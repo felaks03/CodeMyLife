@@ -1,0 +1,148 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  isCommitmentEnforcedNow,
+  domainsToBlock,
+  buildCalendar,
+  currentStreak,
+  commitmentStats
+} from '../src/shared/schedule';
+import { renderHostsFile, sanitizeDomains, stripManagedBlock } from '../src/shared/hosts-file';
+import { Commitment } from '../src/shared/types';
+
+function commitment(overrides: Partial<Commitment> = {}): Commitment {
+  return {
+    _id: '1',
+    scriptId: 'domain-block',
+    name: 'Bloqueo de YouTube',
+    blockedDomains: ['youtube.com'],
+    days: [1, 2, 3, 4, 5],
+    startTime: '09:00',
+    endTime: '18:00',
+    startsAt: '2026-01-01T00:00:00.000Z',
+    endsAt: '2026-12-31T23:59:59.000Z',
+    status: 'active',
+    ...overrides
+  };
+}
+
+// 2026-09-07 is a Monday.
+const mondayAt = (time: string) => new Date(`2026-09-07T${time}:00`);
+const saturdayAt = (time: string) => new Date(`2026-09-05T${time}:00`);
+
+test('bloquea dentro de la franja horaria en un dia seleccionado', () => {
+  assert.equal(isCommitmentEnforcedNow(commitment(), mondayAt('10:30')), true);
+});
+
+test('no bloquea antes de la hora de inicio', () => {
+  assert.equal(isCommitmentEnforcedNow(commitment(), mondayAt('08:59')), false);
+});
+
+test('no bloquea en el minuto de fin', () => {
+  assert.equal(isCommitmentEnforcedNow(commitment(), mondayAt('18:00')), false);
+});
+
+test('no bloquea en un dia no seleccionado', () => {
+  assert.equal(isCommitmentEnforcedNow(commitment(), saturdayAt('10:30')), false);
+});
+
+test('no bloquea fuera del periodo del compromiso', () => {
+  const past = commitment({ endsAt: '2026-01-31T23:59:59.000Z' });
+  assert.equal(isCommitmentEnforcedNow(past, mondayAt('10:30')), false);
+});
+
+test('no bloquea compromisos cancelados', () => {
+  assert.equal(isCommitmentEnforcedNow(commitment({ status: 'cancelled' }), mondayAt('10:30')), false);
+});
+
+test('combina dominios de varios compromisos sin duplicados', () => {
+  const domains = domainsToBlock(
+    [
+      commitment({ _id: '1', blockedDomains: ['youtube.com', 'youtu.be'] }),
+      commitment({ _id: '2', blockedDomains: ['youtube.com', 'tiktok.com'] }),
+      commitment({ _id: '3', blockedDomains: ['instagram.com'], days: [0] })
+    ],
+    mondayAt('10:30')
+  );
+  assert.deepEqual(domains, ['tiktok.com', 'youtu.be', 'youtube.com']);
+});
+
+test('descarta dominios con formato invalido', () => {
+  assert.deepEqual(sanitizeDomains([' YouTube.com ', 'no-es-un-dominio', '', 'youtube.com']), [
+    'youtube.com'
+  ]);
+});
+
+test('anade el bloque gestionado sin tocar el contenido original', () => {
+  const original = '127.0.0.1 localhost\r\n10.0.0.1 intranet\r\n';
+  const result = renderHostsFile(original, ['youtube.com']);
+
+  assert.ok(result.startsWith('127.0.0.1 localhost\r\n10.0.0.1 intranet'));
+  assert.ok(result.includes('127.0.0.1 youtube.com'));
+  assert.ok(result.includes('127.0.0.1 www.youtube.com'));
+});
+
+test('quitar el bloqueo restaura exactamente el archivo original', () => {
+  const original = '127.0.0.1 localhost\r\n10.0.0.1 intranet\r\n';
+  const blocked = renderHostsFile(original, ['youtube.com']);
+
+  assert.equal(renderHostsFile(blocked, []), original);
+});
+
+test('no duplica el bloque al aplicarlo dos veces', () => {
+  const original = '127.0.0.1 localhost\r\n';
+  const once = renderHostsFile(original, ['youtube.com']);
+  const twice = renderHostsFile(once, ['youtube.com']);
+
+  assert.equal(once, twice);
+});
+
+test('deja intacto un archivo sin bloque gestionado', () => {
+  const original = '127.0.0.1 localhost\r\n';
+  assert.equal(stripManagedBlock(original), original);
+});
+
+test('el calendario cubre 28 dias terminando hoy', () => {
+  const calendar = buildCalendar([commitment()], mondayAt('12:00'));
+
+  assert.equal(calendar.length, 28);
+  assert.equal(calendar[27].date.getDate(), 7);
+});
+
+test('el calendario marca solo los dias programados', () => {
+  const soloLunes = commitment({ days: [1] });
+  const calendar = buildCalendar([soloLunes], mondayAt('12:00'));
+
+  assert.equal(calendar.filter((day) => day.scheduled).length, 4);
+  assert.ok(calendar.every((day) => !day.scheduled || day.date.getDay() === 1));
+});
+
+test('la racha cuenta los dias programados desde el inicio del compromiso', () => {
+  // Del 1 al 6 de septiembre solo hay 4 dias laborables antes del lunes 7.
+  const reciente = commitment({ startsAt: '2026-09-01T00:00:00.000Z' });
+  assert.equal(currentStreak([reciente], mondayAt('12:00')), 4);
+});
+
+test('la racha ignora los dias no programados sin romperse', () => {
+  const soloLunes = commitment({ days: [1], startsAt: '2026-08-24T00:00:00.000Z' });
+  assert.equal(currentStreak([soloLunes], mondayAt('12:00')), 2);
+});
+
+test('sin compromisos no hay racha', () => {
+  assert.equal(currentStreak([], mondayAt('12:00')), 0);
+});
+
+test('las estadisticas separan compromisos en curso y cumplidos', () => {
+  const stats = commitmentStats(
+    [
+      commitment({ _id: '1' }),
+      commitment({ _id: '2', endsAt: '2026-01-31T23:59:59.000Z' }),
+      commitment({ _id: '3', status: 'cancelled' })
+    ],
+    mondayAt('12:00')
+  );
+
+  assert.equal(stats.total, 3);
+  assert.equal(stats.running, 1);
+  assert.equal(stats.completed, 1);
+});

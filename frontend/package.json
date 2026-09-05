@@ -1,0 +1,44 @@
+{
+  "name": "codemylife-frontend",
+  "version": "0.1.0",
+  "description": "CodeMyLife desktop app (Electron)",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "npm run build && electron .",
+    "dev": "tsc -p tsconfig.json -w",
+    "test": "tsc -p tsconfig.test.json && node --test \"dist_test/test/**/*.test.js\"",
+    "package": "npm run build && electron-builder --win --publish never"
+  },
+  "build": {
+    "appId": "com.codemylife.desktop",
+    "productName": "CodeMyLife",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "files": [
+      "dist/**/*",
+      "src/renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^38.8.6",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.5.0"
+  },
+  "allowScripts": {
+    "electron@38.8.6": true
+  }
+}

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;" />
+  <title>CodeMyLife</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="banner" class="banner hidden"></div>
+
+  <section id="auth-view" class="view">
+    <h1>CodeMyLife</h1>
+    <p class="subtitle" data-i18n="tagline"></p>
+
+    <form id="auth-form" class="card">
+      <div id="name-field" class="field hidden">
+        <label for="name" data-i18n="name"></label>
+        <input id="name" type="text" autocomplete="name" maxlength="80" />
+      </div>
+      <div class="field">
+        <label for="email" data-i18n="email"></label>
+        <input id="email" type="email" autocomplete="email" required maxlength="254" />
+      </div>
+      <div class="field">
+        <label for="password" data-i18n="password"></label>
+        <input id="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" />
+      </div>
+      <button id="auth-submit" type="submit"></button>
+      <p class="switch">
+        <span id="switch-text"></span>
+        <a href="#" id="switch-mode"></a>
+      </p>
+      <p id="auth-error" class="error"></p>
+    </form>
+
+    <p class="switch"><a href="#" id="lang-auth">English / Espanol</a></p>
+  </section>
+
+  <section id="app-view" class="view hidden">
+    <header class="topbar">
+      <div>
+        <strong id="user-name"></strong>
+        <span id="blocking-status" class="status"></span>
+      </div>
+      <div class="actions">
+        <button id="lang-app" class="ghost" type="button">EN</button>
+        <button id="logout" class="ghost" type="button" data-i18n="logout"></button>
+      </div>
+    </header>
+
+    <div class="columns">
+      <div class="column">
+        <h2 data-i18n="newCommitment"></h2>
+        <form id="commitment-form" class="card">
+          <div class="field">
+            <label for="commitment-name" data-i18n="commitmentName"></label>
+            <input id="commitment-name" type="text" value="Bloqueo de YouTube" required maxlength="80" />
+          </div>
+          <div class="field">
+            <label for="domains" data-i18n="domains"></label>
+            <textarea id="domains" rows="3" required>youtube.com
+youtu.be</textarea>
+          </div>
+          <div class="field">
+            <label data-i18n="days"></label>
+            <div id="days" class="days"></div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="start-time" data-i18n="from"></label>
+              <input id="start-time" type="time" value="09:00" required />
+            </div>
+            <div class="field">
+              <label for="end-time" data-i18n="to"></label>
+              <input id="end-time" type="time" value="18:00" required />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="starts-at" data-i18n="start"></label>
+              <input id="starts-at" type="date" required />
+            </div>
+            <div class="field">
+              <label for="ends-at" data-i18n="end"></label>
+              <input id="ends-at" type="date" required />
+            </div>
+          </div>
+          <button type="submit" data-i18n="create"></button>
+          <p id="commitment-error" class="error"></p>
+        </form>
+      </div>
+
+      <div class="column">
+        <h2 data-i18n="myCommitments"></h2>
+        <div id="stats" class="stats"></div>
+        <p class="calendar-title" data-i18n="activity"></p>
+        <div id="calendar" class="calendar"></div>
+        <ul id="commitments" class="list"></ul>
+      </div>
+    </div>
+  </section>
+
+  <script src="i18n.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

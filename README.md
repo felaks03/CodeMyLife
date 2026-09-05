@@ -6,7 +6,9 @@ CodeMyLife sera una aplicacion de escritorio para Windows que permite a las pers
 
 ## Estado
 
-Proyecto en fase de definicion. Aun no se ha implementado codigo de la aplicacion.
+Aplicacion funcional en desarrollo. Implementado: cuentas con email y contrasena, compromisos con horario por dias, bloqueo real mediante el archivo `hosts`, ejecucion en segundo plano desde la bandeja del sistema, notificaciones, estadisticas con racha y calendario, e interfaz en espanol e ingles.
+
+Pendiente de implementar: inicio de sesion con Google, verificacion de email y recuperacion de contrasena con Amazon SES, auto-actualizacion y suscripcion de pago. Todas requieren credenciales o infraestructura todavia no disponibles.
 
 ## Decisiones Confirmadas
 
@@ -54,18 +56,90 @@ Proyecto en fase de definicion. Aun no se ha implementado codigo de la aplicacio
 - Envio de emails (verificacion, recuperacion de contrasena): Amazon SES.
 - La app pedira permisos de administrador/elevados en Windows para poder bloquear paginas y protegerse de cierres del proceso.
 - La aplicacion tendra auto-actualizacion cuando se publiquen nuevas versiones.
-- Repositorios separados: app de escritorio (CodeMyLife) y landing page (CodeMyLifeLP); el backend tendra su propio repositorio.
+- El backend vive en la carpeta `backend/` de este mismo repositorio (CodeMyLife), junto al frontend en `frontend/`; la landing page sigue en su propio repositorio (CodeMyLifeLP).
 - Experiencia previa del equipo: backend con Node.js, frontend con Angular.
+- Proveedor de nube: AWS.
+
+## Modelo de Negocio
+
+- Suscripcion mensual/anual.
+
+## Publico Objetivo
+
+- Cualquier persona con problemas de procrastinacion o adiccion digital que quiera imponerse compromisos de bloqueo.
+
+## Accesibilidad
+
+- No es prioridad para la primera version.
+
+## Catalogo de Scripts
+
+- El primer lanzamiento incluira unicamente el script de bloqueo de YouTube.
+- El resto de scripts se disenaran y desarrollaran por separado mas adelante.
+
+## Metodo Tecnico de Bloqueo
+
+- Bloqueo mediante modificacion del archivo hosts de Windows combinado con un proxy/servicio local que intercepta y filtra el trafico, ya que cubre navegador, apps de escritorio/PWA y enlaces externos con un unico mecanismo.
+- El proceso de la app se ejecutara como servicio o con proteccion adicional para dificultar su cierre mientras un compromiso este activo (requiere los permisos de administrador ya acordados).
+
+## Recuperacion ante Fallos
+
+- No existira una via para que la persona usuaria se desbloquee antes de tiempo durante un compromiso activo.
+- Debera existir una recuperacion tecnica solo para casos de fallo real del sistema (por ejemplo corrupcion de datos o error de la app), gestionada por el equipo de CodeMyLife, nunca accesible directamente por la persona usuaria.
 
 ## Decisiones Pendientes
 
-- Personas usuarias objetivo y sus necesidades concretas.
-- Proveedor concreto de nube (AWS, Azure o GCP) para el hosting del backend.
-- Catalogo de scripts del primer lanzamiento (mas alla del ejemplo de YouTube) y sus permisos.
-- Metodo tecnico exacto de bloqueo por navegador/sistema.
-- Definicion exacta de "bloquear los ajustes" y procedimiento tecnico de recuperacion ante fallos.
-- Modelo de negocio, si aplica.
-- Opciones de accesibilidad.
+- Necesidades concretas y casos de uso detallados de las personas usuarias objetivo.
+- Permisos y alcance exacto del script de bloqueo de YouTube.
+- Precio y planes de la suscripcion.
+
+## Como Ejecutar
+
+Requisitos: Node.js 22.12 o superior y una base de datos MongoDB accesible (por ejemplo un cluster gratuito de MongoDB Atlas).
+
+Arranque completo (API + aplicacion) desde la raiz del repositorio:
+
+```bash
+./run.sh
+```
+
+Antes del primer arranque, copia `backend/.env.example` a `backend/.env` y rellena `MONGODB_URI` y `JWT_SECRET`.
+
+Comandos por proyecto:
+
+```powershell
+# backend/
+npm install; npm run build; npm start
+
+# frontend/
+npm install; npm test; npm start
+```
+
+El bloqueo modifica el archivo `hosts` de Windows, asi que la aplicacion debe ejecutarse como administrador para que las restricciones se apliquen. Sin permisos elevados la app funciona, pero muestra un aviso y no bloquea.
+
+Al cerrar la ventana la aplicacion sigue ejecutandose en la bandeja del sistema para mantener el bloqueo. Salir mientras hay un compromiso activo pide confirmacion explicita.
+
+## Publicar
+
+```bash
+./produccion.sh
+```
+
+Valida el repositorio, compila, ejecuta los tests, genera el instalador de Windows en `frontend/dist_electron/` y sube la version etiquetada. El despliegue del backend se ejecuta a traves de la variable `CODEMYLIFE_DEPLOY_CMD`.
+
+## Estructura
+
+```text
+CodeMyLife/
+├── backend/       # API Node.js + Express + MongoDB
+├── frontend/      # Aplicacion de escritorio Electron
+│   ├── assets/    # Iconos generados con scripts/generate-icons.js
+│   ├── src/main/  # Proceso principal: bandeja, sesion, planificador, bloqueo
+│   ├── src/shared/# Logica pura de horarios y archivo hosts (con tests)
+│   └── src/renderer/ # Interfaz
+├── run.sh         # Arranque local
+└── produccion.sh  # Publicacion
+```
 
 ## Proceso de Definicion
 

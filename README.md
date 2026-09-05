@@ -44,14 +44,26 @@ Proyecto en fase de definicion. Aun no se ha implementado codigo de la aplicacio
 - Notificaciones de inicio/fin de bloqueo y de intentos de acceso a contenido restringido.
 - Estadisticas de uso: tiempo bloqueado, compromisos cumplidos, rachas y calendario.
 
+## Tecnologia y Arquitectura
+
+- App de escritorio: Electron (JS/TS).
+- Backend/API: Node.js.
+- Base de datos: MongoDB.
+- Hosting del backend: nube grande (AWS/Azure/GCP, por concretar cual).
+- Autenticacion: login social con Google ademas de email/contrasena propios.
+- Envio de emails (verificacion, recuperacion de contrasena): Amazon SES.
+- La app pedira permisos de administrador/elevados en Windows para poder bloquear paginas y protegerse de cierres del proceso.
+- La aplicacion tendra auto-actualizacion cuando se publiquen nuevas versiones.
+- Repositorios separados: app de escritorio (CodeMyLife) y landing page (CodeMyLifeLP); el backend tendra su propio repositorio.
+- Experiencia previa del equipo: backend con Node.js, frontend con Angular.
+
 ## Decisiones Pendientes
 
 - Personas usuarias objetivo y sus necesidades concretas.
-- Tecnologia y arquitectura de escritorio, servicio y sincronizacion.
+- Proveedor concreto de nube (AWS, Azure o GCP) para el hosting del backend.
 - Catalogo de scripts del primer lanzamiento (mas alla del ejemplo de YouTube) y sus permisos.
 - Metodo tecnico exacto de bloqueo por navegador/sistema.
 - Definicion exacta de "bloquear los ajustes" y procedimiento tecnico de recuperacion ante fallos.
-- Servicio de envio de emails a utilizar.
 - Modelo de negocio, si aplica.
 - Opciones de accesibilidad.
 

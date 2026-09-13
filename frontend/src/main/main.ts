@@ -17,6 +17,10 @@ let quitting = false;
 
 Menu.setApplicationMenu(null);
 
+ipcMain.handle('sleep-lock:test', async () => {
+  await scheduler.startSleepLockTest();
+});
+
 async function loadCommitments(): Promise<Commitment[] | null> {
   return guestStore.list();
 }
@@ -24,7 +28,7 @@ async function loadCommitments(): Promise<Commitment[] | null> {
 const scheduler = new BlockingScheduler(loadCommitments, (state) => {
   mainWindow?.webContents.send('blocking:state', state);
   updateTray(state);
-  syncSleepLockWindow(state.lockScreenActive === true);
+  syncSleepLockWindow(state.lockScreenActive === true, state.lockScreenEndsAt);
 });
 
 function assetPath(file: string): string {
@@ -119,16 +123,16 @@ function updateTray(state: BlockingState): void {
   );
 }
 
-function syncSleepLockWindow(active: boolean): void {
+function syncSleepLockWindow(active: boolean, endsAt?: string): void {
   if (active) {
-    if (!sleepLockWindow || sleepLockWindow.isDestroyed()) createSleepLockWindow();
+    if (!sleepLockWindow || sleepLockWindow.isDestroyed()) createSleepLockWindow(endsAt);
     return;
   }
   if (sleepLockWindow && !sleepLockWindow.isDestroyed()) sleepLockWindow.destroy();
   sleepLockWindow = null;
 }
 
-function createSleepLockWindow(): void {
+function createSleepLockWindow(endsAt?: string): void {
   sleepLockWindow = new BrowserWindow({
     fullscreen: true,
     frame: false,
@@ -147,7 +151,8 @@ function createSleepLockWindow(): void {
   });
 
   sleepLockWindow.setAlwaysOnTop(true, 'screen-saver');
-  sleepLockWindow.loadFile(path.join(__dirname, '../../src/renderer/lock-screen.html'));
+  const query = endsAt ? { testEndsAt: endsAt } : undefined;
+  sleepLockWindow.loadFile(path.join(__dirname, '../../src/renderer/lock-screen.html'), { query });
   sleepLockWindow.once('ready-to-show', () => {
     sleepLockWindow?.show();
     sleepLockWindow?.focus();

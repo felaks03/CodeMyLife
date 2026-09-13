@@ -22,6 +22,7 @@ export class BlockingScheduler {
   private commitments: Commitment[] = [];
   private temporarilyAllowedDomains = new Set<string>();
   private manuallyBlockedDomains = new Set<string>();
+  private testLockScreenEndsAt: Date | null = null;
   private state: BlockingState = {
     enforcing: false,
     blockedDomains: [],
@@ -80,11 +81,24 @@ export class BlockingScheduler {
     }
   }
 
+  async startSleepLockTest(durationMs = 30_000): Promise<void> {
+    this.testLockScreenEndsAt = new Date(Date.now() + durationMs);
+    await this.tick();
+    setTimeout(() => {
+      if (this.testLockScreenEndsAt && this.testLockScreenEndsAt.getTime() <= Date.now()) {
+        this.testLockScreenEndsAt = null;
+        void this.tick();
+      }
+    }, durationMs + 100);
+  }
+
   private async tick(): Promise<void> {
     await this.syncFromServer();
 
     const scheduledDomains = domainsToBlock(this.commitments, new Date());
-    const lockScreenActive = shouldShowLockScreen(this.commitments, new Date());
+    const now = new Date();
+    const testLockActive = this.testLockScreenEndsAt !== null && this.testLockScreenEndsAt > now;
+    const lockScreenActive = testLockActive || shouldShowLockScreen(this.commitments, now);
     const domains = [...new Set([
       ...scheduledDomains,
       ...this.manuallyBlockedDomains,
@@ -99,7 +113,8 @@ export class BlockingScheduler {
         blockedDomains: domains,
         hasAdminRights: true,
         lastError: null,
-        lockScreenActive
+        lockScreenActive,
+        lockScreenEndsAt: testLockActive ? this.testLockScreenEndsAt?.toISOString() : undefined
       };
     } catch (error) {
       const hasAdminRights = await this.blocker.canWrite();
@@ -108,7 +123,8 @@ export class BlockingScheduler {
         blockedDomains: domains,
         hasAdminRights,
         lastError: hasAdminRights ? (error as Error).message : 'Se requieren permisos de administrador para aplicar el bloqueo.',
-        lockScreenActive
+        lockScreenActive,
+        lockScreenEndsAt: testLockActive ? this.testLockScreenEndsAt?.toISOString() : undefined
       };
     }
 

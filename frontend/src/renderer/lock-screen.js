@@ -1,4 +1,7 @@
-function nextEightAM() {
+function lockEnd() {
+  const testEndsAt = new URLSearchParams(window.location.search).get('testEndsAt');
+  if (testEndsAt) return new Date(testEndsAt);
+
   const now = new Date();
   const end = new Date(now);
   end.setHours(8, 0, 0, 0);
@@ -7,7 +10,7 @@ function nextEightAM() {
 }
 
 function renderCountdown() {
-  const remaining = Math.max(0, nextEightAM().getTime() - Date.now());
+  const remaining = Math.max(0, lockEnd().getTime() - Date.now());
   const totalSeconds = Math.ceil(remaining / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);

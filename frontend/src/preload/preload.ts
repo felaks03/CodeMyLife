@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('codeMyLife', {
   listScripts: (): Promise<Script[]> => ipcRenderer.invoke('scripts:list'),
   startInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:start-usage'),
   pauseInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:pause-usage'),
+  startSleepLockTest: (): Promise<void> => ipcRenderer.invoke('sleep-lock:test'),
   onInstagramPaused: (callback: () => void): void => {
     ipcRenderer.on('instagram:paused', () => callback());
   },

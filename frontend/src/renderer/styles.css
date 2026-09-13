@@ -440,6 +440,20 @@ button.small {
   opacity: .65;
 }
 
+.sleep-lock-test {
+  background: transparent;
+  border-color: rgba(88, 199, 165, .5);
+  color: var(--ok);
+  flex: 0 0 auto;
+  margin-top: 5px;
+  width: auto;
+}
+
+.sleep-lock-test:hover {
+  background: rgba(88, 199, 165, .12);
+  border-color: var(--ok);
+}
+
 .eyebrow {
   color: var(--danger-hover);
   font-size: 11px;

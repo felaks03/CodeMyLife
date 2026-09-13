@@ -5,7 +5,7 @@ setlocal EnableExtensions
 set "ROOT=%~dp0"
 set "BACKEND=%ROOT%backend"
 set "FRONTEND=%ROOT%frontend"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$projectRoot = [System.IO.Path]::GetFullPath('%ROOT%'); Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('electron.exe', 'CodeMyLife.exe') -and $_.CommandLine -and $_.CommandLine.Contains($projectRoot.TrimEnd('\')) } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$projectRoot = [regex]::Escape(([System.IO.Path]::GetFullPath('%ROOT%')).TrimEnd('\')); Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('electron.exe', 'CodeMyLife.exe') -and $_.CommandLine -and $_.CommandLine -match $projectRoot } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Start-Sleep -Milliseconds 500" >nul 2>&1
 
 REM La terminal debe estar elevada para modificar hosts. No abrimos otra ventana:
 REM si no esta elevada, mostramos el aviso en esta misma terminal y continuamos.

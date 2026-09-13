@@ -66,4 +66,5 @@ export interface BlockingState {
   hasAdminRights: boolean;
   lastError: string | null;
   lockScreenActive?: boolean;
+  lockScreenEndsAt?: string;
 }

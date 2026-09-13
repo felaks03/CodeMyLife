@@ -615,6 +615,20 @@ el('lock-week').addEventListener('click', async () => {
   }
 });
 
+el('sleep-lock-test').addEventListener('click', async () => {
+  const banner = el('banner');
+  if (!window.confirm(i18n.t('sleepLockTestConfirm'))) return;
+
+  try {
+    await window.codeMyLife.startSleepLockTest();
+    banner.textContent = i18n.t('sleepLockTestStarted');
+    banner.classList.remove('hidden');
+  } catch (error) {
+    banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+    banner.classList.remove('hidden');
+  }
+});
+
 document.addEventListener('keydown', (event) => {
   if (event.ctrlKey && event.key.toLowerCase() === 'l') {
     event.preventDefault();

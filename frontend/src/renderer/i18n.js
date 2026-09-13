@@ -156,15 +156,15 @@ const TRANSLATIONS = {
 };
 
 const i18n = {
-  language: localStorage.getItem('language') === 'en' ? 'en' : 'es',
+  language: 'es',
 
   t(key) {
     return TRANSLATIONS[this.language][key];
   },
 
   setLanguage(language) {
-    this.language = TRANSLATIONS[language] ? language : 'es';
-    localStorage.setItem('language', this.language);
+    this.language = 'es';
+    localStorage.setItem('language', 'es');
     this.apply();
   },
 

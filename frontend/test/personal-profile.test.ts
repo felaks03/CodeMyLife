@@ -75,6 +75,8 @@ test('Bloqueo Lust incluye adultos, DeviantArt y FlowGPT', () => {
   assert.deepEqual(lust.blockedDomains, LUST_BLOCKED_DOMAINS);
   assert.ok(lust.blockedDomains.includes('deviantart.com'));
   assert.ok(lust.blockedDomains.includes('flowgpt.com'));
+  assert.ok(lust.blockedDomains.includes('tiava.com'));
+  assert.ok(lust.blockedDomains.length >= 100);
 });
 
 test('Bloqueo Lust se mantiene activo aunque no haya compromiso semanal', () => {

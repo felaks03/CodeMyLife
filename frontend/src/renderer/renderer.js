@@ -376,16 +376,18 @@ function renderScriptResults(scripts) {
 
     const domains = document.createElement('div');
     domains.className = 'script-domain-list';
-    const domainsLabel = document.createElement('span');
-    domainsLabel.className = 'detail-label';
-    domainsLabel.textContent = i18n.t('scriptBlocks');
-    domains.append(domainsLabel);
-    script.blockedDomains.forEach((domain) => {
-      const pill = document.createElement('span');
-      pill.className = 'domain-pill';
-      pill.textContent = domain;
-      domains.append(pill);
-    });
+    if (script._id !== 'builtin-lust') {
+      const domainsLabel = document.createElement('span');
+      domainsLabel.className = 'detail-label';
+      domainsLabel.textContent = i18n.t('scriptBlocks');
+      domains.append(domainsLabel);
+      script.blockedDomains.forEach((domain) => {
+        const pill = document.createElement('span');
+        pill.className = 'domain-pill';
+        pill.textContent = domain;
+        domains.append(pill);
+      });
+    }
 
     const configuration = document.createElement('div');
     configuration.className = 'script-configuration';
@@ -413,6 +415,7 @@ function renderScriptResults(scripts) {
       usageButton.type = 'button';
       usageButton.className = 'instagram-action';
       usageButton.setAttribute('data-instagram-action', '');
+      usageButton.textContent = i18n.t('useInstagram');
       usageButton.addEventListener('click', async (event) => {
         event.stopPropagation();
         try {
@@ -448,6 +451,7 @@ function renderScriptResults(scripts) {
     });
     list.append(item);
   });
+  renderInstagramTimer();
 }
 
 async function loadScripts() {
@@ -458,18 +462,6 @@ async function loadScripts() {
     el('script-results').replaceChildren();
   }
 }
-
-function applyLanguage(language) {
-  i18n.setLanguage(language);
-  el('lang-app').textContent = i18n.language === 'es' ? 'EN' : 'ES';
-  if (lastOverview) renderOverview(lastOverview);
-  if (lastBlockingState) renderBlockingState(lastBlockingState);
-  if (!el('app-view').classList.contains('hidden')) void loadScripts();
-}
-
-el('lang-app').addEventListener('click', () => {
-  applyLanguage(i18n.language === 'es' ? 'en' : 'es');
-});
 
 function weekBounds() {
   const startsAt = new Date();
@@ -645,7 +637,7 @@ window.codeMyLife.onInstagramError((message) => {
 });
 
 (async function init() {
-  applyLanguage(i18n.language);
+  i18n.setLanguage('es');
 
   const user = await window.codeMyLife.getSession();
   showApp(user || { name: 'Mi perfil', id: 'personal', email: '' });

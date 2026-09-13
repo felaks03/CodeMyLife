@@ -1,6 +1,8 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
+import { Types } from 'mongoose';
 import { Commitment } from '../models/commitment.model';
+import { Script } from '../models/script.model';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
 
 export const commitmentRouter = Router();
@@ -9,9 +11,9 @@ const DOMAIN_PATTERN = /^(?!-)[a-z0-9-]{1,63}(\.[a-z0-9-]{1,63})+$/i;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const createSchema = z.object({
-  scriptId: z.string().min(1).max(60),
+  scriptId: z.string().refine((value) => Types.ObjectId.isValid(value), 'Invalid scriptId'),
   name: z.string().min(1).max(80),
-  blockedDomains: z.array(z.string().regex(DOMAIN_PATTERN)).min(1).max(50),
+  customDomains: z.array(z.string().regex(DOMAIN_PATTERN)).max(50).optional(),
   days: z.array(z.number().int().min(0).max(6)).min(1).max(7),
   startTime: z.string().regex(TIME_PATTERN),
   endTime: z.string().regex(TIME_PATTERN),
@@ -54,13 +56,33 @@ commitmentRouter.post('/', async (req: AuthenticatedRequest, res: Response) => {
     return;
   }
 
+  const script = await Script.findById(data.scriptId);
+  if (!script) {
+    res.status(404).json({ error: 'Script not found' });
+    return;
+  }
+
+  const customDomains = script.allowCustomDomains
+    ? (data.customDomains ?? []).map((domain) => domain.toLowerCase())
+    : [];
+  const blockedDomains = [...new Set([...script.blockedDomains, ...customDomains])];
+
   const commitment = await Commitment.create({
-    ...data,
-    blockedDomains: data.blockedDomains.map((domain) => domain.toLowerCase()),
+    name: data.name,
     days: [...new Set(data.days)].sort(),
+    startTime: data.startTime,
+    endTime: data.endTime,
+    startsAt: data.startsAt,
+    endsAt: data.endsAt,
+    scriptId: script._id,
+    scriptName: script.name,
+    blockedDomains,
     userId: req.userId,
     status: 'active'
   });
+
+  script.usageCount += 1;
+  await script.save();
 
   res.status(201).json(commitment);
 });

@@ -1,4 +1,4 @@
-import { AuthUser, Commitment } from '../shared/types';
+import { AuthUser, Commitment, NewCommitment, NewScript, Script } from '../shared/types';
 
 const API_BASE_URL = process.env.CODEMYLIFE_API_URL ?? 'http://127.0.0.1:3000';
 
@@ -42,9 +42,15 @@ export const api = {
 
   activeCommitments: (token: string) => request<Commitment[]>('/api/commitments/active', {}, token),
 
-  createCommitment: (token: string, payload: Omit<Commitment, '_id' | 'status'>) =>
+  createCommitment: (token: string, payload: NewCommitment) =>
     request<Commitment>('/api/commitments', { method: 'POST', body: JSON.stringify(payload) }, token),
 
   cancelCommitment: (token: string, id: string) =>
-    request<Commitment>(`/api/commitments/${encodeURIComponent(id)}`, { method: 'DELETE' }, token)
+    request<Commitment>(`/api/commitments/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
+
+  searchScripts: (token: string, query: string) =>
+    request<Script[]>(`/api/scripts?q=${encodeURIComponent(query)}`, {}, token),
+
+  createScript: (token: string, payload: NewScript) =>
+    request<Script>('/api/scripts', { method: 'POST', body: JSON.stringify(payload) }, token)
 };

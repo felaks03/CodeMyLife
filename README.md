@@ -99,6 +99,12 @@ Requisitos: Node.js 22.12 o superior y una base de datos MongoDB accesible (por 
 
 Arranque completo (API + aplicacion) desde la raiz del repositorio:
 
+```powershell
+.\run.cmd
+```
+
+En Linux, macOS o Git Bash:
+
 ```bash
 ./run.sh
 ```
@@ -121,8 +127,8 @@ Al cerrar la ventana la aplicacion sigue ejecutandose en la bandeja del sistema 
 
 ## Publicar
 
-```bash
-./produccion.sh
+```powershell
+.\produccion.cmd
 ```
 
 Valida el repositorio, compila, ejecuta los tests, genera el instalador de Windows en `frontend/dist_electron/` y sube la version etiquetada. El despliegue del backend se ejecuta a traves de la variable `CODEMYLIFE_DEPLOY_CMD`.
@@ -138,7 +144,9 @@ CodeMyLife/
 │   ├── src/shared/# Logica pura de horarios y archivo hosts (con tests)
 │   └── src/renderer/ # Interfaz
 ├── run.sh         # Arranque local
-└── produccion.sh  # Publicacion
+├── run.cmd        # Lanzador de run.sh en Windows
+├── produccion.sh  # Publicacion
+└── produccion.cmd # Lanzador de produccion.sh en Windows
 ```
 
 ## Proceso de Definicion

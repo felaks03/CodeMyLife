@@ -34,10 +34,13 @@
       <p id="auth-error" class="error"></p>
     </form>
 
+    <button id="guest-continue" class="ghost guest-button" type="button" data-i18n="guestContinue"></button>
+
     <p class="switch"><a href="#" id="lang-auth">English / Espanol</a></p>
   </section>
 
   <section id="app-view" class="view hidden">
+    <p id="guest-banner" class="info-banner hidden" data-i18n="guestBanner"></p>
     <header class="topbar">
       <div>
         <strong id="user-name"></strong>
@@ -52,15 +55,55 @@
     <div class="columns">
       <div class="column">
         <h2 data-i18n="newCommitment"></h2>
-        <form id="commitment-form" class="card">
+
+        <div id="script-browser" class="card">
           <div class="field">
-            <label for="commitment-name" data-i18n="commitmentName"></label>
-            <input id="commitment-name" type="text" value="Bloqueo de YouTube" required maxlength="80" />
+            <label for="script-search" data-i18n="searchScripts"></label>
+            <input id="script-search" type="search" maxlength="80" data-i18n-placeholder="searchPlaceholder" />
+          </div>
+          <ul id="script-results" class="list scripts"></ul>
+          <button id="new-script-toggle" type="button" class="ghost small" data-i18n="publishScript"></button>
+        </div>
+
+        <form id="script-form" class="card hidden">
+          <div class="field">
+            <label for="script-name" data-i18n="scriptName"></label>
+            <input id="script-name" type="text" required maxlength="80" />
           </div>
           <div class="field">
-            <label for="domains" data-i18n="domains"></label>
-            <textarea id="domains" rows="3" required>youtube.com
-youtu.be</textarea>
+            <label for="script-category" data-i18n="scriptCategory"></label>
+            <input id="script-category" type="text" required maxlength="40" />
+          </div>
+          <div class="field">
+            <label for="script-description" data-i18n="scriptDescription"></label>
+            <textarea id="script-description" rows="2" required maxlength="280"></textarea>
+          </div>
+          <div class="field">
+            <label for="script-domains" data-i18n="domains"></label>
+            <textarea id="script-domains" rows="3" required></textarea>
+          </div>
+          <label class="checkbox-field">
+            <input id="script-allow-custom" type="checkbox" checked />
+            <span data-i18n="allowCustomDomains"></span>
+          </label>
+          <button type="submit" data-i18n="publishScript"></button>
+          <p id="script-error" class="error"></p>
+        </form>
+
+        <form id="commitment-form" class="card hidden">
+          <div class="field">
+            <span class="selected-script-label" data-i18n="selectedScript"></span>
+            <strong id="selected-script-name"></strong>
+            <p id="selected-script-description" class="meta"></p>
+            <p id="selected-script-domains" class="meta"></p>
+          </div>
+          <div class="field">
+            <label for="commitment-name" data-i18n="commitmentName"></label>
+            <input id="commitment-name" type="text" required maxlength="80" />
+          </div>
+          <div id="custom-domains-field" class="field hidden">
+            <label for="custom-domains" data-i18n="customDomains"></label>
+            <textarea id="custom-domains" rows="2"></textarea>
           </div>
           <div class="field">
             <label data-i18n="days"></label>
@@ -87,6 +130,7 @@ youtu.be</textarea>
             </div>
           </div>
           <button type="submit" data-i18n="create"></button>
+          <button id="change-script" type="button" class="ghost small" data-i18n="changeScript"></button>
           <p id="commitment-error" class="error"></p>
         </form>
       </div>

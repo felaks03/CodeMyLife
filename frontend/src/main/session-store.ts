@@ -3,9 +3,10 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { AuthUser } from '../shared/types';
 
-interface StoredSession {
-  token: string;
+export interface StoredSession {
+  token: string | null;
   user: AuthUser;
+  guest: boolean;
 }
 
 function sessionFile(): string {

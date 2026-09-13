@@ -14,6 +14,7 @@ function commitment(overrides: Partial<Commitment> = {}): Commitment {
   return {
     _id: '1',
     scriptId: 'domain-block',
+    scriptName: 'Bloqueo de YouTube',
     name: 'Bloqueo de YouTube',
     blockedDomains: ['youtube.com'],
     days: [1, 2, 3, 4, 5],

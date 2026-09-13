@@ -167,6 +167,36 @@ button.small {
   justify-content: space-between;
 }
 
+.list.scripts {
+  margin-bottom: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.list.scripts li {
+  margin-bottom: 8px;
+}
+
+.checkbox-field {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.checkbox-field input {
+  margin: 0;
+}
+
+.selected-script-label {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
 .days {
   display: flex;
   gap: 6px;
@@ -200,6 +230,11 @@ button.small {
   color: var(--accent-hover);
 }
 
+.guest-button {
+  max-width: 420px;
+  margin-top: 4px;
+}
+
 .error {
   color: var(--danger);
   font-size: 12px;
@@ -229,6 +264,15 @@ button.small {
   background: #5a1d1d;
   border: 1px solid var(--danger);
   border-radius: 4px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+}
+
+.info-banner {
+  background: #1d3a4a;
+  border: 1px solid var(--accent-hover);
+  border-radius: 4px;
+  color: var(--text);
   margin-bottom: 16px;
   padding: 10px 14px;
 }

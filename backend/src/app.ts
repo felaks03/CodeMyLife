@@ -3,6 +3,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { authRouter } from './routes/auth.routes';
 import { commitmentRouter } from './routes/commitment.routes';
+import { scriptRouter } from './routes/script.routes';
 
 export function createApp() {
   const app = express();
@@ -16,6 +17,7 @@ export function createApp() {
 
   app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 20 }), authRouter);
   app.use('/api/commitments', commitmentRouter);
+  app.use('/api/scripts', scriptRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found' });

@@ -2,6 +2,8 @@ const el = (id) => document.getElementById(id);
 let isRegisterMode = false;
 let lastOverview = null;
 let lastBlockingState = null;
+let selectedScript = null;
+let searchDebounce = null;
 
 function toIsoDate(date) {
   return date.toISOString().slice(0, 10);
@@ -44,9 +46,11 @@ function setAuthMode(register) {
 function showApp(user) {
   el('auth-view').classList.add('hidden');
   el('app-view').classList.remove('hidden');
-  el('user-name').textContent = user.name;
+  el('user-name').textContent = user.id === 'guest' ? `${user.name} (${i18n.t('guestBadge')})` : user.name;
+  el('guest-banner').classList.toggle('hidden', user.id !== 'guest');
   void refreshOverview();
   void refreshBlockingState();
+  void searchScripts('');
 }
 
 function showAuth() {
@@ -178,6 +182,75 @@ async function cancelCommitment(id) {
   }
 }
 
+function renderScriptResults(scripts) {
+  const list = el('script-results');
+  list.replaceChildren();
+
+  if (scripts.length === 0) {
+    const empty = document.createElement('li');
+    empty.textContent = i18n.t('noScripts');
+    list.append(empty);
+    return;
+  }
+
+  scripts.forEach((script) => {
+    const item = document.createElement('li');
+
+    const header = document.createElement('div');
+    header.className = 'item-header';
+
+    const title = document.createElement('strong');
+    title.textContent = script.name;
+    header.append(title);
+
+    const useButton = document.createElement('button');
+    useButton.type = 'button';
+    useButton.className = 'ghost small';
+    useButton.textContent = i18n.t('useScript');
+    useButton.addEventListener('click', () => selectScript(script));
+    header.append(useButton);
+
+    const description = document.createElement('div');
+    description.className = 'meta';
+    description.textContent = script.description;
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = `${script.category} · ${i18n.t('by')} ${script.authorName} · ${script.blockedDomains.join(', ')}`;
+
+    item.append(header, description, meta);
+    list.append(item);
+  });
+}
+
+async function searchScripts(query) {
+  try {
+    renderScriptResults(await window.codeMyLife.searchScripts(query));
+  } catch (error) {
+    el('script-results').replaceChildren();
+  }
+}
+
+function selectScript(script) {
+  selectedScript = script;
+  el('script-form').classList.add('hidden');
+  el('selected-script-name').textContent = script.name;
+  el('selected-script-description').textContent = script.description;
+  el('selected-script-domains').textContent = `${i18n.t('fixedDomains')}: ${script.blockedDomains.join(', ')}`;
+  el('commitment-name').value = script.name;
+  el('custom-domains-field').classList.toggle('hidden', !script.allowCustomDomains);
+  el('custom-domains').value = '';
+
+  document.getElementById('script-browser').classList.add('hidden');
+  el('commitment-form').classList.remove('hidden');
+}
+
+function backToScriptSearch() {
+  selectedScript = null;
+  el('commitment-form').classList.add('hidden');
+  document.getElementById('script-browser').classList.remove('hidden');
+}
+
 function applyLanguage(language) {
   i18n.setLanguage(language);
   el('lang-app').textContent = i18n.language === 'es' ? 'EN' : 'ES';
@@ -185,6 +258,9 @@ function applyLanguage(language) {
   setAuthMode(isRegisterMode);
   if (lastOverview) renderOverview(lastOverview);
   if (lastBlockingState) renderBlockingState(lastBlockingState);
+  if (!el('app-view').classList.contains('hidden')) {
+    void searchScripts(el('script-search').value);
+  }
 }
 
 el('switch-mode').addEventListener('click', (event) => {
@@ -195,6 +271,17 @@ el('switch-mode').addEventListener('click', (event) => {
 el('lang-auth').addEventListener('click', (event) => {
   event.preventDefault();
   applyLanguage(i18n.language === 'es' ? 'en' : 'es');
+});
+
+el('guest-continue').addEventListener('click', async () => {
+  const errorLabel = el('auth-error');
+  errorLabel.textContent = '';
+  try {
+    const user = await window.codeMyLife.continueAsGuest();
+    showApp(user);
+  } catch (error) {
+    errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+  }
 });
 
 el('lang-app').addEventListener('click', () => {
@@ -235,22 +322,26 @@ el('commitment-form').addEventListener('submit', async (event) => {
   const errorLabel = el('commitment-error');
   errorLabel.textContent = '';
 
+  if (!selectedScript) {
+    return;
+  }
+
   const days = [...document.querySelectorAll('#days input:checked')].map((input) => Number(input.value));
   if (days.length === 0) {
     errorLabel.textContent = i18n.t('pickDay');
     return;
   }
 
-  const blockedDomains = el('domains')
+  const customDomains = el('custom-domains')
     .value.split('\n')
     .map((line) => line.trim().toLowerCase())
     .filter(Boolean);
 
   try {
     await window.codeMyLife.createCommitment({
-      scriptId: 'domain-block',
+      scriptId: selectedScript._id,
       name: el('commitment-name').value.trim(),
-      blockedDomains,
+      customDomains,
       days,
       startTime: el('start-time').value,
       endTime: el('end-time').value,
@@ -259,6 +350,45 @@ el('commitment-form').addEventListener('submit', async (event) => {
     });
     await refreshOverview();
     await refreshBlockingState();
+  } catch (error) {
+    errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+  }
+});
+
+el('change-script').addEventListener('click', backToScriptSearch);
+
+el('script-search').addEventListener('input', (event) => {
+  clearTimeout(searchDebounce);
+  const query = event.target.value;
+  searchDebounce = setTimeout(() => void searchScripts(query), 250);
+});
+
+el('new-script-toggle').addEventListener('click', () => {
+  el('script-form').classList.toggle('hidden');
+});
+
+el('script-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const errorLabel = el('script-error');
+  errorLabel.textContent = '';
+
+  const blockedDomains = el('script-domains')
+    .value.split('\n')
+    .map((line) => line.trim().toLowerCase())
+    .filter(Boolean);
+
+  try {
+    const script = await window.codeMyLife.createScript({
+      name: el('script-name').value.trim(),
+      category: el('script-category').value.trim(),
+      description: el('script-description').value.trim(),
+      blockedDomains,
+      allowCustomDomains: el('script-allow-custom').checked
+    });
+    el('script-form').reset();
+    el('script-form').classList.add('hidden');
+    await searchScripts(el('script-search').value);
+    selectScript(script);
   } catch (error) {
     errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
   }

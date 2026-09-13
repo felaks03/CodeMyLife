@@ -5,7 +5,8 @@ export type CommitmentStatus = 'active' | 'completed' | 'cancelled';
 export interface CommitmentDocument extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
-  scriptId: string;
+  scriptId: Types.ObjectId;
+  scriptName: string;
   name: string;
   blockedDomains: string[];
   days: number[];
@@ -21,7 +22,8 @@ export interface CommitmentDocument extends Document {
 const commitmentSchema = new Schema<CommitmentDocument>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    scriptId: { type: String, required: true },
+    scriptId: { type: Schema.Types.ObjectId, ref: 'Script', required: true },
+    scriptName: { type: String, required: true, trim: true },
     name: { type: String, required: true, trim: true },
     blockedDomains: { type: [String], required: true },
     days: { type: [Number], required: true },

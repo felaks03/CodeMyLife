@@ -3,21 +3,31 @@ import * as path from 'path';
 import { SessionStore } from './session-store';
 import { BlockingScheduler } from './scheduler';
 import { api } from './api-client';
+import { guestStore } from './guest-store';
 import { buildCalendar, commitmentStats } from '../shared/schedule';
-import { BlockingState, Commitment } from '../shared/types';
+import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
 
 const sessionStore = new SessionStore();
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
 
-const scheduler = new BlockingScheduler(
-  () => sessionStore.session?.token ?? null,
-  (state) => {
-    mainWindow?.webContents.send('blocking:state', state);
-    updateTray(state);
+async function loadCommitments(): Promise<Commitment[] | null> {
+  const session = sessionStore.session;
+  if (!session) return [];
+  if (session.guest) return guestStore.list();
+  if (!session.token) return [];
+  try {
+    return await api.listCommitments(session.token);
+  } catch {
+    return null;
   }
-);
+}
+
+const scheduler = new BlockingScheduler(loadCommitments, (state) => {
+  mainWindow?.webContents.send('blocking:state', state);
+  updateTray(state);
+});
 
 function assetPath(file: string): string {
   return path.join(__dirname, '../../assets', file);
@@ -120,16 +130,23 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('auth:login', async (_event, email: string, password: string) => {
     const result = await api.login(email, password);
-    await sessionStore.save(result);
+    await sessionStore.save({ ...result, guest: false });
     await scheduler.refresh();
     return result.user;
   });
 
   ipcMain.handle('auth:register', async (_event, email: string, name: string, password: string) => {
     const result = await api.register(email, name, password);
-    await sessionStore.save(result);
+    await sessionStore.save({ ...result, guest: false });
     await scheduler.refresh();
     return result.user;
+  });
+
+  ipcMain.handle('auth:guest', async () => {
+    const user = { id: 'guest', email: '', name: 'Invitado' };
+    await sessionStore.save({ token: null, user, guest: true });
+    await scheduler.refresh();
+    return user;
   });
 
   ipcMain.handle('auth:logout', async () => {
@@ -140,10 +157,9 @@ function registerIpcHandlers(): void {
     await scheduler.refresh();
   });
 
-  ipcMain.handle('commitments:list', () => api.listCommitments(requireToken()));
-
   ipcMain.handle('commitments:overview', async () => {
-    const commitments = await api.listCommitments(requireToken());
+    const session = sessionStore.session;
+    const commitments = session?.guest ? await guestStore.list() : await api.listCommitments(requireToken());
     const now = new Date();
     return {
       commitments,
@@ -155,16 +171,33 @@ function registerIpcHandlers(): void {
     };
   });
 
-  ipcMain.handle('commitments:create', async (_event, payload: Omit<Commitment, '_id' | 'status'>) => {
-    const created = await api.createCommitment(requireToken(), payload);
+  ipcMain.handle('commitments:create', async (_event, payload: NewCommitment) => {
+    const created = sessionStore.session?.guest
+      ? await guestStore.create(payload)
+      : await api.createCommitment(requireToken(), payload);
     await scheduler.refresh();
     return created;
   });
 
   ipcMain.handle('commitments:cancel', async (_event, id: string) => {
-    const cancelled = await api.cancelCommitment(requireToken(), id);
+    const cancelled = sessionStore.session?.guest
+      ? await guestStore.cancel(id)
+      : await api.cancelCommitment(requireToken(), id);
     await scheduler.refresh();
     return cancelled;
+  });
+
+  ipcMain.handle('scripts:search', async (_event, query: string) => {
+    const session = sessionStore.session;
+    if (session?.guest) return guestStore.searchScripts(query);
+    return api.searchScripts(requireToken(), query);
+  });
+
+  ipcMain.handle('scripts:create', async (_event, payload: NewScript) => {
+    if (sessionStore.session?.guest) {
+      throw new Error('Crea una cuenta para publicar scripts para otras personas.');
+    }
+    return api.createScript(requireToken(), payload);
   });
 
   ipcMain.handle('blocking:state', (): BlockingState => scheduler.getState());

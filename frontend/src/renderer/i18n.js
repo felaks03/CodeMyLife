@@ -31,7 +31,25 @@ const TRANSLATIONS = {
     total: 'en total',
     streak: 'dias de racha',
     dayNames: ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'],
-    statusActive: 'En curso'
+    statusActive: 'En curso',
+    guestContinue: 'Continuar como invitado',
+    guestBadge: 'Invitado',
+    guestBanner: 'Estas en modo invitado: tus compromisos se guardan solo en este equipo y se perderan si desinstalas la app.',
+    searchScripts: 'Buscar scripts de la comunidad',
+    searchPlaceholder: 'Ej: redes sociales, videojuegos, YouTube...',
+    publishScript: 'Publicar un script nuevo',
+    scriptName: 'Nombre del script',
+    scriptCategory: 'Categoria',
+    scriptDescription: 'Descripcion',
+    allowCustomDomains: 'Permitir que quien lo use anada sus propios dominios',
+    scriptCreated: 'Script publicado. Ya puedes usarlo.',
+    noScripts: 'No se encontraron scripts. Prueba otra busqueda o publica el tuyo.',
+    by: 'por',
+    useScript: 'Usar',
+    selectedScript: 'Script seleccionado',
+    customDomains: 'Dominios adicionales (opcional, uno por linea)',
+    changeScript: 'Elegir otro script',
+    fixedDomains: 'Bloquea siempre'
   },
   en: {
     tagline: 'Commitments you actually keep.',
@@ -65,7 +83,25 @@ const TRANSLATIONS = {
     total: 'total',
     streak: 'day streak',
     dayNames: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-    statusActive: 'Running'
+    statusActive: 'Running',
+    guestContinue: 'Continue as guest',
+    guestBadge: 'Guest',
+    guestBanner: 'You are in guest mode: your commitments are saved only on this device and will be lost if you uninstall the app.',
+    searchScripts: 'Search community scripts',
+    searchPlaceholder: 'E.g. social media, gaming, YouTube...',
+    publishScript: 'Publish a new script',
+    scriptName: 'Script name',
+    scriptCategory: 'Category',
+    scriptDescription: 'Description',
+    allowCustomDomains: 'Let people using it add their own domains',
+    scriptCreated: 'Script published. You can use it now.',
+    noScripts: 'No scripts found. Try another search or publish your own.',
+    by: 'by',
+    useScript: 'Use',
+    selectedScript: 'Selected script',
+    customDomains: 'Extra domains (optional, one per line)',
+    changeScript: 'Choose another script',
+    fixedDomains: 'Always blocks'
   }
 };
 
@@ -86,6 +122,9 @@ const i18n = {
     document.documentElement.lang = this.language;
     document.querySelectorAll('[data-i18n]').forEach((node) => {
       node.textContent = this.t(node.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((node) => {
+      node.placeholder = this.t(node.dataset.i18nPlaceholder);
     });
   }
 };

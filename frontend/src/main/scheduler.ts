@@ -2,11 +2,12 @@ import { app, Notification } from 'electron';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { HostsBlocker } from './blocker';
-import { api } from './api-client';
 import { domainsToBlock } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
 
 const CHECK_INTERVAL_MS = 30_000;
+
+export type CommitmentsProvider = () => Promise<Commitment[] | null>;
 
 function cacheFile(): string {
   return path.join(app.getPath('userData'), 'commitments-cache.json');
@@ -23,7 +24,10 @@ export class BlockingScheduler {
     lastError: null
   };
 
-  constructor(private readonly getToken: () => string | null, private readonly onStateChange: (state: BlockingState) => void) {}
+  constructor(
+    private readonly getCommitments: CommitmentsProvider,
+    private readonly onStateChange: (state: BlockingState) => void
+  ) {}
 
   async start(): Promise<void> {
     this.commitments = await this.readCache();
@@ -86,13 +90,12 @@ export class BlockingScheduler {
   }
 
   private async syncFromServer(): Promise<void> {
-    const token = this.getToken();
-    if (!token) return;
-
     try {
-      const commitments = await api.listCommitments(token);
-      this.commitments = commitments;
-      await this.writeCache(commitments);
+      const commitments = await this.getCommitments();
+      if (commitments) {
+        this.commitments = commitments;
+        await this.writeCache(commitments);
+      }
     } catch {
       // Offline: keep enforcing the cached commitments.
     }

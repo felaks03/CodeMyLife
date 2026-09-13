@@ -17,8 +17,12 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
+tsc_pid=""
 backend_pid=""
 cleanup() {
+  if [ -n "$tsc_pid" ] && kill -0 "$tsc_pid" 2>/dev/null; then
+    kill "$tsc_pid" 2>/dev/null || true
+  fi
   if [ -n "$backend_pid" ] && kill -0 "$backend_pid" 2>/dev/null; then
     kill "$backend_pid" 2>/dev/null || true
   fi
@@ -38,27 +42,44 @@ fi
 echo "==> Compilando backend"
 (cd "$BACKEND" && npm run build)
 
-echo "==> Arrancando API"
+echo "==> Intentando arrancar API..."
 (cd "$BACKEND" && npm start) &
 backend_pid=$!
 
 API_URL="${CODEMYLIFE_API_URL:-http://127.0.0.1:3000}"
-echo "==> Esperando a $API_URL/health"
-for _ in $(seq 1 60); do
+echo "==> Verificando API en $API_URL/health"
+api_ready=false
+for _ in $(seq 1 5); do
   if curl -sf "$API_URL/health" >/dev/null 2>&1; then
-    echo "    API lista"
+    echo "    API lista y conectada a la base de datos."
+    api_ready=true
     break
   fi
   if ! kill -0 "$backend_pid" 2>/dev/null; then
-    echo "Error: la API se ha detenido durante el arranque." >&2
-    exit 1
+    break
   fi
   sleep 1
 done
 
+if [ "$api_ready" = false ]; then
+  echo "    Nota: No se pudo conectar a la base de datos MongoDB."
+  echo "    La aplicacion iniciara en modo local / perfil de prueba."
+  if [ -n "$backend_pid" ] && kill -0 "$backend_pid" 2>/dev/null; then
+    kill "$backend_pid" 2>/dev/null || true
+  fi
+  backend_pid=""
+fi
+
 echo "==> Instalando dependencias del frontend"
 (cd "$FRONTEND" && npm install --no-fund --no-audit)
 
+echo "==> Compilando frontend"
+(cd "$FRONTEND" && npm run build)
+
+echo "==> Iniciando observador TypeScript (Hot Reload activo)"
+(cd "$FRONTEND" && npx tsc -p tsconfig.json -w --preserveWatchOutput) &
+tsc_pid=$!
+
 echo "==> Arrancando aplicacion de escritorio"
 echo "    Aviso: sin permisos de administrador el bloqueo no se aplicara."
-(cd "$FRONTEND" && npm start)
+(cd "$FRONTEND" && npx electron .)

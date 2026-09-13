@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, Tray, dialog } from 'electron';
 import * as path from 'path';
+import { watch } from 'fs';
 import { SessionStore } from './session-store';
 import { BlockingScheduler } from './scheduler';
 import { api } from './api-client';
@@ -96,6 +97,33 @@ function createTray(): void {
   updateTray(scheduler.getState());
 }
 
+function setupDevReloader(win: BrowserWindow): void {
+  if (app.isPackaged) return;
+
+  let debounceTimer: NodeJS.Timeout | null = null;
+  const triggerReload = () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      if (!win.isDestroyed()) {
+        win.webContents.reload();
+      }
+    }, 200);
+  };
+
+  const watchTargets = [
+    path.join(__dirname, '../../src/renderer'),
+    path.join(__dirname, '..') // dist folder
+  ];
+
+  for (const target of watchTargets) {
+    try {
+      watch(target, { recursive: true }, triggerReload);
+    } catch {
+      // Ignorar si no se puede observar
+    }
+  }
+}
+
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1024,
@@ -111,6 +139,7 @@ function createMainWindow(): void {
   });
 
   mainWindow.loadFile(path.join(__dirname, '../../src/renderer/index.html'));
+  setupDevReloader(mainWindow);
 
   // Cerrar la ventana solo la oculta: el bloqueo debe seguir aplicandose.
   mainWindow.on('close', (event) => {

@@ -27,6 +27,12 @@ const scheduler = new BlockingScheduler(loadCommitments, (state) => {
   syncSleepLockWindow(state.lockScreenActive === true);
 });
 
+ipcMain.handle('commitments:cancel-test-locks', async () => {
+  const cancelled = await guestStore.cancelTestLocks();
+  await scheduler.refresh();
+  return cancelled;
+});
+
 function assetPath(file: string): string {
   return path.join(__dirname, '../../assets', file);
 }
@@ -185,7 +191,7 @@ async function requestQuit(): Promise<void> {
   quitting = true;
   sleepLockWindow?.destroy();
   sleepLockWindow = null;
-  scheduler.stop();
+  await scheduler.stop();
   app.quit();
 }
 
@@ -276,12 +282,6 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('commitments:cancel', async (_event, id: string) => {
     const cancelled = await guestStore.cancel(id);
-    await scheduler.refresh();
-    return cancelled;
-  });
-
-  ipcMain.handle('commitments:cancel-test-locks', async () => {
-    const cancelled = await guestStore.cancelTestLocks();
     await scheduler.refresh();
     return cancelled;
   });

@@ -7,7 +7,7 @@ import {
   currentStreak,
   commitmentStats
 } from '../src/shared/schedule';
-import { renderHostsFile, sanitizeDomains, stripManagedBlock } from '../src/shared/hosts-file';
+import { buildManagedBlock, renderHostsFile, sanitizeDomains, stripManagedBlock } from '../src/shared/hosts-file';
 import { Commitment } from '../src/shared/types';
 
 function commitment(overrides: Partial<Commitment> = {}): Commitment {
@@ -29,7 +29,9 @@ function commitment(overrides: Partial<Commitment> = {}): Commitment {
 
 // 2026-09-07 is a Monday.
 const mondayAt = (time: string) => new Date(`2026-09-07T${time}:00`);
+const tuesdayAt = (time: string) => new Date(`2026-09-08T${time}:00`);
 const saturdayAt = (time: string) => new Date(`2026-09-05T${time}:00`);
+const sundayAt = (time: string) => new Date(`2026-09-06T${time}:00`);
 
 test('bloquea dentro de la franja horaria en un dia seleccionado', () => {
   assert.equal(isCommitmentEnforcedNow(commitment(), mondayAt('10:30')), true);
@@ -103,6 +105,23 @@ test('deja intacto un archivo sin bloque gestionado', () => {
   assert.equal(stripManagedBlock(original), original);
 });
 
+test('genera aliases comunes para cada dominio bloqueado', () => {
+  const block = buildManagedBlock(['example.com']);
+
+  assert.ok(block.includes('127.0.0.1 example.com'));
+  assert.ok(block.includes('127.0.0.1 www.example.com'));
+  assert.ok(block.includes('127.0.0.1 api.example.com'));
+  assert.ok(block.includes('127.0.0.1 cdn.example.com'));
+  assert.ok(block.includes('::1 media.example.com'));
+});
+
+test('no genera entradas wildcard invalidas en hosts', () => {
+  const block = buildManagedBlock(['example.com']);
+
+  assert.equal(block.includes('*.'), false);
+  assert.equal(block.includes('*.example.com'), false);
+});
+
 test('el calendario cubre 28 dias terminando hoy', () => {
   const calendar = buildCalendar([commitment()], mondayAt('12:00'));
 
@@ -146,4 +165,43 @@ test('las estadisticas separan compromisos en curso y cumplidos', () => {
   assert.equal(stats.total, 3);
   assert.equal(stats.running, 1);
   assert.equal(stats.completed, 1);
+});
+
+test('un bloqueo permanente ignora dias y horas', () => {
+  const permanent = commitment({
+    alwaysBlocked: true,
+    days: [],
+    startTime: '23:59',
+    endTime: '00:01'
+  });
+
+  assert.equal(isCommitmentEnforcedNow(permanent, mondayAt('12:00')), true);
+  assert.equal(isCommitmentEnforcedNow(permanent, saturdayAt('03:00')), true);
+});
+
+test('un bloqueo permanente sigue respetando sus fechas', () => {
+  const permanent = commitment({
+    alwaysBlocked: true,
+    startsAt: '2026-09-08T00:00:00.000Z',
+    endsAt: '2026-09-12T23:59:59.000Z'
+  });
+
+  assert.equal(isCommitmentEnforcedNow(permanent, mondayAt('12:00')), false);
+  assert.equal(isCommitmentEnforcedNow(permanent, tuesdayAt('12:00')), true);
+  assert.equal(isCommitmentEnforcedNow(permanent, sundayAt('12:00')), false);
+});
+
+test('el limite diario de Instagram no se activa por la evaluacion de horario', () => {
+  const instagram = commitment({
+    scriptId: 'builtin-instagram',
+    scriptName: 'Bloqueo de Instagram',
+    blockedDomains: ['instagram.com'],
+    alwaysBlocked: false,
+    days: [1, 2, 3, 4, 5, 6, 0],
+    startTime: '00:00',
+    endTime: '23:59'
+  });
+
+  assert.equal(isCommitmentEnforcedNow(instagram, mondayAt('12:00')), true);
+  assert.equal(isCommitmentEnforcedNow(instagram, sundayAt('12:00')), true);
 });

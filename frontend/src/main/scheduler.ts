@@ -2,7 +2,6 @@ import { app, Notification } from 'electron';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { HostsBlocker } from './blocker';
-import { BrowserGuard } from './browser-guard';
 import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
 import { domainsToBlock, shouldShowLockScreen } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
@@ -17,7 +16,6 @@ function cacheFile(): string {
 
 export class BlockingScheduler {
   private readonly blocker = new HostsBlocker();
-  private readonly browserGuard = new BrowserGuard();
   private timer: NodeJS.Timeout | null = null;
   private commitments: Commitment[] = [];
   private temporarilyAllowedDomains = new Set<string>();
@@ -36,17 +34,21 @@ export class BlockingScheduler {
   ) {}
 
   async start(): Promise<void> {
-    this.commitments = await this.readCache();
+    this.commitments = await this.normalizeCommitments(await this.readCache());
     await this.tick();
     this.timer = setInterval(() => void this.tick(), CHECK_INTERVAL_MS);
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }
-    void this.browserGuard.unblockChrome();
+    try {
+      await this.blocker.clear();
+    } catch {
+      // Cleanup is best-effort during shutdown.
+    }
   }
 
   getState(): BlockingState {
@@ -84,14 +86,6 @@ export class BlockingScheduler {
       }
     }
     await this.tick();
-    if (allowed) {
-      try {
-        await this.browserGuard.blockChrome();
-      } catch (error) {
-      }
-    } else {
-      await this.browserGuard.unblockChrome();
-    }
   }
 
   private async tick(): Promise<void> {
@@ -104,16 +98,6 @@ export class BlockingScheduler {
       ...scheduledDomains,
       ...this.manuallyBlockedDomains
     ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain));
-    const instagramIsBlocked = INSTAGRAM_DOMAINS.some((domain) => domains.includes(domain));
-    if (instagramIsBlocked) {
-      try {
-        await this.browserGuard.blockChrome();
-      } catch {
-        // Hosts remains as a fallback when Chrome firewall protection is unavailable.
-      }
-    } else {
-      await this.browserGuard.unblockChrome();
-    }
     const wasEnforcing = this.state.enforcing;
 
     try {
@@ -168,6 +152,22 @@ export class BlockingScheduler {
     } catch {
       return [];
     }
+  }
+
+  private async normalizeCommitments(commitments: Commitment[]): Promise<Commitment[]> {
+    const now = Date.now();
+    const valid = commitments.filter((commitment) =>
+      commitment && typeof commitment.startsAt === 'string' && typeof commitment.endsAt === 'string'
+    );
+    let changed = valid.length !== commitments.length;
+    for (const commitment of valid) {
+      if (commitment.status === 'active' && new Date(commitment.endsAt).getTime() < now) {
+        commitment.status = 'completed';
+        changed = true;
+      }
+    }
+    if (changed) await this.writeCache(valid);
+    return valid;
   }
 
   private async writeCache(commitments: Commitment[]): Promise<void> {

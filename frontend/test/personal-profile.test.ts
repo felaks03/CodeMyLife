@@ -39,6 +39,15 @@ test('el perfil personal incluye todos los scripts integrados', () => {
   assert.ok(BUILTIN_SCRIPTS.filter((script) => !script.showLockScreen).every((script) => script.blockedDomains.length > 0));
 });
 
+test('el catalogo tiene identificadores unicos y configuraciones validas', () => {
+  const ids = BUILTIN_SCRIPTS.map((script) => script._id);
+
+  assert.equal(new Set(ids).size, ids.length);
+  assert.ok(BUILTIN_SCRIPTS.every((script) => script.name.length > 0));
+  assert.ok(BUILTIN_SCRIPTS.every((script) => !script.blockingMode || ['scheduled', 'always', 'daily-limit'].includes(script.blockingMode)));
+  assert.equal(BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-instagram')?.dailyLimitMinutes, 15);
+});
+
 test('las redes sociales estan separadas entre Instagram y el resto', () => {
   const instagram = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-instagram');
   const rest = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-social-rest');

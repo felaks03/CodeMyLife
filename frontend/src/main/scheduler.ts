@@ -2,8 +2,10 @@ import { app, Notification } from 'electron';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { HostsBlocker } from './blocker';
+import { DesktopAppGuard } from './desktop-app-guard';
 import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
-import { domainsToBlock, shouldShowLockScreen } from '../shared/schedule';
+import { VIDEO_GAME_BLOCKED_PROCESSES } from '../shared/builtin-scripts';
+import { domainsToBlock, isCommitmentEnforcedNow, shouldShowLockScreen } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
 
 const CHECK_INTERVAL_MS = 30_000;
@@ -16,6 +18,7 @@ function cacheFile(): string {
 
 export class BlockingScheduler {
   private readonly blocker = new HostsBlocker();
+  private readonly desktopAppGuard = new DesktopAppGuard();
   private timer: NodeJS.Timeout | null = null;
   private commitments: Commitment[] = [];
   private temporarilyAllowedDomains = new Set<string>();
@@ -49,6 +52,7 @@ export class BlockingScheduler {
     } catch {
       // Cleanup is best-effort during shutdown.
     }
+    this.desktopAppGuard.stop();
   }
 
   getState(): BlockingState {
@@ -94,6 +98,10 @@ export class BlockingScheduler {
     const scheduledDomains = domainsToBlock(this.commitments, new Date());
     const now = new Date();
     const lockScreenActive = shouldShowLockScreen(this.commitments, now);
+    const gamesActive = this.commitments.some(
+      (commitment) => commitment.scriptId === 'builtin-games' && isCommitmentEnforcedNow(commitment, now)
+    );
+    await this.desktopAppGuard.setBlocked(VIDEO_GAME_BLOCKED_PROCESSES, gamesActive);
     const domains = [...new Set([
       ...scheduledDomains,
       ...this.manuallyBlockedDomains

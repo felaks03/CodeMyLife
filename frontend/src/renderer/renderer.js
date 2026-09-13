@@ -196,10 +196,7 @@ function renderActiveLocks(commitments) {
     details.className = 'active-lock-details';
     const name = document.createElement('strong');
     name.textContent = commitment.scriptName;
-    const domains = document.createElement('span');
-    domains.className = 'active-lock-domains';
-    domains.textContent = commitment.blockedDomains.join(', ');
-    details.append(name, domains);
+    details.append(name);
 
     const countdown = document.createElement('div');
     countdown.className = 'active-lock-countdown';

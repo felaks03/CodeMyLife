@@ -115,6 +115,14 @@ test('genera aliases comunes para cada dominio bloqueado', () => {
   assert.ok(block.includes('::1 media.example.com'));
 });
 
+test('los aliases se limitan al dominio solicitado', () => {
+  const block = buildManagedBlock(['example.com']);
+
+  assert.equal(block.includes('youtube.com'), false);
+  assert.equal(block.includes('instagram.com'), false);
+  assert.equal(block.includes('other.example.com'), false);
+});
+
 test('no genera entradas wildcard invalidas en hosts', () => {
   const block = buildManagedBlock(['example.com']);
 

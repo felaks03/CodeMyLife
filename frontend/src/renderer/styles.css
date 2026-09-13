@@ -457,7 +457,7 @@ button.small {
 .scripts-browser-card .list.scripts {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+  grid-template-columns: 1fr;
   margin-bottom: 0;
   max-height: 520px;
 }
@@ -696,12 +696,6 @@ button.small {
   font-size: 14px;
 }
 
-.active-lock-domains {
-  color: var(--muted);
-  font-size: 11px;
-  overflow-wrap: anywhere;
-}
-
 .active-lock-countdown {
   align-items: flex-end;
   display: flex;
@@ -781,10 +775,6 @@ button.small {
   .action-hint {
     max-width: none;
     text-align: left;
-  }
-
-  .scripts-browser-card .list.scripts {
-    grid-template-columns: 1fr;
   }
 
   .commitment-details {

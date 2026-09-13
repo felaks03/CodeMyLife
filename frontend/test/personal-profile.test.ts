@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILTIN_SCRIPTS, INSTAGRAM_DOMAINS, LUST_BLOCKED_DOMAINS, VIDEO_GAME_BLOCKED_DOMAINS } from '../src/shared/builtin-scripts';
+import { BUILTIN_SCRIPTS, INSTAGRAM_DOMAINS, LUST_BLOCKED_DOMAINS, VIDEO_GAME_BLOCKED_PROCESSES } from '../src/shared/builtin-scripts';
 import { commitmentStats, domainsToBlock, isCommitmentEnforcedNow, shouldShowLockScreen } from '../src/shared/schedule';
 import { Commitment, Script } from '../src/shared/types';
 
@@ -37,7 +37,7 @@ const saturdayAt = (time: string) => new Date(`2026-09-05T${time}:00`);
 test('el perfil personal incluye todos los scripts integrados', () => {
   assert.ok(BUILTIN_SCRIPTS.length > 0);
   assert.ok(BUILTIN_SCRIPTS.every((script) => script._id.startsWith('builtin-')));
-  assert.ok(BUILTIN_SCRIPTS.filter((script) => !script.showLockScreen).every((script) => script.blockedDomains.length > 0));
+  assert.ok(BUILTIN_SCRIPTS.filter((script) => !script.showLockScreen && script._id !== 'builtin-games').every((script) => script.blockedDomains.length > 0));
 });
 
 test('el catalogo tiene identificadores unicos y configuraciones validas', () => {
@@ -47,6 +47,33 @@ test('el catalogo tiene identificadores unicos y configuraciones validas', () =>
   assert.ok(BUILTIN_SCRIPTS.every((script) => script.name.length > 0));
   assert.ok(BUILTIN_SCRIPTS.every((script) => !script.blockingMode || ['scheduled', 'always', 'daily-limit'].includes(script.blockingMode)));
   assert.equal(BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-instagram')?.dailyLimitMinutes, 15);
+});
+
+test('el catalogo incluye todos los bloqueos personales definidos', () => {
+  assert.deepEqual(BUILTIN_SCRIPTS.map((script) => script._id), [
+    'builtin-youtube',
+    'builtin-instagram',
+    'builtin-social-rest',
+    'builtin-sleep',
+    'builtin-lust',
+    'builtin-games'
+  ]);
+});
+
+test('el bloqueo de dormir no aporta dominios al bloqueo web', () => {
+  const sleep = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-sleep')!;
+  const lock = commitment(sleep, {
+    showLockScreen: true,
+    blockedDomains: [],
+    days: [0, 1, 2, 3, 4, 5, 6],
+    startTime: '00:00',
+    endTime: '08:00',
+    startsAt: '2026-01-01T00:00:00.000Z',
+    endsAt: '2026-12-31T23:59:59.000Z'
+  });
+
+  assert.deepEqual(domainsToBlock([lock], saturdayAt('04:00')), []);
+  assert.equal(shouldShowLockScreen([lock], saturdayAt('04:00')), true);
 });
 
 test('las redes sociales estan separadas entre Instagram y el resto', () => {
@@ -111,10 +138,10 @@ test('Bloqueo de videojuegos incluye Steam y Minecraft Launcher', () => {
   assert.equal(games.blockingMode, 'always');
   assert.equal(games.allowCustomDomains, false);
   assert.equal(games.unlockable, true);
-  assert.deepEqual(games.blockedDomains, VIDEO_GAME_BLOCKED_DOMAINS);
-  assert.ok(games.blockedDomains.includes('steampowered.com'));
-  assert.ok(games.blockedDomains.includes('minecraft.net'));
-  assert.ok(games.blockedDomains.includes('minecraftservices.com'));
+  assert.deepEqual(games.blockedDomains, []);
+  assert.deepEqual(games.blockedProcesses, VIDEO_GAME_BLOCKED_PROCESSES);
+  assert.ok(games.blockedProcesses.includes('steam.exe'));
+  assert.ok(games.blockedProcesses.includes('MinecraftLauncher.exe'));
 });
 
 test('Bloqueo de videojuegos es permanente dentro de sus fechas', () => {
@@ -130,6 +157,13 @@ test('Bloqueo de videojuegos es permanente dentro de sus fechas', () => {
 
   assert.equal(isCommitmentEnforcedNow(lock, mondayAt('03:00')), true);
   assert.equal(isCommitmentEnforcedNow(lock, sundayAt('23:00')), true);
+});
+
+test('Bloqueo de videojuegos no añade dominios web a hosts', () => {
+  const games = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-games')!;
+
+  assert.deepEqual(games.blockedDomains, []);
+  assert.deepEqual(games.blockedProcesses, VIDEO_GAME_BLOCKED_PROCESSES);
 });
 
 test('Bloqueo de videojuegos se reactiva tras un desbloqueo temporal futuro', () => {

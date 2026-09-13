@@ -28,6 +28,7 @@ export interface Script {
   dailyLimitMinutes?: number;
   showLockScreen?: boolean;
   unlockable?: boolean;
+  blockedProcesses?: string[];
   schedule?: {
     days: number[];
     startTime: string;

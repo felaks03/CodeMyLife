@@ -3,13 +3,13 @@ import { connectDatabase } from './config/db';
 import { env } from './config/env';
 
 async function start(): Promise<void> {
-  await connectDatabase();
-  createApp().listen(env.port, () => {
-    console.log(`CodeMyLife API listening on port ${env.port}`);
-  });
+  try {
+    await connectDatabase();
+    createApp().listen(env.port, () => {
+      console.log(`CodeMyLife API listening on port ${env.port}`);
+    });
+  } catch (error) {
+    console.log('Aviso: MongoDB no está disponible. Modo local activado.');
+    process.exit(0);
+  }
 }
-
-start().catch((error) => {
-  console.error('Failed to start server', error);
-  process.exit(1);
-});

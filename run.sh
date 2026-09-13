@@ -29,6 +29,10 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Cerrar instancias previas huérfanas si las hubiera para liberar el lock de ventana
+taskkill //F //IM electron.exe >/dev/null 2>&1 || true
+taskkill //F //IM CodeMyLife.exe >/dev/null 2>&1 || true
+
 echo "==> Instalando dependencias del backend"
 (cd "$BACKEND" && npm install --no-fund --no-audit)
 
@@ -82,4 +86,4 @@ tsc_pid=$!
 
 echo "==> Arrancando aplicacion de escritorio"
 echo "    Aviso: sin permisos de administrador el bloqueo no se aplicara."
-(cd "$FRONTEND" && npx electron .)
+"$FRONTEND/node_modules/electron/dist/electron.exe" "$FRONTEND"

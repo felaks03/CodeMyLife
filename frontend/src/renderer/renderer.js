@@ -220,7 +220,11 @@ function renderCommitments(commitments) {
   const list = el('commitments');
   list.replaceChildren();
 
-  if (commitments.length === 0) {
+  const visibleCommitments = commitments.filter((commitment) =>
+    commitment.status !== 'completed' || !commitment.name.endsWith(' - Test lock')
+  );
+
+  if (visibleCommitments.length === 0) {
     const empty = document.createElement('li');
     empty.textContent = i18n.t('empty');
     list.append(empty);
@@ -229,7 +233,7 @@ function renderCommitments(commitments) {
 
   const dayNames = i18n.t('dayNames');
 
-  commitments.forEach((commitment) => {
+  visibleCommitments.forEach((commitment) => {
     const item = document.createElement('li');
     item.className = 'commitment-card';
 

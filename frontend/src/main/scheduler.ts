@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { HostsBlocker } from './blocker';
 import { BrowserGuard } from './browser-guard';
-import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
+import { INSTAGRAM_DOMAINS, LUST_BLOCKED_DOMAINS } from '../shared/builtin-scripts';
 import { domainsToBlock, shouldShowLockScreen } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
 
@@ -102,7 +102,8 @@ export class BlockingScheduler {
     const domains = [...new Set([
       ...scheduledDomains,
       ...this.manuallyBlockedDomains,
-      ...INSTAGRAM_DOMAINS
+      ...INSTAGRAM_DOMAINS,
+      ...LUST_BLOCKED_DOMAINS
     ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain));
     const wasEnforcing = this.state.enforcing;
 

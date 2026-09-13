@@ -1,5 +1,20 @@
 import { Script } from './types';
 
+export const LUST_BLOCKED_DOMAINS = [
+  'pornhub.com',
+  'xvideos.com',
+  'xnxx.com',
+  'xhamster.com',
+  'redtube.com',
+  'youporn.com',
+  'tube8.com',
+  'spankbang.com',
+  'chaturbate.com',
+  'onlyfans.com',
+  'deviantart.com',
+  'flowgpt.com'
+];
+
 // Catalogo minimo para el modo invitado, sin conexion a un backend.
 export const INSTAGRAM_DOMAINS = [
   'instagram.com',
@@ -65,6 +80,17 @@ export const BUILTIN_SCRIPTS: Script[] = [
       startTime: '00:00',
       endTime: '08:00'
     }
+  },
+  {
+    _id: 'builtin-lust',
+    authorName: 'CodeMyLife',
+    name: 'Bloqueo Lust',
+    description: 'Bloquea permanentemente paginas para adultos, DeviantArt y FlowGPT.',
+    category: 'Permanente',
+    blockedDomains: LUST_BLOCKED_DOMAINS,
+    allowCustomDomains: false,
+    usageCount: 0,
+    blockingMode: 'always'
   }
 ];
 

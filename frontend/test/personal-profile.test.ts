@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILTIN_SCRIPTS, INSTAGRAM_DOMAINS } from '../src/shared/builtin-scripts';
+import { BUILTIN_SCRIPTS, INSTAGRAM_DOMAINS, LUST_BLOCKED_DOMAINS } from '../src/shared/builtin-scripts';
 import { commitmentStats, domainsToBlock, isCommitmentEnforcedNow, shouldShowLockScreen } from '../src/shared/schedule';
 import { Commitment, Script } from '../src/shared/types';
 
@@ -64,6 +64,31 @@ test('el resto de redes permanece bloqueado fuera de cualquier horario', () => {
   });
 
   assert.equal(isCommitmentEnforcedNow(lock, sundayAt('03:00')), true);
+});
+
+test('Bloqueo Lust incluye adultos, DeviantArt y FlowGPT', () => {
+  const lust = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-lust');
+
+  assert.ok(lust);
+  assert.equal(lust.blockingMode, 'always');
+  assert.equal(lust.allowCustomDomains, false);
+  assert.deepEqual(lust.blockedDomains, LUST_BLOCKED_DOMAINS);
+  assert.ok(lust.blockedDomains.includes('deviantart.com'));
+  assert.ok(lust.blockedDomains.includes('flowgpt.com'));
+});
+
+test('Bloqueo Lust se mantiene activo aunque no haya compromiso semanal', () => {
+  const lust = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-lust')!;
+  const lock = commitment(lust, {
+    days: [],
+    startTime: '23:59',
+    endTime: '00:01',
+    alwaysBlocked: true,
+    startsAt: '2026-01-01T00:00:00.000Z',
+    endsAt: '2026-12-31T23:59:59.000Z'
+  });
+
+  assert.equal(isCommitmentEnforcedNow(lock, sundayAt('12:00')), true);
 });
 
 test('Lock week crea una configuracion para cada script', () => {

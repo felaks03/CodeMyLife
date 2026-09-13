@@ -24,6 +24,12 @@ export function domainsToBlock(commitments: Commitment[], now: Date): string[] {
   return [...new Set(active.flatMap((commitment) => commitment.blockedDomains))].sort();
 }
 
+export function shouldShowLockScreen(commitments: Commitment[], now: Date): boolean {
+  return commitments.some((commitment) =>
+    commitment.showLockScreen === true && isCommitmentEnforcedNow(commitment, now)
+  );
+}
+
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }

@@ -10,6 +10,7 @@ export interface Commitment {
   startsAt: string;
   endsAt: string;
   alwaysBlocked?: boolean;
+  showLockScreen?: boolean;
   status: 'active' | 'completed' | 'cancelled';
 }
 
@@ -24,6 +25,7 @@ export interface Script {
   usageCount: number;
   blockingMode?: 'scheduled' | 'always' | 'daily-limit';
   dailyLimitMinutes?: number;
+  showLockScreen?: boolean;
   schedule?: {
     days: number[];
     startTime: string;
@@ -41,6 +43,7 @@ export interface NewCommitment {
   startsAt: string;
   endsAt: string;
   alwaysBlocked?: boolean;
+  showLockScreen?: boolean;
 }
 
 export interface NewScript {
@@ -62,4 +65,5 @@ export interface BlockingState {
   blockedDomains: string[];
   hasAdminRights: boolean;
   lastError: string | null;
+  lockScreenActive?: boolean;
 }

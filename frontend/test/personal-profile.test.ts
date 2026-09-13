@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BUILTIN_SCRIPTS, INSTAGRAM_DOMAINS } from '../src/shared/builtin-scripts';
-import { commitmentStats, domainsToBlock, isCommitmentEnforcedNow } from '../src/shared/schedule';
+import { commitmentStats, domainsToBlock, isCommitmentEnforcedNow, shouldShowLockScreen } from '../src/shared/schedule';
 import { Commitment, Script } from '../src/shared/types';
 
 const DEFAULT_LOCK_CONFIG = Object.freeze({
@@ -31,11 +31,12 @@ function commitment(script: Script, overrides: Partial<Commitment> = {}): Commit
 const mondayAt = (time: string) => new Date(`2026-09-07T${time}:00`);
 const fridayAt = (time: string) => new Date(`2026-09-11T${time}:00`);
 const sundayAt = (time: string) => new Date(`2026-09-13T${time}:00`);
+const saturdayAt = (time: string) => new Date(`2026-09-05T${time}:00`);
 
 test('el perfil personal incluye todos los scripts integrados', () => {
   assert.ok(BUILTIN_SCRIPTS.length > 0);
   assert.ok(BUILTIN_SCRIPTS.every((script) => script._id.startsWith('builtin-')));
-  assert.ok(BUILTIN_SCRIPTS.every((script) => script.blockedDomains.length > 0));
+  assert.ok(BUILTIN_SCRIPTS.filter((script) => !script.showLockScreen).every((script) => script.blockedDomains.length > 0));
 });
 
 test('las redes sociales estan separadas entre Instagram y el resto', () => {
@@ -115,4 +116,38 @@ test('las estadisticas cuentan el conjunto global de bloqueos', () => {
   assert.equal(stats.total, BUILTIN_SCRIPTS.length);
   assert.equal(stats.running, BUILTIN_SCRIPTS.length);
   assert.equal(stats.completed, 0);
+});
+
+test('el bloqueo de dormir se activa de medianoche a las ocho', () => {
+  const sleep = {
+    ...commitment(BUILTIN_SCRIPTS[0]),
+    showLockScreen: true,
+    days: [0, 1, 2, 3, 4, 5, 6],
+    startTime: '00:00',
+    endTime: '08:00',
+    startsAt: '2026-01-01T00:00:00.000Z',
+    endsAt: '2026-12-31T23:59:59.000Z'
+  };
+
+  assert.equal(isCommitmentEnforcedNow(sleep, saturdayAt('00:00')), true);
+  assert.equal(isCommitmentEnforcedNow(sleep, saturdayAt('07:59')), true);
+  assert.equal(isCommitmentEnforcedNow(sleep, saturdayAt('08:00')), false);
+  assert.equal(isCommitmentEnforcedNow(sleep, saturdayAt('23:00')), false);
+});
+
+test('la pantalla de dormir solo aparece si el script la solicita', () => {
+  const regular = commitment(BUILTIN_SCRIPTS[0]);
+  const sleep = {
+    ...regular,
+    showLockScreen: true,
+    days: [0, 1, 2, 3, 4, 5, 6],
+    startTime: '00:00',
+    endTime: '08:00',
+    startsAt: '2026-01-01T00:00:00.000Z',
+    endsAt: '2026-12-31T23:59:59.000Z'
+  };
+
+  assert.equal(shouldShowLockScreen([regular], saturdayAt('04:00')), false);
+  assert.equal(shouldShowLockScreen([sleep], saturdayAt('04:00')), true);
+  assert.equal(shouldShowLockScreen([sleep], saturdayAt('08:00')), false);
 });

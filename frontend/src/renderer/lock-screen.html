@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self';" />
+  <title>CodeMyLife - Descanso</title>
+  <link rel="stylesheet" href="lock-screen.css" />
+</head>
+<body>
+  <main class="sleep-lock" aria-live="polite">
+    <div class="sleep-lock-mark">CodeMyLife</div>
+    <p class="sleep-lock-eyebrow">Bloqueo de dormir</p>
+    <h1>Es hora de descansar</h1>
+    <p class="sleep-lock-copy">El ordenador volvera a estar disponible a las 08:00.</p>
+    <div id="sleep-countdown" class="sleep-countdown" aria-label="Tiempo restante">08:00:00</div>
+    <p class="sleep-lock-status">Pantalla bloqueada · regreso automatico</p>
+  </main>
+  <script src="lock-screen.js"></script>
+</body>
+</html>

@@ -49,6 +49,22 @@ export const BUILTIN_SCRIPTS: Script[] = [
     allowCustomDomains: true,
     usageCount: 0,
     blockingMode: 'always'
+  },
+  {
+    _id: 'builtin-sleep',
+    authorName: 'CodeMyLife',
+    name: 'Bloqueo de dormir',
+    description: 'Bloquea la pantalla cada noche de 00:00 a 08:00 para ayudarte a dormir.',
+    category: 'Descanso',
+    blockedDomains: [],
+    allowCustomDomains: false,
+    usageCount: 0,
+    showLockScreen: true,
+    schedule: {
+      days: [0, 1, 2, 3, 4, 5, 6],
+      startTime: '00:00',
+      endTime: '08:00'
+    }
   }
 ];
 

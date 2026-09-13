@@ -98,6 +98,7 @@ export const guestStore = {
       startsAt: payload.startsAt,
       endsAt: payload.endsAt,
       alwaysBlocked: payload.alwaysBlocked || script.blockingMode === 'always',
+      showLockScreen: payload.showLockScreen || script.showLockScreen === true,
       status: 'active'
     };
 

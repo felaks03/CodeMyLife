@@ -4,7 +4,7 @@ import * as path from 'path';
 import { HostsBlocker } from './blocker';
 import { BrowserGuard } from './browser-guard';
 import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
-import { domainsToBlock } from '../shared/schedule';
+import { domainsToBlock, shouldShowLockScreen } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
 
 const CHECK_INTERVAL_MS = 30_000;
@@ -26,7 +26,8 @@ export class BlockingScheduler {
     enforcing: false,
     blockedDomains: [],
     hasAdminRights: true,
-    lastError: null
+    lastError: null,
+    lockScreenActive: false
   };
 
   constructor(
@@ -83,6 +84,7 @@ export class BlockingScheduler {
     await this.syncFromServer();
 
     const scheduledDomains = domainsToBlock(this.commitments, new Date());
+    const lockScreenActive = shouldShowLockScreen(this.commitments, new Date());
     const domains = [...new Set([
       ...scheduledDomains,
       ...this.manuallyBlockedDomains,
@@ -96,7 +98,8 @@ export class BlockingScheduler {
         enforcing: domains.length > 0,
         blockedDomains: domains,
         hasAdminRights: true,
-        lastError: null
+        lastError: null,
+        lockScreenActive
       };
     } catch (error) {
       const hasAdminRights = await this.blocker.canWrite();
@@ -104,7 +107,8 @@ export class BlockingScheduler {
         enforcing: false,
         blockedDomains: domains,
         hasAdminRights,
-        lastError: hasAdminRights ? (error as Error).message : 'Se requieren permisos de administrador para aplicar el bloqueo.'
+        lastError: hasAdminRights ? (error as Error).message : 'Se requieren permisos de administrador para aplicar el bloqueo.',
+        lockScreenActive
       };
     }
 

@@ -12,6 +12,7 @@ const sessionStore = new SessionStore();
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
+let sleepLockWindow: BrowserWindow | null = null;
 let quitting = false;
 
 Menu.setApplicationMenu(null);
@@ -23,6 +24,7 @@ async function loadCommitments(): Promise<Commitment[] | null> {
 const scheduler = new BlockingScheduler(loadCommitments, (state) => {
   mainWindow?.webContents.send('blocking:state', state);
   updateTray(state);
+  syncSleepLockWindow(state.lockScreenActive === true);
 });
 
 function assetPath(file: string): string {
@@ -117,6 +119,53 @@ function updateTray(state: BlockingState): void {
   );
 }
 
+function syncSleepLockWindow(active: boolean): void {
+  if (active) {
+    if (!sleepLockWindow || sleepLockWindow.isDestroyed()) createSleepLockWindow();
+    return;
+  }
+  if (sleepLockWindow && !sleepLockWindow.isDestroyed()) sleepLockWindow.destroy();
+  sleepLockWindow = null;
+}
+
+function createSleepLockWindow(): void {
+  sleepLockWindow = new BrowserWindow({
+    fullscreen: true,
+    frame: false,
+    show: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    closable: false,
+    minimizable: false,
+    resizable: false,
+    kiosk: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+
+  sleepLockWindow.setAlwaysOnTop(true, 'screen-saver');
+  sleepLockWindow.loadFile(path.join(__dirname, '../../src/renderer/lock-screen.html'));
+  sleepLockWindow.once('ready-to-show', () => {
+    sleepLockWindow?.show();
+    sleepLockWindow?.focus();
+  });
+  sleepLockWindow.on('blur', () => {
+    if (sleepLockWindow && !sleepLockWindow.isDestroyed()) {
+      sleepLockWindow.show();
+      sleepLockWindow.focus();
+    }
+  });
+  sleepLockWindow.on('close', (event) => {
+    if (!quitting) event.preventDefault();
+  });
+  sleepLockWindow.on('closed', () => {
+    sleepLockWindow = null;
+  });
+}
+
 async function requestQuit(): Promise<void> {
   if (scheduler.getState().enforcing) {
     const { response } = await dialog.showMessageBox({
@@ -134,6 +183,8 @@ async function requestQuit(): Promise<void> {
   }
 
   quitting = true;
+  sleepLockWindow?.destroy();
+  sleepLockWindow = null;
   scheduler.stop();
   app.quit();
 }

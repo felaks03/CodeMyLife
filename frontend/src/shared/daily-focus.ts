@@ -12,6 +12,7 @@ export interface DailyFocusProgress {
   completed: boolean;
   startedAt?: string | null;
   elapsedMs?: number;
+  dayKey?: string;
 }
 
 export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
@@ -57,8 +58,20 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
   }
 ];
 
+export function serializeDateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 export function dailyFocusTaskIds(): string[] {
   return DAILY_FOCUS_TASKS.map((task) => task.id);
+}
+
+export function isGymEnabledForDate(date: Date): boolean {
+  return date.getDay() !== 0 && date.getDay() !== 6;
+}
+
+export function visibleDailyFocusTasks(date: Date): DailyFocusTask[] {
+  return DAILY_FOCUS_TASKS.filter((task) => task.id !== 'gym' || isGymEnabledForDate(date));
 }
 
 export function isDailyFocusWindow(date: Date): boolean {
@@ -66,15 +79,42 @@ export function isDailyFocusWindow(date: Date): boolean {
   return minutes >= 8 * 60 && minutes < 15 * 60;
 }
 
-export type DailyFocusState = { taskId: string; completed: boolean; startedAt?: string | null; elapsedMs?: number }[];
+export type DailyFocusState = { taskId: string; completed: boolean; startedAt?: string | null; elapsedMs?: number; dayKey?: string }[];
 
 export function progressForDay(dayKey: string, items: DailyFocusState): DailyFocusState {
   return items.map((item) => ({
     taskId: item.taskId,
     completed: Boolean(item.completed),
     startedAt: item.startedAt ?? null,
-    elapsedMs: Number(item.elapsedMs ?? 0)
+    elapsedMs: Number(item.elapsedMs ?? 0),
+    dayKey
   }));
+}
+
+export function normalizeDailyFocusProgress(raw: Partial<DailyFocusProgress>[] | undefined, todayKey: string): DailyFocusState {
+  const tasks = visibleDailyFocusTasks(new Date());
+  const defaults: DailyFocusState = tasks.map((task) => ({
+    taskId: task.id,
+    completed: false,
+    startedAt: null as string | null,
+    elapsedMs: 0,
+    dayKey: todayKey
+  }));
+
+  const byId = new Map(defaults.map((item) => [item.taskId, item]));
+  if (!Array.isArray(raw)) return defaults;
+
+  for (const item of raw) {
+    if (!item || typeof item.taskId !== 'string') continue;
+    const target = byId.get(item.taskId);
+    if (!target) continue;
+    target.completed = Boolean(item.completed);
+    target.startedAt = item.startedAt ?? null;
+    target.elapsedMs = Number.isFinite(Number(item.elapsedMs)) ? Math.max(0, Number(item.elapsedMs)) : 0;
+    target.dayKey = todayKey;
+  }
+
+  return [...byId.values()];
 }
 
 export function isDailyFocusBlocked(date: Date, progress: DailyFocusState): boolean {
@@ -88,3 +128,4 @@ export function minutesUntilFocusCutoff(date: Date): number {
   const diff = cutoff.getTime() - date.getTime();
   return Math.max(0, Math.ceil(diff / 60000));
 }
+

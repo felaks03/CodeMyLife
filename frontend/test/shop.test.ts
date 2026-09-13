@@ -10,11 +10,16 @@ test('la tienda tiene una recompensa de tiempo de videojuegos', () => {
   assert.ok(SHOP_ITEMS[0].durationMinutes > 0);
 });
 
-test('la tarea inicial es ir al gimnasio y entrega monedas', () => {
-  assert.equal(TASKS.length, 1);
-  assert.equal(TASKS[0].id, 'gym');
-  assert.equal(TASKS[0].frequency, 'daily');
-  assert.ok(TASKS[0].rewardCoins > 0);
+test('la lista diaria incluye las cinco tareas del foco', () => {
+  assert.equal(TASKS.length, 5);
+  assert.deepEqual(
+    TASKS.map((task) => task.id),
+    ['run3k', 'breakfast', 'cold-shower', 'gym', 'backtesting']
+  );
+  TASKS.forEach((task) => {
+    assert.equal(task.frequency, 'daily');
+    assert.ok(task.rewardCoins > 0);
+  });
 });
 
 test('una compra solo es posible con saldo suficiente', () => {

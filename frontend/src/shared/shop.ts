@@ -2,10 +2,38 @@ import { ShopItem, TaskDefinition } from './types';
 
 export const TASKS: TaskDefinition[] = [
   {
+    id: 'run3k',
+    name: 'Run 3k',
+    description: 'Completa la carrera de 3 km.',
+    rewardCoins: 12,
+    frequency: 'daily'
+  },
+  {
+    id: 'breakfast',
+    name: 'Desayunar',
+    description: 'Haz un desayuno completo antes del mediodía.',
+    rewardCoins: 8,
+    frequency: 'daily'
+  },
+  {
+    id: 'cold-shower',
+    name: 'Cold shower',
+    description: 'Toma la ducha fría.',
+    rewardCoins: 7,
+    frequency: 'daily'
+  },
+  {
     id: 'gym',
-    name: 'Ir al gimnasio',
-    description: 'Completa tu entrenamiento del dia.',
-    rewardCoins: 10,
+    name: 'Gym',
+    description: 'Haz tu entrenamiento del día.',
+    rewardCoins: 20,
+    frequency: 'daily'
+  },
+  {
+    id: 'backtesting',
+    name: 'Backtesting',
+    description: 'Revisa la estrategia y el backtesting.',
+    rewardCoins: 15,
     frequency: 'daily'
   }
 ];

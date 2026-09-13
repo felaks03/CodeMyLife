@@ -121,6 +121,57 @@ function showApp(user) {
   void loadEconomy();
 }
 
+function renderDailyFocusPreview() {
+  const preview = el('daily-focus-preview');
+  const list = el('preview-task-list');
+  const countdown = el('preview-countdown');
+  const tasks = [
+    { id: 'run3k', name: 'Run 3k', status: 'Pendiente' },
+    { id: 'breakfast', name: 'Desayunar', status: 'Pendiente' },
+    { id: 'cold-shower', name: 'Cold shower', status: 'Pendiente' },
+    { id: 'gym', name: 'Gym', status: 'Pendiente' },
+    { id: 'backtesting', name: 'Backtesting', status: 'Pendiente' }
+  ];
+
+  list.replaceChildren();
+  tasks.forEach((task) => {
+    const item = document.createElement('li');
+    item.className = 'daily-focus-row';
+    const left = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = task.name;
+    const meta = document.createElement('span');
+    meta.textContent = 'timer por tarea';
+    left.append(title, meta);
+    const right = document.createElement('div');
+    right.className = `daily-focus-status ${task.status === 'Pendiente' ? 'pending' : ''}`;
+    right.textContent = task.status;
+    item.append(left, right);
+    list.append(item);
+  });
+
+  const totalMinutes = 6 * 60 + 59;
+  let remainingSeconds = totalMinutes * 60;
+  const tick = () => {
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+    countdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    remainingSeconds -= 1;
+    if (remainingSeconds < 0) {
+      preview.classList.add('hidden');
+      clearInterval(intervalId);
+    }
+  };
+
+  preview.classList.remove('hidden');
+  tick();
+  const intervalId = setInterval(tick, 1000);
+}
+
+el('preview-daily-focus').addEventListener('click', () => {
+  renderDailyFocusPreview();
+});
+
 function renderBlockingState(state) {
   lastBlockingState = state;
 

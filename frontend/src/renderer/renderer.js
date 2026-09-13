@@ -528,7 +528,8 @@ el('test-lock').addEventListener('click', async () => {
   el('test-lock').disabled = true;
 
   try {
-    for (const script of availableScripts) {
+    const testScripts = availableScripts.filter((script) => !script.showLockScreen);
+    for (const script of testScripts) {
       for (const lockWindow of lockWindows) {
         await window.codeMyLife.createCommitment({
           scriptId: script._id,
@@ -604,20 +605,6 @@ el('lock-week').addEventListener('click', async () => {
     errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
   } finally {
     el('lock-week').disabled = false;
-  }
-});
-
-el('sleep-lock-test').addEventListener('click', async () => {
-  const banner = el('banner');
-  if (!window.confirm(i18n.t('sleepLockTestConfirm'))) return;
-
-  try {
-    await window.codeMyLife.startSleepLockTest();
-    banner.textContent = i18n.t('sleepLockTestStarted');
-    banner.classList.remove('hidden');
-  } catch (error) {
-    banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
-    banner.classList.remove('hidden');
   }
 });
 

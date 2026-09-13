@@ -145,6 +145,11 @@ test('las estadisticas cuentan el conjunto global de bloqueos', () => {
   assert.equal(stats.completed, 0);
 });
 
+test('sin bloqueos activos no se bloquea ningun dominio', () => {
+  assert.deepEqual(domainsToBlock([], saturdayAt('03:00')), []);
+  assert.equal(shouldShowLockScreen([], saturdayAt('03:00')), false);
+});
+
 test('el bloqueo de dormir se activa de medianoche a las ocho', () => {
   const sleep = {
     ...commitment(BUILTIN_SCRIPTS[0]),

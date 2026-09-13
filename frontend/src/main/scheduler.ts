@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { HostsBlocker } from './blocker';
 import { BrowserGuard } from './browser-guard';
-import { INSTAGRAM_DOMAINS, LUST_BLOCKED_DOMAINS } from '../shared/builtin-scripts';
+import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
 import { domainsToBlock, shouldShowLockScreen } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
 
@@ -22,7 +22,6 @@ export class BlockingScheduler {
   private commitments: Commitment[] = [];
   private temporarilyAllowedDomains = new Set<string>();
   private manuallyBlockedDomains = new Set<string>();
-  private testLockScreenEndsAt: Date | null = null;
   private state: BlockingState = {
     enforcing: false,
     blockedDomains: [],
@@ -61,6 +60,20 @@ export class BlockingScheduler {
 
   async setTemporarilyAllowed(domains: string[], allowed: boolean): Promise<void> {
     this.blocker.forceReconcile();
+    const now = new Date();
+    const instagramConfigured = this.commitments.some(
+      (commitment) =>
+        commitment.scriptId === 'builtin-instagram' &&
+        commitment.status === 'active' &&
+        new Date(commitment.startsAt) <= now &&
+        new Date(commitment.endsAt) >= now
+    );
+
+    if (!instagramConfigured) {
+      await this.tick();
+      return;
+    }
+
     for (const domain of domains) {
       if (allowed) {
         this.temporarilyAllowedDomains.add(domain);
@@ -81,29 +94,15 @@ export class BlockingScheduler {
     }
   }
 
-  async startSleepLockTest(durationMs = 30_000): Promise<void> {
-    this.testLockScreenEndsAt = new Date(Date.now() + durationMs);
-    await this.tick();
-    setTimeout(() => {
-      if (this.testLockScreenEndsAt && this.testLockScreenEndsAt.getTime() <= Date.now()) {
-        this.testLockScreenEndsAt = null;
-        void this.tick();
-      }
-    }, durationMs + 100);
-  }
-
   private async tick(): Promise<void> {
     await this.syncFromServer();
 
     const scheduledDomains = domainsToBlock(this.commitments, new Date());
     const now = new Date();
-    const testLockActive = this.testLockScreenEndsAt !== null && this.testLockScreenEndsAt > now;
-    const lockScreenActive = testLockActive || shouldShowLockScreen(this.commitments, now);
+    const lockScreenActive = shouldShowLockScreen(this.commitments, now);
     const domains = [...new Set([
       ...scheduledDomains,
-      ...this.manuallyBlockedDomains,
-      ...INSTAGRAM_DOMAINS,
-      ...LUST_BLOCKED_DOMAINS
+      ...this.manuallyBlockedDomains
     ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain));
     const wasEnforcing = this.state.enforcing;
 
@@ -114,8 +113,7 @@ export class BlockingScheduler {
         blockedDomains: domains,
         hasAdminRights: true,
         lastError: null,
-        lockScreenActive,
-        lockScreenEndsAt: testLockActive ? this.testLockScreenEndsAt?.toISOString() : undefined
+        lockScreenActive
       };
     } catch (error) {
       const hasAdminRights = await this.blocker.canWrite();
@@ -124,8 +122,7 @@ export class BlockingScheduler {
         blockedDomains: domains,
         hasAdminRights,
         lastError: hasAdminRights ? (error as Error).message : 'Se requieren permisos de administrador para aplicar el bloqueo.',
-        lockScreenActive,
-        lockScreenEndsAt: testLockActive ? this.testLockScreenEndsAt?.toISOString() : undefined
+        lockScreenActive
       };
     }
 

@@ -1,7 +1,4 @@
 function lockEnd() {
-  const testEndsAt = new URLSearchParams(window.location.search).get('testEndsAt');
-  if (testEndsAt) return new Date(testEndsAt);
-
   const now = new Date();
   const end = new Date(now);
   end.setHours(8, 0, 0, 0);

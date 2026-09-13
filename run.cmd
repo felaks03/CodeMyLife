@@ -7,15 +7,14 @@ set "BACKEND=%ROOT%backend"
 set "FRONTEND=%ROOT%frontend"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$projectRoot = [regex]::Escape(([System.IO.Path]::GetFullPath('%ROOT%')).TrimEnd('\')); Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('electron.exe', 'CodeMyLife.exe') -and $_.CommandLine -and $_.CommandLine -match $projectRoot } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Start-Sleep -Milliseconds 500" >nul 2>&1
 
-REM La terminal debe estar elevada para modificar hosts. No abrimos otra ventana:
-REM si no esta elevada, mostramos el aviso en esta misma terminal y continuamos.
+REM La terminal debe estar elevada para modificar hosts.
 net session >nul 2>&1
-if "%errorlevel%"=="0" (
-  rem Permisos de administrador confirmados.
-) else (
-  echo [INFO] Terminal sin permisos elevados.
-  echo [INFO] La app arrancara, pero los bloqueos de Windows requieren ejecutar VS Code como administrador.
+if not "%errorlevel%"=="0" (
+  echo [INFO] Solicitando permisos de administrador para aplicar los bloqueos...
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+  exit /b 0
 )
+echo [INFO] Permisos de administrador confirmados.
 
 pushd "%BACKEND%"
 call npm.cmd install --no-fund --no-audit --loglevel=error

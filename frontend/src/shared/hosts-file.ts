@@ -2,6 +2,7 @@ export const BEGIN_MARKER = '# === CodeMyLife BEGIN (no editar a mano) ===';
 export const END_MARKER = '# === CodeMyLife END ===';
 
 const DOMAIN_PATTERN = /^(?!-)[a-z0-9-]{1,63}(\.[a-z0-9-]{1,63})+$/;
+const COMMON_SUBDOMAINS = ['www', 'm', 'mobile', 'app', 'api', 'static', 'cdn', 'media', 'img', 'images', 'video', 'embed'];
 
 export function sanitizeDomains(domains: string[]): string[] {
   return [...new Set(domains.map((domain) => domain.trim().toLowerCase()))]
@@ -10,12 +11,8 @@ export function sanitizeDomains(domains: string[]): string[] {
 }
 
 export function buildManagedBlock(domains: string[]): string {
-  const entries = domains.flatMap((domain) => [
-    `127.0.0.1 ${domain}`,
-    `127.0.0.1 www.${domain}`,
-    `::1 ${domain}`,
-    `::1 www.${domain}`
-  ]);
+  const hosts = domains.flatMap((domain) => [domain, ...COMMON_SUBDOMAINS.map((prefix) => `${prefix}.${domain}`)]);
+  const entries = hosts.flatMap((host) => [`127.0.0.1 ${host}`, `::1 ${host}`]);
   return [BEGIN_MARKER, ...entries, END_MARKER].join('\r\n');
 }
 

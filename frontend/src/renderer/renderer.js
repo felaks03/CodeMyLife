@@ -48,6 +48,13 @@ function showApp(user) {
   el('app-view').classList.remove('hidden');
   el('user-name').textContent = user.id === 'guest' ? `${user.name} (${i18n.t('guestBadge')})` : user.name;
   el('guest-banner').classList.toggle('hidden', user.id !== 'guest');
+
+  // Actualizar datos de perfil
+  el('profile-name').textContent = user.id === 'guest' ? `${user.name} (${i18n.t('guestBadge')})` : user.name;
+  el('profile-email').textContent = user.email || (user.id === 'guest' ? 'Almacenamiento local' : '');
+  el('profile-avatar').textContent = (user.name || 'P').charAt(0).toUpperCase();
+
+  switchTab('dashboard');
   void refreshOverview();
   void refreshBlockingState();
   void searchScripts('');
@@ -161,6 +168,64 @@ function renderOverview(overview) {
   el('stats').textContent = `${stats.running} ${i18n.t('running')} · ${stats.completed} ${i18n.t('completed')} · ${stats.total} ${i18n.t('total')} · ${stats.streak} ${i18n.t('streak')}`;
   renderCalendar(overview.calendar);
   renderCommitments(overview.commitments.filter((commitment) => commitment.status !== 'cancelled'));
+  renderProfile(overview);
+}
+
+function renderProfile(overview) {
+  const activeCommitments = overview.commitments.filter((c) => c.status !== 'cancelled');
+  const scriptsContainer = el('profile-scripts');
+  scriptsContainer.replaceChildren();
+
+  // Actualizar resumen en la cabecera del perfil
+  el('profile-stats-summary').textContent = `${activeCommitments.length} ${i18n.t('profileActiveCount')} · ${overview.stats.streak} ${i18n.t('streak')}`;
+
+  if (activeCommitments.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'meta';
+    empty.style.padding = '12px 0';
+    empty.textContent = i18n.t('profileScriptsEmpty');
+    scriptsContainer.append(empty);
+    return;
+  }
+
+  const dayNames = i18n.t('dayNames');
+
+  activeCommitments.forEach((commitment) => {
+    const item = document.createElement('div');
+    item.className = 'profile-script-item';
+
+    const header = document.createElement('div');
+    header.className = 'profile-script-header';
+
+    const title = document.createElement('div');
+    title.className = 'profile-script-title';
+    title.textContent = commitment.scriptName ? `${commitment.scriptName} (${commitment.name})` : commitment.name;
+
+    if (isRunning(commitment)) {
+      const tag = document.createElement('span');
+      tag.className = 'tag active';
+      tag.textContent = i18n.t('statusActive');
+      header.append(title, tag);
+    } else {
+      header.append(title);
+    }
+
+    const schedule = document.createElement('div');
+    schedule.className = 'meta';
+    schedule.textContent = `${commitment.days.map((d) => dayNames[d]).join(', ')} · ${commitment.startTime}-${commitment.endTime} (${commitment.startsAt.slice(0, 10)} → ${commitment.endsAt.slice(0, 10)})`;
+
+    const domainsList = document.createElement('div');
+    domainsList.className = 'profile-script-domains';
+    commitment.blockedDomains.forEach((domain) => {
+      const pill = document.createElement('span');
+      pill.className = 'domain-pill';
+      pill.textContent = domain;
+      domainsList.append(pill);
+    });
+
+    item.append(header, schedule, domainsList);
+    scriptsContainer.append(item);
+  });
 }
 
 async function refreshOverview() {
@@ -262,6 +327,17 @@ function applyLanguage(language) {
     void searchScripts(el('script-search').value);
   }
 }
+
+function switchTab(tab) {
+  const isDashboard = tab === 'dashboard';
+  el('tab-btn-dashboard').classList.toggle('active', isDashboard);
+  el('tab-btn-profile').classList.toggle('active', !isDashboard);
+  el('tab-dashboard').classList.toggle('hidden', !isDashboard);
+  el('tab-profile').classList.toggle('hidden', isDashboard);
+}
+
+el('tab-btn-dashboard').addEventListener('click', () => switchTab('dashboard'));
+el('tab-btn-profile').addEventListener('click', () => switchTab('profile'));
 
 el('switch-mode').addEventListener('click', (event) => {
   event.preventDefault();

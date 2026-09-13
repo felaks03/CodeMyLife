@@ -143,7 +143,7 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('auth:guest', async () => {
-    const user = { id: 'guest', email: '', name: 'Invitado' };
+    const user = { id: 'guest', email: '', name: 'Perfil de Prueba' };
     await sessionStore.save({ token: null, user, guest: true });
     await scheduler.refresh();
     return user;
@@ -195,7 +195,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('scripts:create', async (_event, payload: NewScript) => {
     if (sessionStore.session?.guest) {
-      throw new Error('Crea una cuenta para publicar scripts para otras personas.');
+      return guestStore.createScript(payload);
     }
     return api.createScript(requireToken(), payload);
   });

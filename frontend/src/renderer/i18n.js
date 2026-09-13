@@ -32,9 +32,9 @@ const TRANSLATIONS = {
     streak: 'dias de racha',
     dayNames: ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'],
     statusActive: 'En curso',
-    guestContinue: 'Continuar como invitado',
-    guestBadge: 'Invitado',
-    guestBanner: 'Estas en modo invitado: tus compromisos se guardan solo en este equipo y se perderan si desinstalas la app.',
+    guestContinue: 'Entrar con perfil de prueba',
+    guestBadge: 'Temporal',
+    guestBanner: 'Estas usando un perfil de prueba: tus compromisos y scripts se guardan localmente en este equipo.',
     searchScripts: 'Buscar scripts de la comunidad',
     searchPlaceholder: 'Ej: redes sociales, videojuegos, YouTube...',
     publishScript: 'Publicar un script nuevo',
@@ -49,7 +49,13 @@ const TRANSLATIONS = {
     selectedScript: 'Script seleccionado',
     customDomains: 'Dominios adicionales (opcional, uno por linea)',
     changeScript: 'Elegir otro script',
-    fixedDomains: 'Bloquea siempre'
+    fixedDomains: 'Bloquea siempre',
+    profileTitle: 'Mi Perfil',
+    profileScriptsTitle: 'Scripts activos en tu equipo',
+    profileScriptsEmpty: 'No tienes scripts configurados actualmente en tu perfil. Elige uno y crea un compromiso para empezar a aplicarlo a tu equipo.',
+    profileActiveCount: 'scripts configurados',
+    tabCommitments: 'Bloqueos y Estadisticas',
+    tabProfile: 'Mi Perfil'
   },
   en: {
     tagline: 'Commitments you actually keep.',
@@ -84,9 +90,9 @@ const TRANSLATIONS = {
     streak: 'day streak',
     dayNames: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     statusActive: 'Running',
-    guestContinue: 'Continue as guest',
-    guestBadge: 'Guest',
-    guestBanner: 'You are in guest mode: your commitments are saved only on this device and will be lost if you uninstall the app.',
+    guestContinue: 'Continue with test profile',
+    guestBadge: 'Temporary',
+    guestBanner: 'You are using a test profile: your commitments and scripts are saved locally on this device.',
     searchScripts: 'Search community scripts',
     searchPlaceholder: 'E.g. social media, gaming, YouTube...',
     publishScript: 'Publish a new script',
@@ -101,7 +107,13 @@ const TRANSLATIONS = {
     selectedScript: 'Selected script',
     customDomains: 'Extra domains (optional, one per line)',
     changeScript: 'Choose another script',
-    fixedDomains: 'Always blocks'
+    fixedDomains: 'Always blocks',
+    profileTitle: 'My Profile',
+    profileScriptsTitle: 'Scripts active on your machine',
+    profileScriptsEmpty: 'You currently have no scripts configured on your profile. Pick one and create a commitment to start applying it to your machine.',
+    profileActiveCount: 'configured scripts',
+    tabCommitments: 'Blocks & Activity',
+    tabProfile: 'My Profile'
   }
 };
 

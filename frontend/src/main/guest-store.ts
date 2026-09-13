@@ -2,30 +2,68 @@ import { app } from 'electron';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
-import { Commitment, NewCommitment } from '../shared/types';
+import { Commitment, NewCommitment, Script, NewScript } from '../shared/types';
 import { BUILTIN_SCRIPTS, searchBuiltinScripts } from '../shared/builtin-scripts';
 
 // Almacena los compromisos del modo invitado solo en este dispositivo, sin backend.
-function storeFile(): string {
+function commitmentsFile(): string {
   return path.join(app.getPath('userData'), 'guest-commitments.json');
 }
 
-async function readAll(): Promise<Commitment[]> {
+function scriptsFile(): string {
+  return path.join(app.getPath('userData'), 'guest-scripts.json');
+}
+
+async function readCommitments(): Promise<Commitment[]> {
   try {
-    return JSON.parse(await fs.readFile(storeFile(), 'utf8')) as Commitment[];
+    return JSON.parse(await fs.readFile(commitmentsFile(), 'utf8')) as Commitment[];
   } catch {
     return [];
   }
 }
 
-async function writeAll(commitments: Commitment[]): Promise<void> {
-  await fs.writeFile(storeFile(), JSON.stringify(commitments), 'utf8');
+async function writeCommitments(commitments: Commitment[]): Promise<void> {
+  await fs.writeFile(commitmentsFile(), JSON.stringify(commitments), 'utf8');
+}
+
+async function readScripts(): Promise<Script[]> {
+  try {
+    return JSON.parse(await fs.readFile(scriptsFile(), 'utf8')) as Script[];
+  } catch {
+    return [];
+  }
+}
+
+async function writeScripts(scripts: Script[]): Promise<void> {
+  await fs.writeFile(scriptsFile(), JSON.stringify(scripts), 'utf8');
 }
 
 export const guestStore = {
-  list: (): Promise<Commitment[]> => readAll(),
+  list: (): Promise<Commitment[]> => readCommitments(),
 
-  searchScripts: (query: string) => searchBuiltinScripts(query),
+  searchScripts: async (query: string) => {
+    const builtin = searchBuiltinScripts(query);
+    const published = await readScripts();
+    return [...builtin, ...published];
+  },
+
+  async createScript(payload: NewScript): Promise<Script> {
+    const scripts = await readScripts();
+    const script: Script = {
+      _id: `guest-${randomUUID()}`,
+      authorName: 'Perfil de Prueba',
+      name: payload.name,
+      description: payload.description,
+      category: payload.category,
+      blockedDomains: payload.blockedDomains.map((d) => d.toLowerCase()),
+      allowCustomDomains: payload.allowCustomDomains ?? false,
+      usageCount: 0
+    };
+
+    scripts.push(script);
+    await writeScripts(scripts);
+    return script;
+  },
 
   async create(payload: NewCommitment): Promise<Commitment> {
     if (new Date(payload.endsAt) <= new Date(payload.startsAt)) {
@@ -35,7 +73,9 @@ export const guestStore = {
       throw new Error('endTime debe ser posterior a startTime.');
     }
 
-    const script = BUILTIN_SCRIPTS.find((s) => s._id === payload.scriptId);
+    // Buscar en builtin + guest scripts
+    const allScripts = [...BUILTIN_SCRIPTS, ...(await readScripts())];
+    const script = allScripts.find((s) => s._id === payload.scriptId);
     if (!script) {
       throw new Error('Script no encontrado.');
     }
@@ -45,7 +85,7 @@ export const guestStore = {
       : [];
     const blockedDomains = [...new Set([...script.blockedDomains, ...customDomains])];
 
-    const commitments = await readAll();
+    const commitments = await readCommitments();
     const commitment: Commitment = {
       _id: randomUUID(),
       scriptId: script._id,
@@ -61,12 +101,12 @@ export const guestStore = {
     };
 
     commitments.push(commitment);
-    await writeAll(commitments);
+    await writeCommitments(commitments);
     return commitment;
   },
 
   async cancel(id: string): Promise<Commitment> {
-    const commitments = await readAll();
+    const commitments = await readCommitments();
     const commitment = commitments.find((c) => c._id === id);
     if (!commitment) {
       throw new Error('Compromiso no encontrado.');
@@ -80,7 +120,7 @@ export const guestStore = {
     }
 
     commitment.status = 'cancelled';
-    await writeAll(commitments);
+    await writeCommitments(commitments);
     return commitment;
   }
 };

@@ -16,7 +16,17 @@ function scriptsFile(): string {
 
 async function readCommitments(): Promise<Commitment[]> {
   try {
-    return JSON.parse(await fs.readFile(commitmentsFile(), 'utf8')) as Commitment[];
+    const commitments = JSON.parse(await fs.readFile(commitmentsFile(), 'utf8')) as Commitment[];
+    const now = Date.now();
+    let changed = false;
+    for (const commitment of commitments) {
+      if (commitment.status === 'active' && new Date(commitment.endsAt).getTime() < now) {
+        commitment.status = 'completed';
+        changed = true;
+      }
+    }
+    if (changed) await writeCommitments(commitments);
+    return commitments;
   } catch {
     return [];
   }
@@ -124,5 +134,18 @@ export const guestStore = {
     commitment.status = 'cancelled';
     await writeCommitments(commitments);
     return commitment;
+  },
+
+  async cancelTestLocks(): Promise<number> {
+    const commitments = await readCommitments();
+    let cancelled = 0;
+    for (const commitment of commitments) {
+      if (commitment.status === 'active' && commitment.name.endsWith(' - Test lock')) {
+        commitment.status = 'cancelled';
+        cancelled++;
+      }
+    }
+    if (cancelled > 0) await writeCommitments(commitments);
+    return cancelled;
   }
 };

@@ -150,6 +150,15 @@ test('sin bloqueos activos no se bloquea ningun dominio', () => {
   assert.equal(shouldShowLockScreen([], saturdayAt('03:00')), false);
 });
 
+test('un compromiso vencido no se considera un bloqueo activo', () => {
+  const expired = commitment(BUILTIN_SCRIPTS[0], {
+    endsAt: '2026-09-06T23:59:59.000Z',
+    status: 'active'
+  });
+
+  assert.equal(isCommitmentEnforcedNow(expired, mondayAt('12:00')), false);
+});
+
 test('el bloqueo de dormir se activa de medianoche a las ocho', () => {
   const sleep = {
     ...commitment(BUILTIN_SCRIPTS[0]),

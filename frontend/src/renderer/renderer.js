@@ -177,6 +177,8 @@ function renderActiveLocks(commitments) {
   const section = el('active-locks');
   const list = el('active-lock-list');
   const activeLocks = commitments.filter(isRunning);
+  const activeTestLocks = activeLocks.filter((commitment) => commitment.name.endsWith(' - Test lock'));
+  el('exit-test-lock').classList.toggle('hidden', activeTestLocks.length === 0);
   list.replaceChildren();
 
   if (activeLocks.length === 0) {
@@ -320,6 +322,20 @@ async function refreshOverview() {
     el('stats').textContent = i18n.t('offline');
   }
 }
+
+el('exit-test-lock').addEventListener('click', async () => {
+  const banner = el('banner');
+  try {
+    await window.codeMyLife.cancelTestLocks();
+    banner.textContent = i18n.t('exitTestLockSuccess');
+    banner.classList.remove('hidden');
+    await refreshOverview();
+    await refreshBlockingState();
+  } catch (error) {
+    banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+    banner.classList.remove('hidden');
+  }
+});
 
 async function cancelCommitment(id) {
   const errorLabel = el('banner');

@@ -280,6 +280,12 @@ function registerIpcHandlers(): void {
     return cancelled;
   });
 
+  ipcMain.handle('commitments:cancel-test-locks', async () => {
+    const cancelled = await guestStore.cancelTestLocks();
+    await scheduler.refresh();
+    return cancelled;
+  });
+
   ipcMain.handle('scripts:list', async () => {
     return guestStore.searchScripts('');
   });

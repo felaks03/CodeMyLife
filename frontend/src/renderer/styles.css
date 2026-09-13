@@ -723,6 +723,18 @@ button.small {
   letter-spacing: 1px;
 }
 
+.exit-test-lock {
+  background: transparent;
+  border-color: rgba(240, 100, 120, .55);
+  color: var(--danger-hover);
+  margin-top: 12px;
+}
+
+.exit-test-lock:hover {
+  background: rgba(217, 72, 95, .14);
+  border-color: var(--danger-hover);
+}
+
 .script-card {
   transition: border-color .18s ease, box-shadow .18s ease;
 }

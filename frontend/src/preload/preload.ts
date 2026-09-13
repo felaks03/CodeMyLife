@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('codeMyLife', {
     ipcRenderer.invoke('commitments:create', payload),
   cancelCommitment: (id: string): Promise<Commitment> =>
     ipcRenderer.invoke('commitments:cancel', id),
+  cancelTestLocks: (): Promise<number> => ipcRenderer.invoke('commitments:cancel-test-locks'),
   listScripts: (): Promise<Script[]> => ipcRenderer.invoke('scripts:list'),
   startInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:start-usage'),
   pauseInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:pause-usage'),

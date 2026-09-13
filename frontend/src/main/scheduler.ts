@@ -104,6 +104,16 @@ export class BlockingScheduler {
       ...scheduledDomains,
       ...this.manuallyBlockedDomains
     ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain));
+    const instagramIsBlocked = INSTAGRAM_DOMAINS.some((domain) => domains.includes(domain));
+    if (instagramIsBlocked) {
+      try {
+        await this.browserGuard.blockChrome();
+      } catch {
+        // Hosts remains as a fallback when Chrome firewall protection is unavailable.
+      }
+    } else {
+      await this.browserGuard.unblockChrome();
+    }
     const wasEnforcing = this.state.enforcing;
 
     try {

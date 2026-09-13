@@ -247,7 +247,7 @@ function renderDailyFocusPreview() {
 }
 
 el('preview-daily-focus').addEventListener('click', () => {
-  renderDailyFocusPreview();
+  void window.codeMyLife.openDailyFocusPreview();
 });
 
 function renderBlockingState(state) {

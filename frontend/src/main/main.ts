@@ -14,6 +14,8 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
 let sleepLockWindow: BrowserWindow | null = null;
+let dailyFocusPreviewWindow: BrowserWindow | null = null;
+let dailyFocusPreviewTimer: ReturnType<typeof setTimeout> | null = null;
 let quitting = false;
 
 Menu.setApplicationMenu(null);
@@ -32,6 +34,20 @@ ipcMain.handle('commitments:cancel-test-locks', async () => {
   const cancelled = await guestStore.cancelTestLocks();
   await scheduler.refresh();
   return cancelled;
+});
+
+ipcMain.handle('daily-focus-preview:open', () => {
+  if (dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()) {
+    dailyFocusPreviewWindow.show();
+    dailyFocusPreviewWindow.focus();
+    return;
+  }
+
+  createDailyFocusPreviewWindow();
+});
+
+ipcMain.handle('daily-focus-preview:close', () => {
+  closeDailyFocusPreviewWindow();
 });
 
 function assetPath(file: string): string {
@@ -171,6 +187,59 @@ function createSleepLockWindow(): void {
   sleepLockWindow.on('closed', () => {
     sleepLockWindow = null;
   });
+}
+
+function closeDailyFocusPreviewWindow(): void {
+  if (dailyFocusPreviewTimer) clearTimeout(dailyFocusPreviewTimer);
+  dailyFocusPreviewTimer = null;
+  if (dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()) {
+    dailyFocusPreviewWindow.destroy();
+  }
+  dailyFocusPreviewWindow = null;
+}
+
+function createDailyFocusPreviewWindow(): void {
+  dailyFocusPreviewWindow = new BrowserWindow({
+    fullscreen: true,
+    frame: false,
+    show: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    closable: false,
+    minimizable: false,
+    maximizable: false,
+    resizable: false,
+    kiosk: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(__dirname, '../preload/preload.js')
+    }
+  });
+
+  dailyFocusPreviewWindow.setAlwaysOnTop(true, 'screen-saver');
+  dailyFocusPreviewWindow.loadFile(path.join(__dirname, '../../src/renderer/daily-focus-preview.html'));
+  dailyFocusPreviewWindow.once('ready-to-show', () => {
+    dailyFocusPreviewWindow?.show();
+    dailyFocusPreviewWindow?.focus();
+  });
+  dailyFocusPreviewWindow.on('blur', () => {
+    if (dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()) {
+      dailyFocusPreviewWindow.show();
+      dailyFocusPreviewWindow.focus();
+    }
+  });
+  dailyFocusPreviewWindow.on('close', (event) => {
+    if (!quitting) event.preventDefault();
+  });
+  dailyFocusPreviewWindow.on('closed', () => {
+    if (dailyFocusPreviewTimer) clearTimeout(dailyFocusPreviewTimer);
+    dailyFocusPreviewTimer = null;
+    dailyFocusPreviewWindow = null;
+  });
+
+  dailyFocusPreviewTimer = setTimeout(closeDailyFocusPreviewWindow, 30_000);
 }
 
 async function requestQuit(): Promise<void> {

@@ -267,18 +267,6 @@ button.small {
   white-space: nowrap;
 }
 
-.instagram-open {
-  background: var(--danger);
-  flex: 0 0 auto;
-  font-size: 11px;
-  padding: 6px 9px;
-  width: auto;
-}
-
-.instagram-open:hover {
-  background: var(--danger-hover);
-}
-
 .script-card-meta {
   margin-top: 8px;
 }
@@ -518,15 +506,6 @@ button.small {
   color: var(--ok);
 }
 
-.status {
-  color: var(--muted);
-  margin-left: 12px;
-}
-
-.status.on {
-  color: var(--ok);
-}
-
 .banner {
   background: rgba(217, 72, 95, .13);
   border: 1px solid var(--danger);
@@ -669,8 +648,79 @@ button.small {
   letter-spacing: .2px;
 }
 
-.status.on {
+.active-locks {
+  background: rgba(217, 72, 95, .12);
+  border: 1px solid rgba(240, 100, 120, .5);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+}
+
+.active-locks-heading {
+  align-items: center;
   color: var(--danger-hover);
+  display: flex;
+  font-size: 12px;
+  gap: 8px;
+  letter-spacing: .4px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.live-indicator {
+  background: var(--danger-hover);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(240, 100, 120, .16);
+  height: 7px;
+  width: 7px;
+}
+
+.active-lock-item {
+  align-items: center;
+  border-top: 1px solid rgba(240, 100, 120, .18);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding-top: 10px;
+}
+
+.active-lock-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.active-lock-details strong {
+  color: #fff;
+  font-size: 14px;
+}
+
+.active-lock-domains {
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.active-lock-countdown {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.active-lock-countdown span {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.active-lock-countdown strong {
+  color: var(--danger-hover);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
 }
 
 .script-card {
@@ -693,6 +743,16 @@ button.small {
   .topbar {
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .active-lock-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .active-lock-countdown {
+    align-items: flex-start;
   }
 
   .scripts-page-heading {

@@ -13,13 +13,12 @@ net session >nul 2>&1
 if "%errorlevel%"=="0" (
   rem Permisos de administrador confirmados.
 ) else (
-  echo [WARN] Esta terminal NO tiene permisos de administrador.
-  echo [WARN] La app arrancara, pero el bloqueo de Windows puede fallar.
-  echo [WARN] Para aplicar hosts, abre VS Code como administrador y vuelve a ejecutar run.cmd.
+  echo [INFO] Terminal sin permisos elevados.
+  echo [INFO] La app arrancara, pero los bloqueos de Windows requieren ejecutar VS Code como administrador.
 )
 
 pushd "%BACKEND%"
-call npm.cmd install --no-fund --no-audit
+call npm.cmd install --no-fund --no-audit --loglevel=error
 if errorlevel 1 (
   echo [ERROR] npm install del backend fallo con codigo %errorlevel%.
   exit /b 1
@@ -53,7 +52,7 @@ if "%API_READY%"=="1" (
 )
 
 pushd "%FRONTEND%"
-call npm.cmd install --no-fund --no-audit
+call npm.cmd install --no-fund --no-audit --loglevel=error
 if errorlevel 1 (
   echo [ERROR] npm install del frontend fallo con codigo %errorlevel%.
   exit /b 1

@@ -14,12 +14,18 @@
     <header class="topbar">
       <div>
         <strong id="user-name"></strong>
-        <span id="blocking-status" class="status" role="status" aria-live="polite"></span>
       </div>
       <div class="actions">
         <button id="lang-app" class="ghost" type="button">EN</button>
       </div>
     </header>
+    <section id="active-locks" class="active-locks hidden" aria-live="polite">
+      <div class="active-locks-heading">
+        <span class="live-indicator"></span>
+        <strong data-i18n="activeLocksTitle"></strong>
+      </div>
+      <div id="active-lock-list"></div>
+    </section>
 
     <div id="tab-profile" class="tab-content">
       <div class="profile-layout">

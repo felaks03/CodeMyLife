@@ -4,6 +4,7 @@ let lastBlockingState = null;
 let availableScripts = [];
 let instagramTimer = null;
 let instagramTimerInterval = null;
+let activeLocksInterval = null;
 
 const DEFAULT_LOCK_CONFIG = Object.freeze({
   nameSuffix: ' - Weekly lock',
@@ -118,11 +119,6 @@ function showApp(user) {
 
 function renderBlockingState(state) {
   lastBlockingState = state;
-  const status = el('blocking-status');
-  status.classList.toggle('on', state.enforcing);
-  status.textContent = state.enforcing
-    ? `${i18n.t('blocking')}: ${state.blockedDomains.join(', ')}`
-    : i18n.t('notBlocking');
 
   const banner = el('banner');
   if (state.lastError) {
@@ -160,6 +156,65 @@ function isRunning(commitment) {
     new Date(commitment.startsAt).getTime() <= now &&
     new Date(commitment.endsAt).getTime() >= now
   );
+}
+
+function formatCountdown(milliseconds) {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function updateActiveLockCountdowns() {
+  const now = Date.now();
+  document.querySelectorAll('[data-lock-end]').forEach((node) => {
+    node.textContent = formatCountdown(Number(node.dataset.lockEnd) - now);
+  });
+}
+
+function renderActiveLocks(commitments) {
+  const section = el('active-locks');
+  const list = el('active-lock-list');
+  const activeLocks = commitments.filter(isRunning);
+  list.replaceChildren();
+
+  if (activeLocks.length === 0) {
+    section.classList.add('hidden');
+    if (activeLocksInterval) clearInterval(activeLocksInterval);
+    activeLocksInterval = null;
+    return;
+  }
+
+  activeLocks.forEach((commitment) => {
+    const item = document.createElement('div');
+    item.className = 'active-lock-item';
+
+    const details = document.createElement('div');
+    details.className = 'active-lock-details';
+    const name = document.createElement('strong');
+    name.textContent = commitment.scriptName;
+    const domains = document.createElement('span');
+    domains.className = 'active-lock-domains';
+    domains.textContent = commitment.blockedDomains.join(', ');
+    details.append(name, domains);
+
+    const countdown = document.createElement('div');
+    countdown.className = 'active-lock-countdown';
+    const label = document.createElement('span');
+    label.textContent = i18n.t('timeRemaining');
+    const value = document.createElement('strong');
+    value.dataset.lockEnd = String(new Date(commitment.endsAt).getTime());
+    countdown.append(label, value);
+
+    item.append(details, countdown);
+    list.append(item);
+  });
+
+  section.classList.remove('hidden');
+  updateActiveLockCountdowns();
+  if (activeLocksInterval) clearInterval(activeLocksInterval);
+  activeLocksInterval = setInterval(updateActiveLockCountdowns, 1000);
 }
 
 function renderCommitments(commitments) {
@@ -254,6 +309,7 @@ function renderOverview(overview) {
   el('stats').textContent = `${stats.running} ${i18n.t('running')} · ${stats.completed} ${i18n.t('completed')} · ${stats.total} ${i18n.t('total')} · ${stats.streak} ${i18n.t('streak')}`;
   el('profile-stats-summary').textContent = `${stats.total} ${i18n.t('total')} · ${stats.streak} ${i18n.t('streak')}`;
   renderCalendar(overview.calendar);
+  renderActiveLocks(overview.commitments);
   renderCommitments(overview.commitments.filter((commitment) => commitment.status !== 'cancelled'));
 }
 
@@ -310,25 +366,6 @@ function renderScriptResults(scripts) {
     category.className = 'script-category';
     category.textContent = script.category;
     header.append(category);
-
-    if (script._id === 'builtin-instagram') {
-      const openButton = document.createElement('button');
-      openButton.type = 'button';
-      openButton.className = 'instagram-open';
-      openButton.setAttribute('data-instagram-action', '');
-      openButton.textContent = i18n.t('useInstagram');
-      openButton.addEventListener('click', async (event) => {
-        event.stopPropagation();
-        try {
-          await startInstagramTimer();
-        } catch (error) {
-          const banner = el('banner');
-          banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
-          banner.classList.remove('hidden');
-        }
-      });
-      header.append(openButton);
-    }
 
     const details = document.createElement('div');
     details.className = 'script-card-details hidden';
@@ -435,15 +472,12 @@ el('lang-app').addEventListener('click', () => {
 });
 
 function weekBounds() {
-  const today = new Date();
-  const mondayOffset = (today.getDay() + 6) % 7;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - mondayOffset);
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
+  const startsAt = new Date();
+  const sunday = new Date(startsAt);
+  const daysUntilSunday = (7 - startsAt.getDay()) % 7;
+  sunday.setDate(startsAt.getDate() + daysUntilSunday);
   sunday.setHours(23, 59, 59, 999);
-  return { monday, sunday };
+  return { startsAt, sunday };
 }
 
 function timeValue(date) {
@@ -536,8 +570,8 @@ el('lock-week').addEventListener('click', async () => {
 
   if (!window.confirm(i18n.t('lockWeekConfirm'))) return;
 
-  const { monday, sunday } = weekBounds();
-  const weekKey = monday.toISOString().slice(0, 10);
+  const { startsAt, sunday } = weekBounds();
+  const weekKey = startsAt.toISOString().slice(0, 10);
   const existingScripts = new Set(
     (lastOverview?.commitments ?? [])
       .filter((commitment) => commitment.startsAt.slice(0, 10) === weekKey && commitment.status !== 'cancelled')
@@ -565,7 +599,7 @@ el('lock-week').addEventListener('click', async () => {
         days: config.days,
         startTime: config.startTime,
         endTime: config.endTime,
-        startsAt: monday.toISOString(),
+        startsAt: startsAt.toISOString(),
         endsAt: sunday.toISOString(),
         alwaysBlocked: config.alwaysBlocked ?? false
       });

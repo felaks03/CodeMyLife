@@ -1,11 +1,10 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, session } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, dialog } from 'electron';
 import * as path from 'path';
 import { watch } from 'fs';
 import { SessionStore } from './session-store';
 import { BlockingScheduler } from './scheduler';
 import { guestStore } from './guest-store';
 import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
-import { InstagramProxy } from './instagram-proxy';
 import { buildCalendar, commitmentStats } from '../shared/schedule';
 import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
 
@@ -13,7 +12,6 @@ const sessionStore = new SessionStore();
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
-const instagramProxy = new InstagramProxy();
 let quitting = false;
 
 Menu.setApplicationMenu(null);
@@ -64,15 +62,6 @@ async function openInstagramBrowser(): Promise<void> {
     return;
   }
 
-  const proxyPort = await instagramProxy.start();
-  const browserSession = session.fromPartition('persist:codemylife-instagram');
-  await browserSession.setProxy({
-    proxyRules: `https=127.0.0.1:${proxyPort};http=127.0.0.1:${proxyPort}`,
-    proxyBypassRules: ''
-  });
-  await browserSession.forceReloadProxyConfig();
-  await browserSession.clearHostResolverCache();
-
   instagramWindow = new BrowserWindow({
     width: 1100,
     height: 760,
@@ -106,28 +95,8 @@ async function openInstagramBrowser(): Promise<void> {
   instagramWindow.on('minimize', notifyInstagramPaused);
   instagramWindow.on('closed', () => {
     instagramWindow = null;
-    void instagramProxy.stop();
     notifyInstagramPaused();
   });
-}
-
-async function loadInstagramBrowser(): Promise<void> {
-  if (!instagramWindow || instagramWindow.isDestroyed()) return;
-
-  await instagramWindow.webContents.session.clearHostResolverCache();
-
-  let lastError: Error | null = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      await instagramWindow.loadURL('https://www.instagram.com/');
-      return;
-    } catch (error) {
-      lastError = error as Error;
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-  }
-
-  mainWindow?.webContents.send('instagram:error', lastError?.message ?? 'No se pudo cargar Instagram.');
 }
 
 function updateTray(state: BlockingState): void {
@@ -267,7 +236,13 @@ function registerIpcHandlers(): void {
   ipcMain.handle('instagram:start-usage', async () => {
     await scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, true);
     await openInstagramBrowser();
-    await loadInstagramBrowser();
+    if (instagramWindow && !instagramWindow.isDestroyed()) {
+      try {
+        await instagramWindow.loadURL('https://www.instagram.com/');
+      } catch (error) {
+        mainWindow?.webContents.send('instagram:error', (error as Error).message);
+      }
+    }
   });
 
   ipcMain.handle('instagram:pause-usage', async () => {
@@ -295,7 +270,6 @@ if (!hasSingleInstanceLock) {
   });
 
   app.whenReady().then(async () => {
-    app.configureHostResolver({ enableBuiltInResolver: true, secureDnsMode: 'secure' });
     await sessionStore.load();
     await ensurePersonalProfile();
     registerIpcHandlers();

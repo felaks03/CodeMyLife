@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILTIN_SCRIPTS, INSTAGRAM_DOMAINS, LUST_BLOCKED_DOMAINS } from '../src/shared/builtin-scripts';
+import { BUILTIN_SCRIPTS, INSTAGRAM_DOMAINS, LUST_BLOCKED_DOMAINS, VIDEO_GAME_BLOCKED_DOMAINS } from '../src/shared/builtin-scripts';
 import { commitmentStats, domainsToBlock, isCommitmentEnforcedNow, shouldShowLockScreen } from '../src/shared/schedule';
 import { Commitment, Script } from '../src/shared/types';
 
@@ -29,6 +29,7 @@ function commitment(script: Script, overrides: Partial<Commitment> = {}): Commit
 }
 
 const mondayAt = (time: string) => new Date(`2026-09-07T${time}:00`);
+const tuesdayAt = (time: string) => new Date(`2026-09-08T${time}:00`);
 const fridayAt = (time: string) => new Date(`2026-09-11T${time}:00`);
 const sundayAt = (time: string) => new Date(`2026-09-13T${time}:00`);
 const saturdayAt = (time: string) => new Date(`2026-09-05T${time}:00`);
@@ -100,6 +101,48 @@ test('Bloqueo Lust se mantiene activo aunque no haya compromiso semanal', () => 
   });
 
   assert.equal(isCommitmentEnforcedNow(lock, sundayAt('12:00')), true);
+});
+
+test('Bloqueo de videojuegos incluye Steam y Minecraft Launcher', () => {
+  const games = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-games');
+
+  assert.ok(games);
+  assert.equal(games.name, 'Bloqueo de videojuegos');
+  assert.equal(games.blockingMode, 'always');
+  assert.equal(games.allowCustomDomains, false);
+  assert.equal(games.unlockable, true);
+  assert.deepEqual(games.blockedDomains, VIDEO_GAME_BLOCKED_DOMAINS);
+  assert.ok(games.blockedDomains.includes('steampowered.com'));
+  assert.ok(games.blockedDomains.includes('minecraft.net'));
+  assert.ok(games.blockedDomains.includes('minecraftservices.com'));
+});
+
+test('Bloqueo de videojuegos es permanente dentro de sus fechas', () => {
+  const games = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-games')!;
+  const lock = commitment(games, {
+    days: [],
+    startTime: '23:59',
+    endTime: '00:01',
+    alwaysBlocked: true,
+    startsAt: '2026-01-01T00:00:00.000Z',
+    endsAt: '2026-12-31T23:59:59.000Z'
+  });
+
+  assert.equal(isCommitmentEnforcedNow(lock, mondayAt('03:00')), true);
+  assert.equal(isCommitmentEnforcedNow(lock, sundayAt('23:00')), true);
+});
+
+test('Bloqueo de videojuegos se reactiva tras un desbloqueo temporal futuro', () => {
+  const games = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-games')!;
+  const lock = commitment(games, {
+    alwaysBlocked: true,
+    unlockUntil: '2026-09-08T12:00:00.000Z',
+    startsAt: '2026-01-01T00:00:00.000Z',
+    endsAt: '2026-12-31T23:59:59.000Z'
+  });
+
+  assert.equal(isCommitmentEnforcedNow(lock, new Date('2026-09-08T11:59:00.000Z')), false);
+  assert.equal(isCommitmentEnforcedNow(lock, new Date('2026-09-08T12:01:00.000Z')), true);
 });
 
 test('Lock week crea una configuracion para cada script', () => {

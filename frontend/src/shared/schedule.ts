@@ -12,6 +12,7 @@ function parseTime(value: string): number {
 export function isCommitmentEnforcedNow(commitment: Commitment, now: Date): boolean {
   if (commitment.status !== 'active') return false;
   if (now < new Date(commitment.startsAt) || now > new Date(commitment.endsAt)) return false;
+  if (commitment.unlockUntil && now < new Date(commitment.unlockUntil)) return false;
   if (commitment.alwaysBlocked) return true;
   if (!commitment.days.includes(now.getDay())) return false;
 

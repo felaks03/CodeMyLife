@@ -413,7 +413,9 @@ function renderScriptResults(scripts) {
     const configurationValue = document.createElement('strong');
     const config = scriptLockConfig(script);
     const days = config.days.map((day) => i18n.t('dayNames')[day]).join(', ');
-    configurationValue.textContent = script.dailyLimitMinutes
+    configurationValue.textContent = script._id === 'builtin-games'
+      ? i18n.t('permanent')
+      : script.dailyLimitMinutes
       ? `${i18n.t('dailyLimit')} · ${script.dailyLimitMinutes} min`
       : config.alwaysBlocked
         ? i18n.t('permanent')

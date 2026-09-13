@@ -11,6 +11,7 @@ export interface Commitment {
   endsAt: string;
   alwaysBlocked?: boolean;
   showLockScreen?: boolean;
+  unlockUntil?: string;
   status: 'active' | 'completed' | 'cancelled';
 }
 
@@ -26,6 +27,7 @@ export interface Script {
   blockingMode?: 'scheduled' | 'always' | 'daily-limit';
   dailyLimitMinutes?: number;
   showLockScreen?: boolean;
+  unlockable?: boolean;
   schedule?: {
     days: number[];
     startTime: string;
@@ -44,6 +46,7 @@ export interface NewCommitment {
   endsAt: string;
   alwaysBlocked?: boolean;
   showLockScreen?: boolean;
+  unlockUntil?: string;
 }
 
 export interface NewScript {

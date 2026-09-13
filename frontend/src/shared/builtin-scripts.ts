@@ -124,6 +124,25 @@ export const LUST_BLOCKED_DOMAINS = [
   'storiesonline.net'
 ];
 
+export const VIDEO_GAME_BLOCKED_DOMAINS = [
+  'steampowered.com',
+  'steamcommunity.com',
+  'steamstatic.com',
+  'steamcontent.com',
+  'steam-chat.com',
+  'steamgames.com',
+  'steamusercontent.com',
+  'steamcdn-a.akamaihd.net',
+  'minecraft.net',
+  'launcher.mojang.com',
+  'mojang.com',
+  'minecraftservices.com',
+  'api.minecraftservices.com',
+  'authserver.mojang.com',
+  'sessionserver.mojang.com',
+  'libraries.minecraft.net'
+];
+
 // Catalogo minimo para el modo invitado, sin conexion a un backend.
 export const INSTAGRAM_DOMAINS = [
   'instagram.com',
@@ -200,6 +219,18 @@ export const BUILTIN_SCRIPTS: Script[] = [
     allowCustomDomains: false,
     usageCount: 0,
     blockingMode: 'always'
+  },
+  {
+    _id: 'builtin-games',
+    authorName: 'CodeMyLife',
+    name: 'Bloqueo de videojuegos',
+    description: 'Bloquea Steam y Minecraft Launcher de forma permanente mientras este bloqueo este activo.',
+    category: 'Videojuegos',
+    blockedDomains: VIDEO_GAME_BLOCKED_DOMAINS,
+    allowCustomDomains: false,
+    usageCount: 0,
+    blockingMode: 'always',
+    unlockable: true
   }
 ];
 

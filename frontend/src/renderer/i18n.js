@@ -73,6 +73,15 @@ const TRANSLATIONS = {
     tabCommitments: 'Bloqueos y Estadisticas',
     tabScripts: 'Mis scripts',
     tabProfile: 'Mi Perfil'
+    ,tasksTitle: 'Tareas'
+    ,shopTitle: 'Tienda'
+    ,coins: 'monedas'
+    ,completeTask: 'Completar'
+    ,buy: 'Comprar'
+    ,taskCompleted: 'Tarea completada. Monedas añadidas.'
+    ,purchaseConfirm: '¿Quieres comprar esta recompensa?'
+    ,purchaseSuccess: 'Compra realizada. El desbloqueo ya está activo.'
+    ,economyOffline: 'No se pudo cargar la tienda.'
   },
   en: {
     tagline: 'Commitments you actually keep.',
@@ -148,6 +157,15 @@ const TRANSLATIONS = {
     tabCommitments: 'Blocks & Activity',
     tabScripts: 'My scripts',
     tabProfile: 'My Profile'
+    ,tasksTitle: 'Tasks'
+    ,shopTitle: 'Shop'
+    ,coins: 'coins'
+    ,completeTask: 'Complete'
+    ,buy: 'Buy'
+    ,taskCompleted: 'Task completed. Coins added.'
+    ,purchaseConfirm: 'Do you want to buy this reward?'
+    ,purchaseSuccess: 'Purchase complete. The unlock is active.'
+    ,economyOffline: 'The shop could not be loaded.'
   }
 };
 

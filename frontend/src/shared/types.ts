@@ -71,3 +71,34 @@ export interface BlockingState {
   lastError: string | null;
   lockScreenActive?: boolean;
 }
+
+export interface TaskDefinition {
+  id: string;
+  name: string;
+  description: string;
+  rewardCoins: number;
+  frequency: 'daily' | 'weekly';
+}
+
+export interface TaskCompletion {
+  taskId: string;
+  periodKey: string;
+  completedAt: string;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  costCoins: number;
+  durationMinutes: number;
+  targetScriptId: string;
+}
+
+export interface WalletState {
+  coins: number;
+  earnedCoins: number;
+  spentCoins: number;
+  completions: TaskCompletion[];
+  purchases: { itemId: string; coins: number; purchasedAt: string; unlockUntil: string }[];
+}

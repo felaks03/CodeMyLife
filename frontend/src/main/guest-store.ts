@@ -148,5 +148,9 @@ export const guestStore = {
     }
     if (cancelled > 0) await writeCommitments(commitments);
     return cancelled;
+  },
+
+  async replace(commitments: Commitment[]): Promise<void> {
+    await writeCommitments(commitments);
   }
 };

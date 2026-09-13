@@ -5,6 +5,9 @@ let availableScripts = [];
 let instagramTimer = null;
 let instagramTimerInterval = null;
 let activeLocksInterval = null;
+let wallet = null;
+let taskDefinitions = [];
+let shopItems = [];
 
 const DEFAULT_LOCK_CONFIG = Object.freeze({
   nameSuffix: ' - Weekly lock',
@@ -115,6 +118,7 @@ function showApp(user) {
   void refreshOverview();
   void refreshBlockingState();
   void loadScripts();
+  void loadEconomy();
 }
 
 function renderBlockingState(state) {
@@ -126,6 +130,100 @@ function renderBlockingState(state) {
     banner.classList.remove('hidden');
   } else {
     banner.classList.add('hidden');
+  }
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function showNotice(message) {
+  const banner = el('banner');
+  banner.textContent = message;
+  banner.classList.remove('hidden');
+}
+
+function renderEconomy() {
+  if (!wallet) return;
+  el('coin-balance').textContent = `${wallet.coins} ${i18n.t('coins')}`;
+  const taskList = el('tasks-list');
+  taskList.replaceChildren();
+  taskDefinitions.forEach((task) => {
+    const row = document.createElement('div');
+    row.className = 'economy-item';
+    const copy = document.createElement('div');
+    copy.className = 'economy-copy';
+    const name = document.createElement('strong');
+    name.textContent = task.name;
+    const description = document.createElement('span');
+    description.textContent = `${task.description} · +${task.rewardCoins} ${i18n.t('coins')}`;
+    copy.append(name, description);
+    const action = document.createElement('button');
+    action.className = 'economy-action';
+    action.type = 'button';
+    const completed = wallet.completions.some((item) => item.taskId === task.id && item.periodKey === todayKey());
+    action.textContent = completed ? i18n.t('completed') : i18n.t('completeTask');
+    action.disabled = completed;
+    action.addEventListener('click', () => void completeTask(task.id));
+    row.append(copy, action);
+    taskList.append(row);
+  });
+
+  const shopList = el('shop-list');
+  shopList.replaceChildren();
+  shopItems.forEach((item) => {
+    const row = document.createElement('div');
+    row.className = 'economy-item';
+    const copy = document.createElement('div');
+    copy.className = 'economy-copy';
+    const name = document.createElement('strong');
+    name.textContent = item.name;
+    const description = document.createElement('span');
+    description.textContent = `${item.description} · ${item.costCoins} ${i18n.t('coins')}`;
+    copy.append(name, description);
+    const buy = document.createElement('button');
+    buy.className = 'economy-action buy-action';
+    buy.type = 'button';
+    buy.textContent = i18n.t('buy');
+    buy.disabled = wallet.coins < item.costCoins;
+    buy.addEventListener('click', () => void purchaseItem(item.id));
+    row.append(copy, buy);
+    shopList.append(row);
+  });
+}
+
+async function loadEconomy() {
+  try {
+    [wallet, taskDefinitions, shopItems] = await Promise.all([
+      window.codeMyLife.getWallet(),
+      window.codeMyLife.listTasks(),
+      window.codeMyLife.listShop()
+    ]);
+    renderEconomy();
+  } catch {
+    el('tasks-list').textContent = i18n.t('economyOffline');
+  }
+}
+
+async function completeTask(taskId) {
+  try {
+    wallet = await window.codeMyLife.completeTask(taskId);
+    renderEconomy();
+    showNotice(i18n.t('taskCompleted'));
+  } catch (error) {
+    showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
+  }
+}
+
+async function purchaseItem(itemId) {
+  if (!window.confirm(i18n.t('purchaseConfirm'))) return;
+  try {
+    wallet = await window.codeMyLife.purchaseShopItem(itemId);
+    renderEconomy();
+    await refreshOverview();
+    showNotice(i18n.t('purchaseSuccess'));
+  } catch (error) {
+    showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
   }
 }
 

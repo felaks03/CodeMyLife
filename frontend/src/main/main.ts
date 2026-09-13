@@ -7,6 +7,7 @@ import { guestStore } from './guest-store';
 import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
 import { buildCalendar, commitmentStats } from '../shared/schedule';
 import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
+import { walletStore } from './wallet-store';
 
 const sessionStore = new SessionStore();
 let mainWindow: BrowserWindow | null = null;
@@ -288,6 +289,16 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('scripts:list', async () => {
     return guestStore.searchScripts('');
+  });
+
+  ipcMain.handle('wallet:get', () => walletStore.get());
+  ipcMain.handle('wallet:tasks', () => walletStore.tasks());
+  ipcMain.handle('wallet:shop', () => walletStore.shop());
+  ipcMain.handle('wallet:complete-task', (_event, taskId: string) => walletStore.completeTask(taskId));
+  ipcMain.handle('wallet:purchase', async (_event, itemId: string) => {
+    const wallet = await walletStore.purchase(itemId);
+    await scheduler.refresh();
+    return wallet;
   });
 
   ipcMain.handle('instagram:start-usage', async () => {

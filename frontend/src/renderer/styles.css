@@ -88,6 +88,85 @@ h2 {
   margin-top: 4px;
 }
 
+.economy-card {
+  max-width: none;
+  margin-top: 18px;
+}
+
+.economy-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.economy-header h2,
+.economy-card h2 {
+  margin-bottom: 12px;
+}
+
+.coin-balance {
+  background: rgba(217, 72, 95, .14);
+  border: 1px solid rgba(217, 72, 95, .35);
+  border-radius: 999px;
+  color: var(--danger-hover);
+  font-size: 12px;
+  padding: 5px 9px;
+}
+
+.economy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.economy-item {
+  align-items: center;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px;
+}
+
+.economy-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.economy-copy strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.economy-copy span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.economy-action {
+  flex: 0 0 auto;
+  font-size: 11px;
+  padding: 6px 9px;
+  width: auto;
+}
+
+.economy-action:disabled {
+  background: var(--panel-raised);
+  border-color: var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: .75;
+}
+
+.buy-action {
+  background: var(--danger);
+}
+
 .column .card {
   max-width: none;
 }

@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs';
+import { constants as fsConstants, promises as fs } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
@@ -29,8 +29,17 @@ export class HostsBlocker {
     }
 
     const file = hostsPath();
-    const original = await fs.readFile(file, 'utf8');
-    await fs.writeFile(file, renderHostsFile(original, sanitized), 'utf8');
+    let original: string;
+    try {
+      original = await fs.readFile(file, 'utf8');
+      await fs.writeFile(file, renderHostsFile(original, sanitized), 'utf8');
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'EPERM' || code === 'EACCES') {
+        throw new Error('CodeMyLife necesita permisos de administrador para modificar el bloqueo de Windows. Ejecuta run.cmd y acepta la ventana UAC.');
+      }
+      throw error;
+    }
 
     this.appliedDomains = sanitized;
     await flushDns();
@@ -42,7 +51,7 @@ export class HostsBlocker {
 
   async canWrite(): Promise<boolean> {
     try {
-      await fs.access(hostsPath(), fs.constants.W_OK);
+      await fs.access(hostsPath(), fsConstants.W_OK);
       return true;
     } catch {
       return false;

@@ -2,6 +2,7 @@ import { app, Notification } from 'electron';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { HostsBlocker } from './blocker';
+import { BrowserGuard } from './browser-guard';
 import { domainsToBlock } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
 
@@ -15,8 +16,11 @@ function cacheFile(): string {
 
 export class BlockingScheduler {
   private readonly blocker = new HostsBlocker();
+  private readonly browserGuard = new BrowserGuard();
   private timer: NodeJS.Timeout | null = null;
   private commitments: Commitment[] = [];
+  private temporarilyAllowedDomains = new Set<string>();
+  private manuallyBlockedDomains = new Set<string>();
   private state: BlockingState = {
     enforcing: false,
     blockedDomains: [],
@@ -40,6 +44,7 @@ export class BlockingScheduler {
       clearInterval(this.timer);
       this.timer = null;
     }
+    void this.browserGuard.unblockChrome();
   }
 
   getState(): BlockingState {
@@ -51,10 +56,29 @@ export class BlockingScheduler {
     await this.tick();
   }
 
+  async setTemporarilyAllowed(domains: string[], allowed: boolean): Promise<void> {
+    for (const domain of domains) {
+      if (allowed) {
+        this.temporarilyAllowedDomains.add(domain);
+        this.manuallyBlockedDomains.delete(domain);
+      } else {
+        this.temporarilyAllowedDomains.delete(domain);
+        this.manuallyBlockedDomains.add(domain);
+      }
+    }
+    if (allowed) await this.browserGuard.blockChrome();
+    else await this.browserGuard.unblockChrome();
+    await this.tick();
+  }
+
   private async tick(): Promise<void> {
     await this.syncFromServer();
 
-    const domains = domainsToBlock(this.commitments, new Date());
+    const scheduledDomains = domainsToBlock(this.commitments, new Date());
+    const domains = [...new Set([
+      ...scheduledDomains,
+      ...this.manuallyBlockedDomains
+    ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain));
     const wasEnforcing = this.state.enforcing;
 
     try {

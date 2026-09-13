@@ -1,69 +1,119 @@
 const el = (id) => document.getElementById(id);
-let isRegisterMode = false;
 let lastOverview = null;
 let lastBlockingState = null;
-let selectedScript = null;
-let searchDebounce = null;
+let availableScripts = [];
+let instagramTimer = null;
+let instagramTimerInterval = null;
+
+const DEFAULT_LOCK_CONFIG = Object.freeze({
+  nameSuffix: ' - Weekly lock',
+  customDomains: [],
+  days: [0, 1, 2, 3, 4, 5, 6],
+  startTime: '09:00',
+  endTime: '18:00'
+});
+
+function scriptLockConfig(script) {
+  if (script.blockingMode === 'daily-limit') {
+    return {
+      ...DEFAULT_LOCK_CONFIG,
+      days: [0, 1, 2, 3, 4, 5, 6],
+      startTime: '00:00',
+      endTime: '23:59',
+      alwaysBlocked: true
+    };
+  }
+  if (script.blockingMode === 'always') {
+    return { ...DEFAULT_LOCK_CONFIG, alwaysBlocked: true };
+  }
+  return script.schedule ?? DEFAULT_LOCK_CONFIG;
+}
 
 function toIsoDate(date) {
   return date.toISOString().slice(0, 10);
 }
 
-function renderDayCheckboxes() {
-  const container = el('days');
-  const selected = new Set(
-    [...container.querySelectorAll('input:checked')].map((input) => input.value)
-  );
-  const isFirstRender = container.childElementCount === 0;
+function instagramUsageKey() {
+  return `instagram-usage-${toIsoDate(new Date())}`;
+}
 
-  container.replaceChildren();
+function instagramUsedSeconds() {
+  return Number(localStorage.getItem(instagramUsageKey()) ?? 0);
+}
 
-  i18n.t('dayNames').forEach((label, index) => {
-    const wrapper = document.createElement('label');
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.value = String(index);
-    input.checked = isFirstRender ? index >= 1 && index <= 5 : selected.has(String(index));
+function saveInstagramUsedSeconds(seconds) {
+  localStorage.setItem(instagramUsageKey(), String(Math.min(15 * 60, Math.max(0, seconds))));
+}
 
-    const text = document.createElement('span');
-    text.textContent = label;
+function formatRemaining(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${minutes}:${String(rest).padStart(2, '0')}`;
+}
 
-    wrapper.append(input, text);
-    container.append(wrapper);
+function renderInstagramTimer() {
+  const remaining = Math.max(0, 15 * 60 - instagramUsedSeconds() - (instagramTimer?.liveSeconds ?? 0));
+  document.querySelectorAll('[data-instagram-timer]').forEach((node) => {
+    node.textContent = formatRemaining(remaining);
+  });
+  document.querySelectorAll('[data-instagram-action]').forEach((node) => {
+    node.textContent = instagramTimer ? i18n.t('pauseInstagram') : i18n.t('useInstagram');
+    node.disabled = remaining <= 0 && !instagramTimer;
   });
 }
 
-function setAuthMode(register) {
-  isRegisterMode = register;
-  el('name-field').classList.toggle('hidden', !register);
-  el('name').required = register;
-  el('auth-submit').textContent = i18n.t(register ? 'signUp' : 'signIn');
-  el('switch-text').textContent = i18n.t(register ? 'hasAccount' : 'noAccount');
-  el('switch-mode').textContent = i18n.t(register ? 'signIn' : 'signUp');
-  el('auth-error').textContent = '';
+async function pauseInstagramTimer() {
+  if (!instagramTimer) return;
+  const usedSeconds = instagramTimer.liveSeconds;
+  instagramTimer = null;
+  if (instagramTimerInterval) clearInterval(instagramTimerInterval);
+  instagramTimerInterval = null;
+  await window.codeMyLife.pauseInstagramUsage();
+  saveInstagramUsedSeconds(instagramUsedSeconds() + usedSeconds);
+  renderInstagramTimer();
+}
+
+async function startInstagramTimer() {
+  if (instagramTimer) return pauseInstagramTimer();
+  if (instagramUsedSeconds() >= 15 * 60) return;
+  instagramTimer = { startedAt: Date.now(), liveSeconds: 0 };
+  await window.codeMyLife.startInstagramUsage();
+  instagramTimerInterval = setInterval(() => {
+    instagramTimer.liveSeconds = Math.floor((Date.now() - instagramTimer.startedAt) / 1000);
+    if (instagramUsedSeconds() + instagramTimer.liveSeconds >= 15 * 60) {
+      void pauseInstagramTimer();
+      return;
+    }
+    renderInstagramTimer();
+  }, 1000);
+  renderInstagramTimer();
+}
+
+function syncInstagramPaused() {
+  if (!instagramTimer) {
+    renderInstagramTimer();
+    return;
+  }
+  saveInstagramUsedSeconds(instagramUsedSeconds() + instagramTimer.liveSeconds);
+  instagramTimer = null;
+  if (instagramTimerInterval) clearInterval(instagramTimerInterval);
+  instagramTimerInterval = null;
+  renderInstagramTimer();
 }
 
 function showApp(user) {
-  el('auth-view').classList.add('hidden');
   el('app-view').classList.remove('hidden');
-  el('user-name').textContent = user.id === 'guest' ? `${user.name} (${i18n.t('guestBadge')})` : user.name;
-  el('guest-banner').classList.toggle('hidden', user.id !== 'guest');
+  el('user-name').textContent = user.name;
+  el('guest-banner').classList.remove('hidden');
 
   // Actualizar datos de perfil
-  el('profile-name').textContent = user.id === 'guest' ? `${user.name} (${i18n.t('guestBadge')})` : user.name;
-  el('profile-email').textContent = user.email || (user.id === 'guest' ? 'Almacenamiento local' : '');
+  el('profile-name').textContent = user.name;
+  el('profile-email').textContent = 'Almacenamiento local';
   el('profile-avatar').textContent = (user.name || 'P').charAt(0).toUpperCase();
 
-  switchTab('dashboard');
   void refreshOverview();
   void refreshBlockingState();
-  void searchScripts('');
-}
-
-function showAuth() {
-  el('app-view').classList.add('hidden');
-  el('auth-view').classList.remove('hidden');
-  el('banner').classList.add('hidden');
+  void loadScripts();
 }
 
 function renderBlockingState(state) {
@@ -127,13 +177,20 @@ function renderCommitments(commitments) {
 
   commitments.forEach((commitment) => {
     const item = document.createElement('li');
+    item.className = 'commitment-card';
 
     const header = document.createElement('div');
-    header.className = 'item-header';
+    header.className = 'commitment-header';
 
+    const titleBlock = document.createElement('div');
+    titleBlock.className = 'commitment-title-block';
+    const eyebrow = document.createElement('span');
+    eyebrow.className = 'commitment-eyebrow';
+    eyebrow.textContent = commitment.scriptName;
     const title = document.createElement('strong');
     title.textContent = commitment.name;
-    header.append(title);
+    titleBlock.append(eyebrow, title);
+    header.append(titleBlock);
 
     if (isRunning(commitment)) {
       const tag = document.createElement('span');
@@ -149,15 +206,44 @@ function renderCommitments(commitments) {
       header.append(cancel);
     }
 
+    const details = document.createElement('div');
+    details.className = 'commitment-details';
+
     const schedule = document.createElement('div');
-    schedule.className = 'meta';
-    schedule.textContent = `${commitment.days.map((day) => dayNames[day]).join(', ')} · ${commitment.startTime}-${commitment.endTime}`;
+    schedule.className = 'commitment-detail';
+    const scheduleLabel = document.createElement('span');
+    scheduleLabel.className = 'detail-label';
+    scheduleLabel.textContent = i18n.t('scheduleLabel');
+    const scheduleValue = document.createElement('strong');
+    scheduleValue.textContent = `${commitment.days.map((day) => dayNames[day]).join(', ')} · ${commitment.startTime} - ${commitment.endTime}`;
+    schedule.append(scheduleLabel, scheduleValue);
 
     const period = document.createElement('div');
-    period.className = 'meta';
-    period.textContent = `${commitment.startsAt.slice(0, 10)} → ${commitment.endsAt.slice(0, 10)} · ${commitment.blockedDomains.join(', ')}`;
+    period.className = 'commitment-detail';
+    const periodLabel = document.createElement('span');
+    periodLabel.className = 'detail-label';
+    periodLabel.textContent = i18n.t('periodLabel');
+    const periodValue = document.createElement('strong');
+    periodValue.textContent = `${commitment.startsAt.slice(0, 10)} → ${commitment.endsAt.slice(0, 10)}`;
+    period.append(periodLabel, periodValue);
 
-    item.append(header, schedule, period);
+    const domains = document.createElement('div');
+    domains.className = 'commitment-domains';
+    const domainsLabel = document.createElement('span');
+    domainsLabel.className = 'detail-label';
+    domainsLabel.textContent = i18n.t('domainsLabel');
+    const domainList = document.createElement('div');
+    domainList.className = 'domain-list';
+    commitment.blockedDomains.forEach((domain) => {
+      const pill = document.createElement('span');
+      pill.className = 'domain-pill';
+      pill.textContent = domain;
+      domainList.append(pill);
+    });
+    domains.append(domainsLabel, domainList);
+
+    details.append(schedule, period);
+    item.append(header, details, domains);
     list.append(item);
   });
 }
@@ -166,66 +252,9 @@ function renderOverview(overview) {
   lastOverview = overview;
   const { stats } = overview;
   el('stats').textContent = `${stats.running} ${i18n.t('running')} · ${stats.completed} ${i18n.t('completed')} · ${stats.total} ${i18n.t('total')} · ${stats.streak} ${i18n.t('streak')}`;
+  el('profile-stats-summary').textContent = `${stats.total} ${i18n.t('total')} · ${stats.streak} ${i18n.t('streak')}`;
   renderCalendar(overview.calendar);
   renderCommitments(overview.commitments.filter((commitment) => commitment.status !== 'cancelled'));
-  renderProfile(overview);
-}
-
-function renderProfile(overview) {
-  const activeCommitments = overview.commitments.filter((c) => c.status !== 'cancelled');
-  const scriptsContainer = el('profile-scripts');
-  scriptsContainer.replaceChildren();
-
-  // Actualizar resumen en la cabecera del perfil
-  el('profile-stats-summary').textContent = `${activeCommitments.length} ${i18n.t('profileActiveCount')} · ${overview.stats.streak} ${i18n.t('streak')}`;
-
-  if (activeCommitments.length === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'meta';
-    empty.style.padding = '12px 0';
-    empty.textContent = i18n.t('profileScriptsEmpty');
-    scriptsContainer.append(empty);
-    return;
-  }
-
-  const dayNames = i18n.t('dayNames');
-
-  activeCommitments.forEach((commitment) => {
-    const item = document.createElement('div');
-    item.className = 'profile-script-item';
-
-    const header = document.createElement('div');
-    header.className = 'profile-script-header';
-
-    const title = document.createElement('div');
-    title.className = 'profile-script-title';
-    title.textContent = commitment.scriptName ? `${commitment.scriptName} (${commitment.name})` : commitment.name;
-
-    if (isRunning(commitment)) {
-      const tag = document.createElement('span');
-      tag.className = 'tag active';
-      tag.textContent = i18n.t('statusActive');
-      header.append(title, tag);
-    } else {
-      header.append(title);
-    }
-
-    const schedule = document.createElement('div');
-    schedule.className = 'meta';
-    schedule.textContent = `${commitment.days.map((d) => dayNames[d]).join(', ')} · ${commitment.startTime}-${commitment.endTime} (${commitment.startsAt.slice(0, 10)} → ${commitment.endsAt.slice(0, 10)})`;
-
-    const domainsList = document.createElement('div');
-    domainsList.className = 'profile-script-domains';
-    commitment.blockedDomains.forEach((domain) => {
-      const pill = document.createElement('span');
-      pill.className = 'domain-pill';
-      pill.textContent = domain;
-      domainsList.append(pill);
-    });
-
-    item.append(header, schedule, domainsList);
-    scriptsContainer.append(item);
-  });
 }
 
 async function refreshOverview() {
@@ -237,13 +266,16 @@ async function refreshOverview() {
 }
 
 async function cancelCommitment(id) {
-  const errorLabel = el('commitment-error');
+  const errorLabel = el('banner');
   errorLabel.textContent = '';
   try {
     await window.codeMyLife.cancelCommitment(id);
     await refreshOverview();
+    errorLabel.textContent = i18n.t('cancelSuccess');
+    errorLabel.classList.remove('hidden');
   } catch (error) {
     errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+    errorLabel.classList.remove('hidden');
   }
 }
 
@@ -260,229 +292,313 @@ function renderScriptResults(scripts) {
 
   scripts.forEach((script) => {
     const item = document.createElement('li');
+    item.className = 'script-card';
+    item.tabIndex = 0;
+    item.setAttribute('role', 'button');
+    item.setAttribute('aria-expanded', 'false');
+    item.setAttribute('aria-label', script.name);
 
     const header = document.createElement('div');
-    header.className = 'item-header';
+    header.className = 'script-card-header';
 
     const title = document.createElement('strong');
+    title.className = 'script-card-title';
     title.textContent = script.name;
     header.append(title);
 
-    const useButton = document.createElement('button');
-    useButton.type = 'button';
-    useButton.className = 'ghost small';
-    useButton.textContent = i18n.t('useScript');
-    useButton.addEventListener('click', () => selectScript(script));
-    header.append(useButton);
+    const category = document.createElement('span');
+    category.className = 'script-category';
+    category.textContent = script.category;
+    header.append(category);
 
-    const description = document.createElement('div');
-    description.className = 'meta';
-    description.textContent = script.description;
+    if (script._id === 'builtin-instagram') {
+      const openButton = document.createElement('button');
+      openButton.type = 'button';
+      openButton.className = 'instagram-open';
+      openButton.setAttribute('data-instagram-action', '');
+      openButton.textContent = i18n.t('useInstagram');
+      openButton.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        try {
+          await startInstagramTimer();
+        } catch (error) {
+          const banner = el('banner');
+          banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+          banner.classList.remove('hidden');
+        }
+      });
+      header.append(openButton);
+    }
+
+    const details = document.createElement('div');
+    details.className = 'script-card-details hidden';
 
     const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.textContent = `${script.category} · ${i18n.t('by')} ${script.authorName} · ${script.blockedDomains.join(', ')}`;
+    meta.className = 'meta script-card-meta';
+    meta.textContent = script.authorName;
 
-    item.append(header, description, meta);
+    const domains = document.createElement('div');
+    domains.className = 'script-domain-list';
+    const domainsLabel = document.createElement('span');
+    domainsLabel.className = 'detail-label';
+    domainsLabel.textContent = i18n.t('scriptBlocks');
+    domains.append(domainsLabel);
+    script.blockedDomains.forEach((domain) => {
+      const pill = document.createElement('span');
+      pill.className = 'domain-pill';
+      pill.textContent = domain;
+      domains.append(pill);
+    });
+
+    const configuration = document.createElement('div');
+    configuration.className = 'script-configuration';
+    const configurationLabel = document.createElement('span');
+    configurationLabel.className = 'detail-label';
+    configurationLabel.textContent = i18n.t('scriptSchedule');
+    const configurationValue = document.createElement('strong');
+    const config = scriptLockConfig(script);
+    const days = config.days.map((day) => i18n.t('dayNames')[day]).join(', ');
+    configurationValue.textContent = script.dailyLimitMinutes
+      ? `${i18n.t('dailyLimit')} · ${script.dailyLimitMinutes} min`
+      : config.alwaysBlocked
+        ? i18n.t('permanent')
+        : `${days} · ${config.startTime} - ${config.endTime}`;
+    configuration.append(configurationLabel, configurationValue);
+
+    details.append(meta, domains, configuration);
+
+    if (script._id === 'builtin-instagram') {
+      const usage = document.createElement('div');
+      usage.className = 'instagram-usage';
+      const usageText = document.createElement('span');
+      usageText.innerHTML = `${i18n.t('instagramRemaining')}: <strong data-instagram-timer>15:00</strong>`;
+      const usageButton = document.createElement('button');
+      usageButton.type = 'button';
+      usageButton.className = 'instagram-action';
+      usageButton.setAttribute('data-instagram-action', '');
+      usageButton.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        try {
+          await startInstagramTimer();
+        } catch (error) {
+          instagramTimer = null;
+          if (instagramTimerInterval) clearInterval(instagramTimerInterval);
+          instagramTimerInterval = null;
+          const banner = el('banner');
+          banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+          banner.classList.remove('hidden');
+          renderInstagramTimer();
+        }
+      });
+      usage.append(usageText, usageButton);
+      details.append(usage);
+    }
+
+    item.append(header, details);
+
+    const toggleDetails = () => {
+      const expanded = !details.classList.contains('hidden');
+      details.classList.toggle('hidden', expanded);
+      item.classList.toggle('expanded', !expanded);
+      item.setAttribute('aria-expanded', String(!expanded));
+    };
+    item.addEventListener('click', toggleDetails);
+    item.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleDetails();
+      }
+    });
     list.append(item);
   });
 }
 
-async function searchScripts(query) {
+async function loadScripts() {
   try {
-    renderScriptResults(await window.codeMyLife.searchScripts(query));
+    availableScripts = await window.codeMyLife.listScripts();
+    renderScriptResults(availableScripts);
   } catch (error) {
     el('script-results').replaceChildren();
   }
 }
 
-function selectScript(script) {
-  selectedScript = script;
-  el('script-form').classList.add('hidden');
-  el('selected-script-name').textContent = script.name;
-  el('selected-script-description').textContent = script.description;
-  el('selected-script-domains').textContent = `${i18n.t('fixedDomains')}: ${script.blockedDomains.join(', ')}`;
-  el('commitment-name').value = script.name;
-  el('custom-domains-field').classList.toggle('hidden', !script.allowCustomDomains);
-  el('custom-domains').value = '';
-
-  document.getElementById('script-browser').classList.add('hidden');
-  el('commitment-form').classList.remove('hidden');
-}
-
-function backToScriptSearch() {
-  selectedScript = null;
-  el('commitment-form').classList.add('hidden');
-  document.getElementById('script-browser').classList.remove('hidden');
-}
-
 function applyLanguage(language) {
   i18n.setLanguage(language);
   el('lang-app').textContent = i18n.language === 'es' ? 'EN' : 'ES';
-  renderDayCheckboxes();
-  setAuthMode(isRegisterMode);
   if (lastOverview) renderOverview(lastOverview);
   if (lastBlockingState) renderBlockingState(lastBlockingState);
-  if (!el('app-view').classList.contains('hidden')) {
-    void searchScripts(el('script-search').value);
-  }
+  if (!el('app-view').classList.contains('hidden')) void loadScripts();
 }
-
-function switchTab(tab) {
-  const isDashboard = tab === 'dashboard';
-  el('tab-btn-dashboard').classList.toggle('active', isDashboard);
-  el('tab-btn-profile').classList.toggle('active', !isDashboard);
-  el('tab-dashboard').classList.toggle('hidden', !isDashboard);
-  el('tab-profile').classList.toggle('hidden', isDashboard);
-}
-
-el('tab-btn-dashboard').addEventListener('click', () => switchTab('dashboard'));
-el('tab-btn-profile').addEventListener('click', () => switchTab('profile'));
-
-el('switch-mode').addEventListener('click', (event) => {
-  event.preventDefault();
-  setAuthMode(!isRegisterMode);
-});
-
-el('lang-auth').addEventListener('click', (event) => {
-  event.preventDefault();
-  applyLanguage(i18n.language === 'es' ? 'en' : 'es');
-});
-
-el('guest-continue').addEventListener('click', async () => {
-  const errorLabel = el('auth-error');
-  errorLabel.textContent = '';
-  try {
-    const user = await window.codeMyLife.continueAsGuest();
-    showApp(user);
-  } catch (error) {
-    errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
-  }
-});
 
 el('lang-app').addEventListener('click', () => {
   applyLanguage(i18n.language === 'es' ? 'en' : 'es');
 });
 
-el('auth-form').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const errorLabel = el('auth-error');
-  errorLabel.textContent = '';
+function weekBounds() {
+  const today = new Date();
+  const mondayOffset = (today.getDay() + 6) % 7;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+  return { monday, sunday };
+}
 
-  try {
-    const email = el('email').value.trim();
-    const password = el('password').value;
-    const user = isRegisterMode
-      ? await window.codeMyLife.register(email, el('name').value.trim(), password)
-      : await window.codeMyLife.login(email, password);
-    el('password').value = '';
-    showApp(user);
-  } catch (error) {
-    errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+function timeValue(date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function testLockWindows(now) {
+  const end = new Date(now.getTime() + 5 * 60 * 1000);
+  const startTime = timeValue(now);
+  const endTime = timeValue(end);
+
+  if (now.toDateString() === end.toDateString()) {
+    return [{
+      days: [now.getDay()],
+      startTime,
+      endTime,
+      startsAt: now.toISOString(),
+      endsAt: end.toISOString()
+    }];
   }
-});
 
-el('logout').addEventListener('click', async () => {
+  const endOfDay = new Date(now);
+  endOfDay.setHours(23, 59, 59, 999);
+  const nextDay = new Date(end);
+  return [
+    {
+      days: [now.getDay()],
+      startTime,
+      endTime: '23:59',
+      startsAt: now.toISOString(),
+      endsAt: endOfDay.toISOString()
+    },
+    {
+      days: [nextDay.getDay()],
+      startTime: '00:00',
+      endTime,
+      startsAt: new Date(endOfDay.getTime() + 1).toISOString(),
+      endsAt: end.toISOString()
+    }
+  ];
+}
+
+el('test-lock').addEventListener('click', async () => {
   const banner = el('banner');
+  banner.textContent = '';
+
+  if (availableScripts.length === 0) {
+    banner.textContent = i18n.t('noScripts');
+    banner.classList.remove('hidden');
+    return;
+  }
+
+  if (!window.confirm(i18n.t('testLockConfirm'))) return;
+
+  const lockWindows = testLockWindows(new Date());
+  el('test-lock').disabled = true;
+
   try {
-    await window.codeMyLife.logout();
-    showAuth();
+    for (const script of availableScripts) {
+      for (const lockWindow of lockWindows) {
+        await window.codeMyLife.createCommitment({
+          scriptId: script._id,
+          name: `${script.name} - Test lock`,
+          customDomains: [],
+          ...lockWindow
+        });
+      }
+    }
+    banner.textContent = i18n.t('testLockSuccess');
+    banner.classList.remove('hidden');
+    await refreshOverview();
+    await refreshBlockingState();
   } catch (error) {
     banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
     banner.classList.remove('hidden');
+  } finally {
+    el('test-lock').disabled = false;
   }
 });
 
-el('commitment-form').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const errorLabel = el('commitment-error');
+el('lock-week').addEventListener('click', async () => {
+  const errorLabel = el('banner');
   errorLabel.textContent = '';
 
-  if (!selectedScript) {
+  if (availableScripts.length === 0) {
+    errorLabel.textContent = i18n.t('noScripts');
+    errorLabel.classList.remove('hidden');
     return;
   }
 
-  const days = [...document.querySelectorAll('#days input:checked')].map((input) => Number(input.value));
-  if (days.length === 0) {
-    errorLabel.textContent = i18n.t('pickDay');
+  if (!window.confirm(i18n.t('lockWeekConfirm'))) return;
+
+  const { monday, sunday } = weekBounds();
+  const weekKey = monday.toISOString().slice(0, 10);
+  const existingScripts = new Set(
+    (lastOverview?.commitments ?? [])
+      .filter((commitment) => commitment.startsAt.slice(0, 10) === weekKey && commitment.status !== 'cancelled')
+      .map((commitment) => commitment.scriptId)
+  );
+  const scriptsToLock = availableScripts.filter((script) => !existingScripts.has(script._id));
+
+  if (scriptsToLock.length === 0) {
+    errorLabel.textContent = availableScripts.some((script) => script.blockingMode === 'daily-limit')
+      ? i18n.t('dailyLimitPending')
+      : i18n.t('lockWeekAlreadyActive');
+    errorLabel.classList.remove('hidden');
     return;
   }
 
-  const customDomains = el('custom-domains')
-    .value.split('\n')
-    .map((line) => line.trim().toLowerCase())
-    .filter(Boolean);
+  el('lock-week').disabled = true;
 
   try {
-    await window.codeMyLife.createCommitment({
-      scriptId: selectedScript._id,
-      name: el('commitment-name').value.trim(),
-      customDomains,
-      days,
-      startTime: el('start-time').value,
-      endTime: el('end-time').value,
-      startsAt: new Date(`${el('starts-at').value}T00:00:00`).toISOString(),
-      endsAt: new Date(`${el('ends-at').value}T23:59:59`).toISOString()
-    });
+    for (const script of scriptsToLock) {
+      const config = scriptLockConfig(script);
+      await window.codeMyLife.createCommitment({
+        scriptId: script._id,
+        name: `${script.name}${DEFAULT_LOCK_CONFIG.nameSuffix}`,
+        customDomains: DEFAULT_LOCK_CONFIG.customDomains,
+        days: config.days,
+        startTime: config.startTime,
+        endTime: config.endTime,
+        startsAt: monday.toISOString(),
+        endsAt: sunday.toISOString(),
+        alwaysBlocked: config.alwaysBlocked ?? false
+      });
+    }
+    errorLabel.textContent = i18n.t('lockWeekSuccess');
+    errorLabel.classList.remove('hidden');
     await refreshOverview();
     await refreshBlockingState();
   } catch (error) {
     errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+  } finally {
+    el('lock-week').disabled = false;
   }
 });
 
-el('change-script').addEventListener('click', backToScriptSearch);
-
-el('script-search').addEventListener('input', (event) => {
-  clearTimeout(searchDebounce);
-  const query = event.target.value;
-  searchDebounce = setTimeout(() => void searchScripts(query), 250);
-});
-
-el('new-script-toggle').addEventListener('click', () => {
-  el('script-form').classList.toggle('hidden');
-});
-
-el('script-form').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const errorLabel = el('script-error');
-  errorLabel.textContent = '';
-
-  const blockedDomains = el('script-domains')
-    .value.split('\n')
-    .map((line) => line.trim().toLowerCase())
-    .filter(Boolean);
-
-  try {
-    const script = await window.codeMyLife.createScript({
-      name: el('script-name').value.trim(),
-      category: el('script-category').value.trim(),
-      description: el('script-description').value.trim(),
-      blockedDomains,
-      allowCustomDomains: el('script-allow-custom').checked
-    });
-    el('script-form').reset();
-    el('script-form').classList.add('hidden');
-    await searchScripts(el('script-search').value);
-    selectScript(script);
-  } catch (error) {
-    errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+document.addEventListener('keydown', (event) => {
+  if (event.ctrlKey && event.key.toLowerCase() === 'l') {
+    event.preventDefault();
+    if (!el('lock-week').disabled) el('lock-week').click();
   }
 });
 
 window.codeMyLife.onBlockingState(renderBlockingState);
+window.codeMyLife.onInstagramPaused(syncInstagramPaused);
+window.codeMyLife.onInstagramError((message) => {
+  const banner = el('banner');
+  banner.textContent = message;
+  banner.classList.remove('hidden');
+});
 
 (async function init() {
-  renderDayCheckboxes();
   applyLanguage(i18n.language);
 
-  const today = new Date();
-  const inAWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-  el('starts-at').value = toIsoDate(today);
-  el('ends-at').value = toIsoDate(inAWeek);
-
   const user = await window.codeMyLife.getSession();
-  if (user) {
-    showApp(user);
-  }
+  showApp(user || { name: 'Mi perfil', id: 'personal', email: '' });
 })();

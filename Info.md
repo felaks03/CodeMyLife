@@ -106,7 +106,7 @@ Arranque completo (API + aplicacion) desde la raiz del repositorio:
 En Linux, macOS o Git Bash:
 
 ```bash
-./run.sh
+run.cmd
 ```
 
 Antes del primer arranque, copia `backend/.env.example` a `backend/.env` y rellena `MONGODB_URI` y `JWT_SECRET`.
@@ -143,10 +143,8 @@ CodeMyLife/
 │   ├── src/main/  # Proceso principal: bandeja, sesion, planificador, bloqueo
 │   ├── src/shared/# Logica pura de horarios y archivo hosts (con tests)
 │   └── src/renderer/ # Interfaz
-├── run.sh         # Arranque local
-├── run.cmd        # Lanzador de run.sh en Windows
-├── produccion.sh  # Publicacion
-└── produccion.cmd # Lanzador de produccion.sh en Windows
+├── run.cmd        # Arranque local en Windows
+└── produccion.cmd # Publicacion en Windows
 ```
 
 ## Proceso de Definicion

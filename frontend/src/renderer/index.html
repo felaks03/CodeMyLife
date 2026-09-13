@@ -7,165 +7,61 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="banner" class="banner hidden"></div>
+  <div id="banner" class="banner hidden" role="status" aria-live="polite"></div>
 
-  <section id="auth-view" class="view">
-    <h1>CodeMyLife</h1>
-    <p class="subtitle" data-i18n="tagline"></p>
-
-    <form id="auth-form" class="card">
-      <div id="name-field" class="field hidden">
-        <label for="name" data-i18n="name"></label>
-        <input id="name" type="text" autocomplete="name" maxlength="80" />
-      </div>
-      <div class="field">
-        <label for="email" data-i18n="email"></label>
-        <input id="email" type="email" autocomplete="email" required maxlength="254" />
-      </div>
-      <div class="field">
-        <label for="password" data-i18n="password"></label>
-        <input id="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" />
-      </div>
-      <button id="auth-submit" type="submit"></button>
-      <p class="switch">
-        <span id="switch-text"></span>
-        <a href="#" id="switch-mode"></a>
-      </p>
-      <p id="auth-error" class="error"></p>
-    </form>
-
-    <button id="guest-continue" class="ghost guest-button" type="button" data-i18n="guestContinue"></button>
-
-    <p class="switch"><a href="#" id="lang-auth">English / Espanol</a></p>
-  </section>
-
-  <section id="app-view" class="view hidden">
+  <section id="app-view" class="view">
     <p id="guest-banner" class="info-banner hidden" data-i18n="guestBanner"></p>
     <header class="topbar">
       <div>
         <strong id="user-name"></strong>
-        <span id="blocking-status" class="status"></span>
+        <span id="blocking-status" class="status" role="status" aria-live="polite"></span>
       </div>
       <div class="actions">
         <button id="lang-app" class="ghost" type="button">EN</button>
-        <button id="logout" class="ghost" type="button" data-i18n="logout"></button>
       </div>
     </header>
 
-    <div class="nav-tabs">
-      <button id="tab-btn-dashboard" class="nav-tab active" type="button" data-i18n="tabCommitments"></button>
-      <button id="tab-btn-profile" class="nav-tab" type="button" data-i18n="tabProfile"></button>
-    </div>
-
-    <div id="tab-dashboard" class="tab-content">
-      <div class="columns">
-        <div class="column">
-          <h2 data-i18n="newCommitment"></h2>
-
-          <div id="script-browser" class="card">
-            <div class="field">
-              <label for="script-search" data-i18n="searchScripts"></label>
-              <input id="script-search" type="search" maxlength="80" data-i18n-placeholder="searchPlaceholder" />
+    <div id="tab-profile" class="tab-content">
+      <div class="profile-layout">
+        <div class="profile-main">
+          <div class="card profile-card">
+            <div class="profile-header">
+              <div id="profile-avatar" class="profile-avatar">P</div>
+              <div class="profile-info">
+                <h3 id="profile-name">Perfil</h3>
+                <p id="profile-email"></p>
+                <p id="profile-stats-summary"></p>
+              </div>
             </div>
-            <ul id="script-results" class="list scripts"></ul>
-            <button id="new-script-toggle" type="button" class="ghost small" data-i18n="publishScript"></button>
           </div>
 
-          <form id="script-form" class="card hidden">
-            <div class="field">
-              <label for="script-name" data-i18n="scriptName"></label>
-              <input id="script-name" type="text" required maxlength="80" />
+          <div class="card profile-card">
+            <div class="scripts-page-heading">
+              <div>
+                <p class="eyebrow">CodeMyLife</p>
+                <h2 data-i18n="profileScriptsTitle"></h2>
+              </div>
+              <div class="action-group">
+                <button id="lock-week" class="lock-week" type="button" data-i18n="lockWeek" aria-describedby="lock-week-hint"></button>
+                <p id="lock-week-hint" class="action-hint" data-i18n="lockWeekHint"></p>
+                <button id="test-lock" class="test-lock" type="button" data-i18n="testLock" aria-describedby="test-lock-hint"></button>
+                <p id="test-lock-hint" class="action-hint" data-i18n="testLockHint"></p>
+              </div>
             </div>
-            <div class="field">
-              <label for="script-category" data-i18n="scriptCategory"></label>
-              <input id="script-category" type="text" required maxlength="40" />
+            <div id="script-browser" class="scripts-browser-card">
+              <ul id="script-results" class="list scripts"></ul>
             </div>
-            <div class="field">
-              <label for="script-description" data-i18n="scriptDescription"></label>
-              <textarea id="script-description" rows="2" required maxlength="280"></textarea>
-            </div>
-            <div class="field">
-              <label for="script-domains" data-i18n="domains"></label>
-              <textarea id="script-domains" rows="3" required></textarea>
-            </div>
-            <label class="checkbox-field">
-              <input id="script-allow-custom" type="checkbox" checked />
-              <span data-i18n="allowCustomDomains"></span>
-            </label>
-            <button type="submit" data-i18n="publishScript"></button>
-            <p id="script-error" class="error"></p>
-          </form>
+          </div>
 
-          <form id="commitment-form" class="card hidden">
-            <div class="field">
-              <span class="selected-script-label" data-i18n="selectedScript"></span>
-              <strong id="selected-script-name"></strong>
-              <p id="selected-script-description" class="meta"></p>
-              <p id="selected-script-domains" class="meta"></p>
-            </div>
-            <div class="field">
-              <label for="commitment-name" data-i18n="commitmentName"></label>
-              <input id="commitment-name" type="text" required maxlength="80" />
-            </div>
-            <div id="custom-domains-field" class="field hidden">
-              <label for="custom-domains" data-i18n="customDomains"></label>
-              <textarea id="custom-domains" rows="2"></textarea>
-            </div>
-            <div class="field">
-              <label data-i18n="days"></label>
-              <div id="days" class="days"></div>
-            </div>
-            <div class="row">
-              <div class="field">
-                <label for="start-time" data-i18n="from"></label>
-                <input id="start-time" type="time" value="09:00" required />
-              </div>
-              <div class="field">
-                <label for="end-time" data-i18n="to"></label>
-                <input id="end-time" type="time" value="18:00" required />
-              </div>
-            </div>
-            <div class="row">
-              <div class="field">
-                <label for="starts-at" data-i18n="start"></label>
-                <input id="starts-at" type="date" required />
-              </div>
-              <div class="field">
-                <label for="ends-at" data-i18n="end"></label>
-                <input id="ends-at" type="date" required />
-              </div>
-            </div>
-            <button type="submit" data-i18n="create"></button>
-            <button id="change-script" type="button" class="ghost small" data-i18n="changeScript"></button>
-            <p id="commitment-error" class="error"></p>
-          </form>
         </div>
 
-        <div class="column">
+        <aside class="profile-sidebar">
           <h2 data-i18n="myCommitments"></h2>
           <div id="stats" class="stats"></div>
           <p class="calendar-title" data-i18n="activity"></p>
           <div id="calendar" class="calendar"></div>
           <ul id="commitments" class="list"></ul>
-        </div>
-      </div>
-    </div>
-
-    <div id="tab-profile" class="tab-content hidden">
-      <div class="card profile-card">
-        <div class="profile-header">
-          <div id="profile-avatar" class="profile-avatar">P</div>
-          <div class="profile-info">
-            <h3 id="profile-name">Perfil</h3>
-            <p id="profile-email"></p>
-            <p id="profile-stats-summary"></p>
-          </div>
-        </div>
-      </div>
-
-      <div class="card profile-card">
-        <h2 data-i18n="profileScriptsTitle"></h2>
-        <div id="profile-scripts" class="profile-scripts-list"></div>
+        </aside>
       </div>
     </div>
   </section>

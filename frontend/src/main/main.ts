@@ -3,26 +3,21 @@ import * as path from 'path';
 import { watch } from 'fs';
 import { SessionStore } from './session-store';
 import { BlockingScheduler } from './scheduler';
-import { api } from './api-client';
 import { guestStore } from './guest-store';
+import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
 import { buildCalendar, commitmentStats } from '../shared/schedule';
 import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
 
 const sessionStore = new SessionStore();
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let instagramWindow: BrowserWindow | null = null;
 let quitting = false;
 
+Menu.setApplicationMenu(null);
+
 async function loadCommitments(): Promise<Commitment[] | null> {
-  const session = sessionStore.session;
-  if (!session) return [];
-  if (session.guest) return guestStore.list();
-  if (!session.token) return [];
-  try {
-    return await api.listCommitments(session.token);
-  } catch {
-    return null;
-  }
+  return guestStore.list();
 }
 
 const scheduler = new BlockingScheduler(loadCommitments, (state) => {
@@ -34,24 +29,76 @@ function assetPath(file: string): string {
   return path.join(__dirname, '../../assets', file);
 }
 
-function requireToken(): string {
-  const token = sessionStore.session?.token;
-  if (!token) {
-    throw new Error('No hay sesion iniciada.');
-  }
-  return token;
-}
-
 function showMainWindow(): void {
+  console.log('[CodeMyLife] Solicitud para mostrar la ventana principal.');
   if (!mainWindow) {
+    console.log('[CodeMyLife] No existia ventana; creando una nueva.');
     createMainWindow();
     return;
   }
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
+  console.log('[CodeMyLife] Ventana principal mostrada y enfocada.');
   mainWindow.setAlwaysOnTop(true);
   mainWindow.setAlwaysOnTop(false);
+}
+
+function isInstagramUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === 'instagram.com' || hostname.endsWith('.instagram.com');
+  } catch {
+    return false;
+  }
+}
+
+function notifyInstagramPaused(): void {
+  scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, false).catch(() => undefined);
+  mainWindow?.webContents.send('instagram:paused');
+}
+
+function openInstagramBrowser(): void {
+  if (instagramWindow && !instagramWindow.isDestroyed()) {
+    instagramWindow.show();
+    instagramWindow.focus();
+    return;
+  }
+
+  instagramWindow = new BrowserWindow({
+    width: 1100,
+    height: 760,
+    title: 'Instagram - CodeMyLife',
+    show: true,
+    backgroundColor: '#101418',
+    parent: mainWindow ?? undefined,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+
+  instagramWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isInstagramUrl(url)) event.preventDefault();
+  });
+  instagramWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    mainWindow?.webContents.send('instagram:error', `${errorDescription} (${errorCode})`);
+  });
+  instagramWindow.webContents.setWindowOpenHandler(({ url }) => ({
+    action: isInstagramUrl(url) ? 'allow' : 'deny'
+  }));
+  instagramWindow.once('ready-to-show', () => {
+    instagramWindow?.show();
+    instagramWindow?.focus();
+  });
+  instagramWindow.show();
+  instagramWindow.focus();
+  instagramWindow.on('minimize', notifyInstagramPaused);
+  instagramWindow.on('closed', () => {
+    instagramWindow = null;
+    notifyInstagramPaused();
+  });
 }
 
 function updateTray(state: BlockingState): void {
@@ -127,6 +174,7 @@ function setupDevReloader(win: BrowserWindow): void {
 }
 
 function createMainWindow(): void {
+  console.log('[CodeMyLife] Creando ventana principal.');
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 720,
@@ -141,6 +189,12 @@ function createMainWindow(): void {
   });
 
   mainWindow.loadFile(path.join(__dirname, '../../src/renderer/index.html'));
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[CodeMyLife] Renderer cargado correctamente.');
+  });
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error('[CodeMyLife] Renderer terminado:', details.reason, details.exitCode);
+  });
   setupDevReloader(mainWindow);
 
   // Cerrar la ventana solo la oculta: el bloqueo debe seguir aplicandose.
@@ -159,38 +213,8 @@ function createMainWindow(): void {
 function registerIpcHandlers(): void {
   ipcMain.handle('session:get', () => sessionStore.session?.user ?? null);
 
-  ipcMain.handle('auth:login', async (_event, email: string, password: string) => {
-    const result = await api.login(email, password);
-    await sessionStore.save({ ...result, guest: false });
-    await scheduler.refresh();
-    return result.user;
-  });
-
-  ipcMain.handle('auth:register', async (_event, email: string, name: string, password: string) => {
-    const result = await api.register(email, name, password);
-    await sessionStore.save({ ...result, guest: false });
-    await scheduler.refresh();
-    return result.user;
-  });
-
-  ipcMain.handle('auth:guest', async () => {
-    const user = { id: 'guest', email: '', name: 'Perfil de Prueba' };
-    await sessionStore.save({ token: null, user, guest: true });
-    await scheduler.refresh();
-    return user;
-  });
-
-  ipcMain.handle('auth:logout', async () => {
-    if (scheduler.getState().enforcing) {
-      throw new Error('No puedes cerrar sesion mientras un bloqueo esta activo.');
-    }
-    await sessionStore.clear();
-    await scheduler.refresh();
-  });
-
   ipcMain.handle('commitments:overview', async () => {
-    const session = sessionStore.session;
-    const commitments = session?.guest ? await guestStore.list() : await api.listCommitments(requireToken());
+    const commitments = await guestStore.list();
     const now = new Date();
     return {
       commitments,
@@ -203,32 +227,32 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('commitments:create', async (_event, payload: NewCommitment) => {
-    const created = sessionStore.session?.guest
-      ? await guestStore.create(payload)
-      : await api.createCommitment(requireToken(), payload);
+    const created = await guestStore.create(payload);
     await scheduler.refresh();
     return created;
   });
 
   ipcMain.handle('commitments:cancel', async (_event, id: string) => {
-    const cancelled = sessionStore.session?.guest
-      ? await guestStore.cancel(id)
-      : await api.cancelCommitment(requireToken(), id);
+    const cancelled = await guestStore.cancel(id);
     await scheduler.refresh();
     return cancelled;
   });
 
-  ipcMain.handle('scripts:search', async (_event, query: string) => {
-    const session = sessionStore.session;
-    if (session?.guest) return guestStore.searchScripts(query);
-    return api.searchScripts(requireToken(), query);
+  ipcMain.handle('scripts:list', async () => {
+    return guestStore.searchScripts('');
   });
 
-  ipcMain.handle('scripts:create', async (_event, payload: NewScript) => {
-    if (sessionStore.session?.guest) {
-      return guestStore.createScript(payload);
+  ipcMain.handle('instagram:start-usage', async () => {
+    openInstagramBrowser();
+    await scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, true);
+    if (instagramWindow && !instagramWindow.isDestroyed()) {
+      await instagramWindow.loadURL('https://www.instagram.com/');
     }
-    return api.createScript(requireToken(), payload);
+  });
+
+  ipcMain.handle('instagram:pause-usage', async () => {
+    if (instagramWindow && !instagramWindow.isDestroyed()) instagramWindow.close();
+    else await scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, false);
   });
 
   ipcMain.handle('blocking:state', (): BlockingState => scheduler.getState());
@@ -236,23 +260,41 @@ function registerIpcHandlers(): void {
   ipcMain.handle('app:quit', () => void requestQuit());
 }
 
-if (!app.requestSingleInstanceLock()) {
+async function ensurePersonalProfile(): Promise<void> {
+  const user = { id: 'personal', email: '', name: 'Mi perfil' };
+  await sessionStore.save({ token: null, user, guest: true });
+}
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+console.log(`[CodeMyLife] Single instance lock: ${hasSingleInstanceLock}`);
+
+if (!hasSingleInstanceLock) {
+  console.log('[CodeMyLife] Ya existe otra instancia. Cerrando esta instancia secundaria.');
   app.quit();
 } else {
-  app.on('second-instance', showMainWindow);
+  app.on('second-instance', (_event, commandLine, workingDirectory) => {
+    console.log('[CodeMyLife] Segunda instancia detectada:', commandLine, workingDirectory);
+    showMainWindow();
+  });
 
   app.whenReady().then(async () => {
+    console.log('[CodeMyLife] Electron listo. Cargando perfil local.');
     await sessionStore.load();
+    await ensurePersonalProfile();
     registerIpcHandlers();
     createMainWindow();
     createTray();
     await scheduler.start();
+    console.log('[CodeMyLife] Aplicacion iniciada correctamente.');
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         createMainWindow();
       }
     });
+  }).catch((error) => {
+    console.error('[CodeMyLife] Error fatal durante el arranque:', error);
+    app.exit(1);
   });
 }
 

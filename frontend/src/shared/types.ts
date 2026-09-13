@@ -9,6 +9,7 @@ export interface Commitment {
   endTime: string;
   startsAt: string;
   endsAt: string;
+  alwaysBlocked?: boolean;
   status: 'active' | 'completed' | 'cancelled';
 }
 
@@ -21,6 +22,13 @@ export interface Script {
   blockedDomains: string[];
   allowCustomDomains: boolean;
   usageCount: number;
+  blockingMode?: 'scheduled' | 'always' | 'daily-limit';
+  dailyLimitMinutes?: number;
+  schedule?: {
+    days: number[];
+    startTime: string;
+    endTime: string;
+  };
 }
 
 export interface NewCommitment {
@@ -32,6 +40,7 @@ export interface NewCommitment {
   endTime: string;
   startsAt: string;
   endsAt: string;
+  alwaysBlocked?: boolean;
 }
 
 export interface NewScript {

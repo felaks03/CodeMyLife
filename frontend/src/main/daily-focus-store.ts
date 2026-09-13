@@ -5,8 +5,11 @@ import {
   DAILY_FOCUS_TASKS,
   DailyFocusProgress,
   DailyFocusTask,
+  activeDailyFocusTaskId,
+  canStartDailyFocusTask,
   normalizeDailyFocusProgress,
-  serializeDateKey
+  serializeDateKey,
+  tickDailyFocusProgress
 } from '../shared/daily-focus';
 
 export type DailyFocusStoreState = DailyFocusProgress[];
@@ -53,9 +56,11 @@ export const dailyFocusStore = {
     const item = progress.find((entry) => entry.taskId === taskId);
     if (!item) throw new Error('Tarea no encontrada.');
     if (item.completed) throw new Error('Esta tarea ya está completada.');
-    if (!item.startedAt) {
-      item.startedAt = new Date().toISOString();
+    if (!canStartDailyFocusTask(taskId, progress)) {
+      const activeTaskId = activeDailyFocusTaskId(progress);
+      throw new Error(activeTaskId ? 'Ya hay otra tarea en curso.' : 'No puedes iniciar esta tarea ahora.');
     }
+    item.startedAt = new Date().toISOString();
     await writeState(progress);
     return progress;
   },
@@ -80,14 +85,8 @@ export const dailyFocusStore = {
   async tick(): Promise<DailyFocusStoreState> {
     const progress = await readState();
     const now = Date.now();
-    for (const task of progress) {
-      if (!task.startedAt || task.completed) continue;
-      const startedAt = new Date(task.startedAt).getTime();
-      if (Number.isNaN(startedAt)) continue;
-      task.elapsedMs = Math.max(0, (task.elapsedMs ?? 0) + (now - startedAt));
-      task.startedAt = new Date().toISOString();
-    }
-    await writeState(progress);
-    return progress;
+    const next = tickDailyFocusProgress(progress, now);
+    await writeState(next);
+    return next;
   }
 };

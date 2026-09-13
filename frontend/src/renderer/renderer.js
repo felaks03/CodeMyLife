@@ -8,6 +8,14 @@ let activeLocksInterval = null;
 let wallet = null;
 let taskDefinitions = [];
 let shopItems = [];
+let dailyFocusPreviewInterval = null;
+let previewTasks = [
+  { id: 'run3k', name: 'Run 3k', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 45 },
+  { id: 'breakfast', name: 'Desayunar', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 20 },
+  { id: 'cold-shower', name: 'Cold shower', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 5 },
+  { id: 'gym', name: 'Gym', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 120 },
+  { id: 'backtesting', name: 'Backtesting', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 60 }
+];
 
 const DEFAULT_LOCK_CONFIG = Object.freeze({
   nameSuffix: ' - Weekly lock',
@@ -121,51 +129,121 @@ function showApp(user) {
   void loadEconomy();
 }
 
+function getTaskElapsedSeconds(task) {
+  if (task.status !== 'active' || !task.startedAt) return Math.max(0, Number(task.elapsed ?? 0));
+  const elapsedSinceStart = Math.floor((Date.now() - task.startedAt) / 1000);
+  return Math.max(0, Number(task.elapsed ?? 0) + elapsedSinceStart);
+}
+
+function formatTaskTimer(task) {
+  const elapsedTotal = Math.min(task.targetMinutes * 60, getTaskElapsedSeconds(task));
+  const remainingSeconds = Math.max(0, task.targetMinutes * 60 - elapsedTotal);
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 function renderDailyFocusPreview() {
   const preview = el('daily-focus-preview');
   const list = el('preview-task-list');
   const countdown = el('preview-countdown');
-  const tasks = [
-    { id: 'run3k', name: 'Run 3k', status: 'Pendiente' },
-    { id: 'breakfast', name: 'Desayunar', status: 'Pendiente' },
-    { id: 'cold-shower', name: 'Cold shower', status: 'Pendiente' },
-    { id: 'gym', name: 'Gym', status: 'Pendiente' },
-    { id: 'backtesting', name: 'Backtesting', status: 'Pendiente' }
-  ];
 
-  list.replaceChildren();
-  tasks.forEach((task) => {
-    const item = document.createElement('li');
-    item.className = 'daily-focus-row';
-    const left = document.createElement('div');
-    const title = document.createElement('strong');
-    title.textContent = task.name;
-    const meta = document.createElement('span');
-    meta.textContent = 'timer por tarea';
-    left.append(title, meta);
-    const right = document.createElement('div');
-    right.className = `daily-focus-status ${task.status === 'Pendiente' ? 'pending' : ''}`;
-    right.textContent = task.status;
-    item.append(left, right);
-    list.append(item);
-  });
+  const updatePreview = () => {
+    const activeTask = previewTasks.find((task) => task.status === 'active');
+    list.replaceChildren();
 
-  const totalMinutes = 6 * 60 + 59;
-  let remainingSeconds = totalMinutes * 60;
-  const tick = () => {
-    const minutes = Math.floor(remainingSeconds / 60);
-    const seconds = remainingSeconds % 60;
-    countdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    remainingSeconds -= 1;
-    if (remainingSeconds < 0) {
-      preview.classList.add('hidden');
-      clearInterval(intervalId);
+    previewTasks.forEach((task) => {
+      const liveElapsed = getTaskElapsedSeconds(task);
+      if (task.status === 'active' && task.startedAt) {
+        task.elapsed = liveElapsed;
+      }
+
+      const item = document.createElement('li');
+      item.className = 'daily-focus-row';
+
+      const left = document.createElement('div');
+      left.className = 'daily-focus-task-main';
+      const title = document.createElement('strong');
+      title.textContent = task.name;
+      const meta = document.createElement('span');
+      meta.textContent = formatTaskTimer(task);
+      left.append(title, meta);
+
+      const right = document.createElement('div');
+      right.className = 'daily-focus-actions';
+
+      const state = document.createElement('span');
+      state.className = `daily-focus-status ${task.status === 'pending' ? 'pending' : ''}`;
+      state.textContent = task.status === 'pending' ? 'Pendiente' : task.status === 'active' ? 'En curso' : 'Completada';
+
+      const action = document.createElement('button');
+      action.type = 'button';
+      action.className = 'daily-focus-action';
+      action.textContent = task.status === 'pending' ? 'Start' : task.status === 'active' ? 'Complete' : 'Hecho';
+      action.disabled = task.status === 'done' || Boolean(activeTask && activeTask.id !== task.id);
+      action.addEventListener('click', () => {
+        if (task.status === 'pending') {
+          if (previewTasks.some((candidate) => candidate.status === 'active')) {
+            return;
+          }
+          task.status = 'active';
+          task.startedAt = Date.now();
+          task.elapsed = Math.max(0, Number(task.elapsed ?? 0));
+        } else if (task.status === 'active') {
+          const totalRequired = task.targetMinutes * 60;
+          const elapsedForTask = getTaskElapsedSeconds(task);
+          if (elapsedForTask < totalRequired) {
+            return;
+          }
+          task.status = 'done';
+          task.elapsed = totalRequired;
+          task.startedAt = null;
+        }
+        updatePreview();
+      });
+
+      right.append(state, action);
+      item.append(left, right);
+      list.append(item);
+    });
+
+    const cutoffSeconds = 6 * 60 * 60 + 59 * 60;
+    const deadline = Date.now() + cutoffSeconds * 1000;
+    const tickCountdown = () => {
+      const remainingMs = Math.max(0, deadline - Date.now());
+      const remainingSeconds = Math.ceil(remainingMs / 1000);
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      countdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      if (remainingSeconds <= 0) {
+        clearInterval(dailyFocusPreviewInterval);
+        dailyFocusPreviewInterval = null;
+        preview.classList.add('hidden');
+      }
+    };
+
+    if (dailyFocusPreviewInterval) {
+      clearInterval(dailyFocusPreviewInterval);
     }
+    tickCountdown();
+    dailyFocusPreviewInterval = setInterval(() => {
+      previewTasks.forEach((task) => {
+        if (task.status === 'active' && task.startedAt) {
+          const liveElapsed = getTaskElapsedSeconds(task);
+          if (liveElapsed >= task.targetMinutes * 60) {
+            task.status = 'done';
+            task.elapsed = task.targetMinutes * 60;
+            task.startedAt = null;
+          }
+        }
+      });
+      tickCountdown();
+      updatePreview();
+    }, 1000);
   };
 
+  updatePreview();
   preview.classList.remove('hidden');
-  tick();
-  const intervalId = setInterval(tick, 1000);
 }
 
 el('preview-daily-focus').addEventListener('click', () => {

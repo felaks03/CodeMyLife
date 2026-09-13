@@ -2,11 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DAILY_FOCUS_TASKS,
+  activeDailyFocusTaskId,
+  canStartDailyFocusTask,
   dailyFocusTaskIds,
   isDailyFocusWindow,
   isDailyFocusBlocked,
   minutesUntilFocusCutoff,
-  progressForDay
+  progressForDay,
+  tickDailyFocusProgress
 } from '../src/shared/daily-focus';
 
 test('la ventana de foco arranca a las 8:00 y termina a las 15:00', () => {
@@ -41,4 +44,21 @@ test('si no hay tareas completadas dentro de la ventana, se activa el bloqueo', 
 test('la cuenta atrás hasta el corte se calcula en minutos', () => {
   const now = new Date('2026-09-13T13:00:00');
   assert.equal(minutesUntilFocusCutoff(now), 120);
+});
+
+test('solo puede haber una tarea activa y el temporizador acumula el tiempo', () => {
+  const byDay = progressForDay('2026-09-13', [
+    { taskId: 'run3k', completed: false, startedAt: null, elapsedMs: 0 },
+    { taskId: 'breakfast', completed: false, startedAt: '2026-09-13T09:00:00.000Z', elapsedMs: 30000 },
+    { taskId: 'cold-shower', completed: false, startedAt: null, elapsedMs: 0 },
+    { taskId: 'gym', completed: false, startedAt: null, elapsedMs: 0 },
+    { taskId: 'backtesting', completed: false, startedAt: null, elapsedMs: 0 }
+  ]);
+
+  assert.equal(activeDailyFocusTaskId(byDay), 'breakfast');
+  assert.equal(canStartDailyFocusTask('run3k', byDay), false);
+
+  const ticked = tickDailyFocusProgress(byDay, new Date('2026-09-13T09:02:00.000Z').getTime());
+  assert.equal(ticked[1].elapsedMs, 150000);
+  assert.equal(ticked[1].startedAt, '2026-09-13T09:02:00.000Z');
 });

@@ -117,6 +117,34 @@ export function normalizeDailyFocusProgress(raw: Partial<DailyFocusProgress>[] |
   return [...byId.values()];
 }
 
+export function activeDailyFocusTaskId(progress: DailyFocusState): string | null {
+  const active = progress.find((task) => task.startedAt && !task.completed);
+  return active ? active.taskId : null;
+}
+
+export function canStartDailyFocusTask(taskId: string, progress: DailyFocusState): boolean {
+  const activeTaskId = activeDailyFocusTaskId(progress);
+  if (activeTaskId && activeTaskId !== taskId) return false;
+  const task = progress.find((item) => item.taskId === taskId);
+  if (!task || task.completed) return false;
+  return !task.startedAt;
+}
+
+export function tickDailyFocusProgress(progress: DailyFocusState, nowMs: number): DailyFocusState {
+  return progress.map((task) => {
+    if (!task.startedAt || task.completed) return { ...task };
+    const startedAt = new Date(task.startedAt).getTime();
+    if (Number.isNaN(startedAt)) return { ...task };
+    const previousElapsed = Number(task.elapsedMs ?? 0);
+    const nextElapsed = Math.max(0, previousElapsed + (nowMs - startedAt));
+    return {
+      ...task,
+      elapsedMs: nextElapsed,
+      startedAt: new Date(nowMs).toISOString()
+    };
+  });
+}
+
 export function isDailyFocusBlocked(date: Date, progress: DailyFocusState): boolean {
   if (!isDailyFocusWindow(date)) return false;
   return !progress.every((task) => task.completed === true);

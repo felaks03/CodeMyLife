@@ -41,6 +41,19 @@ test('si no hay tareas completadas dentro de la ventana, se activa el bloqueo', 
   assert.deepEqual(dailyFocusTaskIds(), ['run3k', 'breakfast', 'cold-shower', 'gym', 'backtesting']);
 });
 
+test('las tareas usan las duraciones diarias acordadas', () => {
+  assert.deepEqual(
+    DAILY_FOCUS_TASKS.map((task) => [task.id, task.durationMinutes]),
+    [
+      ['run3k', 20],
+      ['breakfast', 15],
+      ['cold-shower', 15],
+      ['gym', 90],
+      ['backtesting', 60]
+    ]
+  );
+});
+
 test('la cuenta atrás hasta el corte se calcula en minutos', () => {
   const now = new Date('2026-09-13T13:00:00');
   assert.equal(minutesUntilFocusCutoff(now), 120);

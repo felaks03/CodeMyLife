@@ -20,7 +20,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     id: 'run3k',
     name: 'Run 3k',
     description: 'Correr 3 km.',
-    durationMinutes: 45,
+    durationMinutes: 20,
     rewardCoins: 12,
     enabled: true
   },
@@ -28,7 +28,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     id: 'breakfast',
     name: 'Desayunar',
     description: 'Desayuno completo antes del mediodía.',
-    durationMinutes: 20,
+    durationMinutes: 15,
     rewardCoins: 8,
     enabled: true
   },
@@ -36,7 +36,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     id: 'cold-shower',
     name: 'Cold shower',
     description: 'Ducha fría.',
-    durationMinutes: 5,
+    durationMinutes: 15,
     rewardCoins: 7,
     enabled: true
   },
@@ -44,7 +44,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     id: 'gym',
     name: 'Gym',
     description: 'Entrenamiento de fuerza.',
-    durationMinutes: 120,
+    durationMinutes: 90,
     rewardCoins: 20,
     enabled: true
   },

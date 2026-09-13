@@ -10,10 +10,10 @@ let taskDefinitions = [];
 let shopItems = [];
 let dailyFocusPreviewInterval = null;
 let previewTasks = [
-  { id: 'run3k', name: 'Run 3k', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 45 },
-  { id: 'breakfast', name: 'Desayunar', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 20 },
-  { id: 'cold-shower', name: 'Cold shower', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 5 },
-  { id: 'gym', name: 'Gym', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 120 },
+  { id: 'run3k', name: 'Run 3k', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 20 },
+  { id: 'breakfast', name: 'Desayunar', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 15 },
+  { id: 'cold-shower', name: 'Cold shower', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 15 },
+  { id: 'gym', name: 'Gym', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 90 },
   { id: 'backtesting', name: 'Backtesting', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 60 }
 ];
 

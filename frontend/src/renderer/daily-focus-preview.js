@@ -1,8 +1,8 @@
 const tasks = [
-  { name: 'Run 3k', targetMinutes: 45, status: 'pending', startedAt: null, elapsed: 0 },
-  { name: 'Desayunar', targetMinutes: 20, status: 'pending', startedAt: null, elapsed: 0 },
-  { name: 'Cold shower', targetMinutes: 5, status: 'pending', startedAt: null, elapsed: 0 },
-  { name: 'Gym', targetMinutes: 120, status: 'pending', startedAt: null, elapsed: 0 },
+  { name: 'Run 3k', targetMinutes: 20, status: 'pending', startedAt: null, elapsed: 0 },
+  { name: 'Desayunar', targetMinutes: 15, status: 'pending', startedAt: null, elapsed: 0 },
+  { name: 'Cold shower', targetMinutes: 15, status: 'pending', startedAt: null, elapsed: 0 },
+  { name: 'Gym', targetMinutes: 90, status: 'pending', startedAt: null, elapsed: 0 },
   { name: 'Backtesting', targetMinutes: 60, status: 'pending', startedAt: null, elapsed: 0 }
 ];
 
@@ -48,6 +48,9 @@ function render() {
       if (task.status === 'pending') {
         task.status = 'active';
         task.startedAt = Date.now();
+        if (task.name === 'Backtesting') {
+          void window.codeMyLife.allowComputerDuringDailyFocusPreview();
+        }
       } else if (task.status === 'active') {
         task.elapsed = task.targetMinutes * 60;
         task.startedAt = null;

@@ -16,6 +16,7 @@ let instagramWindow: BrowserWindow | null = null;
 let sleepLockWindow: BrowserWindow | null = null;
 let dailyFocusPreviewWindow: BrowserWindow | null = null;
 let dailyFocusPreviewTimer: ReturnType<typeof setTimeout> | null = null;
+let dailyFocusPreviewComputerAllowed = false;
 let quitting = false;
 
 Menu.setApplicationMenu(null);
@@ -48,6 +49,20 @@ ipcMain.handle('daily-focus-preview:open', () => {
 
 ipcMain.handle('daily-focus-preview:close', () => {
   closeDailyFocusPreviewWindow();
+});
+
+ipcMain.handle('daily-focus-preview:allow-computer', () => {
+  if (!dailyFocusPreviewWindow || dailyFocusPreviewWindow.isDestroyed()) return;
+  dailyFocusPreviewComputerAllowed = true;
+  dailyFocusPreviewWindow.setKiosk(false);
+  dailyFocusPreviewWindow.setFullScreen(false);
+  dailyFocusPreviewWindow.setAlwaysOnTop(false);
+  dailyFocusPreviewWindow.setSkipTaskbar(false);
+  dailyFocusPreviewWindow.setResizable(true);
+  dailyFocusPreviewWindow.setSize(760, 700);
+  dailyFocusPreviewWindow.center();
+  dailyFocusPreviewWindow.show();
+  dailyFocusPreviewWindow.focus();
 });
 
 function assetPath(file: string): string {
@@ -196,9 +211,11 @@ function closeDailyFocusPreviewWindow(): void {
     dailyFocusPreviewWindow.destroy();
   }
   dailyFocusPreviewWindow = null;
+  dailyFocusPreviewComputerAllowed = false;
 }
 
 function createDailyFocusPreviewWindow(): void {
+  dailyFocusPreviewComputerAllowed = false;
   dailyFocusPreviewWindow = new BrowserWindow({
     fullscreen: true,
     frame: false,
@@ -225,18 +242,19 @@ function createDailyFocusPreviewWindow(): void {
     dailyFocusPreviewWindow?.focus();
   });
   dailyFocusPreviewWindow.on('blur', () => {
-    if (dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()) {
+    if (!dailyFocusPreviewComputerAllowed && dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()) {
       dailyFocusPreviewWindow.show();
       dailyFocusPreviewWindow.focus();
     }
   });
   dailyFocusPreviewWindow.on('close', (event) => {
-    if (!quitting) event.preventDefault();
+    if (!quitting && !dailyFocusPreviewComputerAllowed) event.preventDefault();
   });
   dailyFocusPreviewWindow.on('closed', () => {
     if (dailyFocusPreviewTimer) clearTimeout(dailyFocusPreviewTimer);
     dailyFocusPreviewTimer = null;
     dailyFocusPreviewWindow = null;
+    dailyFocusPreviewComputerAllowed = false;
   });
 
   dailyFocusPreviewTimer = setTimeout(closeDailyFocusPreviewWindow, 30_000);

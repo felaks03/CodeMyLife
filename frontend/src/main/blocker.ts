@@ -22,6 +22,10 @@ async function flushDns(): Promise<void> {
 export class HostsBlocker {
   private appliedDomains: string[] = [];
 
+  forceReconcile(): void {
+    this.appliedDomains = [];
+  }
+
   async apply(domains: string[]): Promise<void> {
     const sanitized = sanitizeDomains(domains);
     if (this.isSameAsApplied(sanitized)) {

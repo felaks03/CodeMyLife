@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, session } from 'electron';
 import * as path from 'path';
 import { watch } from 'fs';
 import { SessionStore } from './session-store';
 import { BlockingScheduler } from './scheduler';
 import { guestStore } from './guest-store';
 import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
+import { InstagramProxy } from './instagram-proxy';
 import { buildCalendar, commitmentStats } from '../shared/schedule';
 import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
 
@@ -12,6 +13,7 @@ const sessionStore = new SessionStore();
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
+const instagramProxy = new InstagramProxy();
 let quitting = false;
 
 Menu.setApplicationMenu(null);
@@ -30,16 +32,13 @@ function assetPath(file: string): string {
 }
 
 function showMainWindow(): void {
-  console.log('[CodeMyLife] Solicitud para mostrar la ventana principal.');
   if (!mainWindow) {
-    console.log('[CodeMyLife] No existia ventana; creando una nueva.');
     createMainWindow();
     return;
   }
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
-  console.log('[CodeMyLife] Ventana principal mostrada y enfocada.');
   mainWindow.setAlwaysOnTop(true);
   mainWindow.setAlwaysOnTop(false);
 }
@@ -58,12 +57,21 @@ function notifyInstagramPaused(): void {
   mainWindow?.webContents.send('instagram:paused');
 }
 
-function openInstagramBrowser(): void {
+async function openInstagramBrowser(): Promise<void> {
   if (instagramWindow && !instagramWindow.isDestroyed()) {
     instagramWindow.show();
     instagramWindow.focus();
     return;
   }
+
+  const proxyPort = await instagramProxy.start();
+  const browserSession = session.fromPartition('persist:codemylife-instagram');
+  await browserSession.setProxy({
+    proxyRules: `https=127.0.0.1:${proxyPort};http=127.0.0.1:${proxyPort}`,
+    proxyBypassRules: ''
+  });
+  await browserSession.forceReloadProxyConfig();
+  await browserSession.clearHostResolverCache();
 
   instagramWindow = new BrowserWindow({
     width: 1100,
@@ -73,6 +81,7 @@ function openInstagramBrowser(): void {
     backgroundColor: '#101418',
     parent: mainWindow ?? undefined,
     webPreferences: {
+      partition: 'persist:codemylife-instagram',
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
@@ -97,8 +106,28 @@ function openInstagramBrowser(): void {
   instagramWindow.on('minimize', notifyInstagramPaused);
   instagramWindow.on('closed', () => {
     instagramWindow = null;
+    void instagramProxy.stop();
     notifyInstagramPaused();
   });
+}
+
+async function loadInstagramBrowser(): Promise<void> {
+  if (!instagramWindow || instagramWindow.isDestroyed()) return;
+
+  await instagramWindow.webContents.session.clearHostResolverCache();
+
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await instagramWindow.loadURL('https://www.instagram.com/');
+      return;
+    } catch (error) {
+      lastError = error as Error;
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  mainWindow?.webContents.send('instagram:error', lastError?.message ?? 'No se pudo cargar Instagram.');
 }
 
 function updateTray(state: BlockingState): void {
@@ -174,7 +203,6 @@ function setupDevReloader(win: BrowserWindow): void {
 }
 
 function createMainWindow(): void {
-  console.log('[CodeMyLife] Creando ventana principal.');
   mainWindow = new BrowserWindow({
     width: 1024,
     height: 720,
@@ -189,12 +217,6 @@ function createMainWindow(): void {
   });
 
   mainWindow.loadFile(path.join(__dirname, '../../src/renderer/index.html'));
-  mainWindow.webContents.on('did-finish-load', () => {
-    console.log('[CodeMyLife] Renderer cargado correctamente.');
-  });
-  mainWindow.webContents.on('render-process-gone', (_event, details) => {
-    console.error('[CodeMyLife] Renderer terminado:', details.reason, details.exitCode);
-  });
   setupDevReloader(mainWindow);
 
   // Cerrar la ventana solo la oculta: el bloqueo debe seguir aplicandose.
@@ -243,11 +265,9 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('instagram:start-usage', async () => {
-    openInstagramBrowser();
     await scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, true);
-    if (instagramWindow && !instagramWindow.isDestroyed()) {
-      await instagramWindow.loadURL('https://www.instagram.com/');
-    }
+    await openInstagramBrowser();
+    await loadInstagramBrowser();
   });
 
   ipcMain.handle('instagram:pause-usage', async () => {
@@ -266,26 +286,22 @@ async function ensurePersonalProfile(): Promise<void> {
 }
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
-console.log(`[CodeMyLife] Single instance lock: ${hasSingleInstanceLock}`);
 
 if (!hasSingleInstanceLock) {
-  console.log('[CodeMyLife] Ya existe otra instancia. Cerrando esta instancia secundaria.');
   app.quit();
 } else {
   app.on('second-instance', (_event, commandLine, workingDirectory) => {
-    console.log('[CodeMyLife] Segunda instancia detectada:', commandLine, workingDirectory);
     showMainWindow();
   });
 
   app.whenReady().then(async () => {
-    console.log('[CodeMyLife] Electron listo. Cargando perfil local.');
+    app.configureHostResolver({ enableBuiltInResolver: true, secureDnsMode: 'secure' });
     await sessionStore.load();
     await ensurePersonalProfile();
     registerIpcHandlers();
     createMainWindow();
     createTray();
     await scheduler.start();
-    console.log('[CodeMyLife] Aplicacion iniciada correctamente.');
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

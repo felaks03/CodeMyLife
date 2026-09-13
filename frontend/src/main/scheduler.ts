@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { HostsBlocker } from './blocker';
 import { BrowserGuard } from './browser-guard';
+import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
 import { domainsToBlock } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
 
@@ -57,6 +58,7 @@ export class BlockingScheduler {
   }
 
   async setTemporarilyAllowed(domains: string[], allowed: boolean): Promise<void> {
+    this.blocker.forceReconcile();
     for (const domain of domains) {
       if (allowed) {
         this.temporarilyAllowedDomains.add(domain);
@@ -66,9 +68,15 @@ export class BlockingScheduler {
         this.manuallyBlockedDomains.add(domain);
       }
     }
-    if (allowed) await this.browserGuard.blockChrome();
-    else await this.browserGuard.unblockChrome();
     await this.tick();
+    if (allowed) {
+      try {
+        await this.browserGuard.blockChrome();
+      } catch (error) {
+      }
+    } else {
+      await this.browserGuard.unblockChrome();
+    }
   }
 
   private async tick(): Promise<void> {
@@ -77,7 +85,8 @@ export class BlockingScheduler {
     const scheduledDomains = domainsToBlock(this.commitments, new Date());
     const domains = [...new Set([
       ...scheduledDomains,
-      ...this.manuallyBlockedDomains
+      ...this.manuallyBlockedDomains,
+      ...INSTAGRAM_DOMAINS
     ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain));
     const wasEnforcing = this.state.enforcing;
 

@@ -7,6 +7,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Los bloqueos activos no deben cortar la conexión general a Internet.
 - [x] Un bloqueo solo puede afectar a los dominios o procesos que define su propio script.
 - [x] Activar el bloqueo de videojuegos no debe bloquear YouTube, Instagram ni otros dominios no relacionados.
+- [x] Activar el bloqueo semanal invalida excepciones temporales antiguas y aplica el bloqueo de Instagram inmediatamente.
 - [x] El bloqueo de YouTube solo debe actuar dentro de su horario configurado.
 - [x] Las entradas antiguas de bloqueos no deben seguir activas fuera de su horario o después de cancelarse.
 - [x] Cualquier cambio en dominios bloqueados debe reflejarse en hosts sin borrar entradas ajenas del usuario.
@@ -46,7 +47,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] El bloqueo real de 08:00 a 15:00 debe usar el progreso persistente.
 - [x] Solo puede haber una tarea activa.
 - [x] Gym no debe exigirse durante el fin de semana.
-- [x] La cuenta atrás de cada tarea debe actualizarse cada segundo en preview y bloqueo real.
+- [x] La cuenta atrás de cada tarea debe actualizarse cada segundo en el bloqueo real.
 
 ## Estabilidad Y Seguridad
 
@@ -54,8 +55,8 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Wallet, compromisos y foco diario usan escrituras atómicas.
 - [x] Los errores del scheduler deben aparecer en la interfaz.
 - [x] Revisar revalidación cuando un compromiso expira durante una compra o pausa.
-- [ ] Añadir pruebas de rollback de wallet y compromisos.
-- [ ] Añadir pruebas de reinicio y migración de inventario antiguo.
+- [ ] Añadir pruebas E2E de rollback de wallet y compromisos con fallos reales de escritura.
+- [ ] Añadir pruebas E2E de reinicio y migración de inventario antiguo.
 
 ## UX Y Accesibilidad
 
@@ -64,7 +65,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Countdown con `aria-live`.
 - [x] Inventario con minutos totales en lugar de un contador ambiguo de registros.
 - [x] Validar todos los botones con teclado y estados disabled explicados.
-- [ ] Mantener textos visibles y estados consistentes entre Instagram y videojuegos.
+- [x] Mantener textos visibles y estados consistentes entre Instagram y videojuegos.
 
 ## Pruebas Pendientes
 
@@ -72,11 +73,13 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Activar solo YouTube dentro de horario: solo YouTube debe bloquearse (tests de horario y dominios).
 - [x] Activar varios scripts: cada uno debe respetar su horario y dominios (tests de schedule).
 - [x] Confirmar que no se crea una regla de hosts para dominios no activos (tests de hosts/schedule).
+- [x] Añadir cobertura de todos los dominios de los scripts integrados y sus aliases en hosts.
 - [x] Comprar con 42 minutos activos: resultado 102 minutos.
 - [x] Comprar dos veces sin usar: un único saldo de 120 minutos.
 - [ ] Pausar, reiniciar y reanudar sin perder tiempo (requiere prueba manual de Electron).
 - [ ] Instagram gratis + compra de 5 minutos + reinicio (requiere prueba manual de Electron).
 - [x] Ejecutar build y suite completa después de cada bloque.
+- [x] Suite de contratos de producto: UI, updater, multi-monitor, `newversion`, timers, notificaciones, persistencia, rollback estructural y ausencia de pruebas.
 
 ## Registro De Cambios
 
@@ -98,3 +101,4 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.
 - Añadidos estados ARIA para botones de compra y uso/pausa.
+- Añadida suite `product-contract.test.ts` para verificar requisitos de producto y evitar regresiones estructurales.

@@ -9,6 +9,7 @@ import {
 } from '../src/shared/schedule';
 import { buildManagedBlock, renderHostsFile, sanitizeDomains, stripManagedBlock } from '../src/shared/hosts-file';
 import { Commitment } from '../src/shared/types';
+import { BUILTIN_SCRIPTS } from '../src/shared/builtin-scripts';
 
 function commitment(overrides: Partial<Commitment> = {}): Commitment {
   return {
@@ -30,6 +31,7 @@ function commitment(overrides: Partial<Commitment> = {}): Commitment {
 // 2026-09-07 is a Monday.
 const mondayAt = (time: string) => new Date(`2026-09-07T${time}:00`);
 const tuesdayAt = (time: string) => new Date(`2026-09-08T${time}:00`);
+const fridayAt = (time: string) => new Date(`2026-09-11T${time}:00`);
 const saturdayAt = (time: string) => new Date(`2026-09-05T${time}:00`);
 const sundayAt = (time: string) => new Date(`2026-09-06T${time}:00`);
 
@@ -81,6 +83,38 @@ test('YouTube solo se bloquea dentro de su horario', () => {
 test('el bloqueo de videojuegos no aporta dominios de YouTube', () => {
   const games = commitment({ scriptId: 'builtin-games', blockedDomains: [], alwaysBlocked: true });
   assert.deepEqual(domainsToBlock([games], mondayAt('10:30')), []);
+});
+
+test('todos los bloqueos web activos aportan sus dominios y videojuegos ninguno', () => {
+  const commitments = BUILTIN_SCRIPTS.map((script) => commitment({
+    _id: script._id,
+    scriptId: script._id,
+    scriptName: script.name,
+    blockedDomains: script.blockedDomains,
+    alwaysBlocked: script.blockingMode === 'always' || script.blockingMode === 'daily-limit',
+    days: script.schedule?.days ?? [0, 1, 2, 3, 4, 5, 6],
+    startTime: script.schedule?.startTime ?? '00:00',
+    endTime: script.schedule?.endTime ?? '23:59'
+  }));
+  const expected = [...new Set(BUILTIN_SCRIPTS.flatMap((script) => script.blockedDomains))].sort();
+  const actual = domainsToBlock(commitments, fridayAt('16:00'));
+
+  assert.deepEqual(actual, expected);
+  assert.equal(actual.includes('steam.exe'), false);
+  assert.equal(actual.includes('youtube.com'), true);
+  assert.equal(actual.includes('instagram.com'), true);
+});
+
+test('hosts genera aliases para todos los dominios bloqueables', () => {
+  const domains = [...new Set(BUILTIN_SCRIPTS.flatMap((script) => script.blockedDomains))];
+  const block = buildManagedBlock(domains);
+
+  for (const domain of domains) {
+    assert.ok(block.includes(`127.0.0.1 ${domain}`));
+    assert.ok(block.includes(`::1 ${domain}`));
+  }
+  assert.equal(block.includes('127.0.0.1 steam.exe'), false);
+  assert.equal(block.includes('127.0.0.1 unrelated.example'), false);
 });
 
 test('descarta dominios con formato invalido', () => {

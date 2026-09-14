@@ -65,6 +65,7 @@ export class BlockingScheduler {
   }
 
   async refresh(): Promise<void> {
+    this.temporarilyAllowedDomains.clear();
     await this.syncFromServer();
     await this.tick();
   }

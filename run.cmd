@@ -1,6 +1,6 @@
 @echo off
 REM Lanzador completo de CodeMyLife para Windows.
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 set "ROOT=%~dp0"
 set "BACKEND=%ROOT%backend"
@@ -11,7 +11,7 @@ REM La terminal debe estar elevada para modificar hosts.
 net session >nul 2>&1
 if not "%errorlevel%"=="0" (
   echo [INFO] Solicitando permisos de administrador para aplicar los bloqueos...
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$process = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', ('""' + '%~f0' + '""') -Verb RunAs -Wait -PassThru; exit $process.ExitCode"
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$process = Start-Process -FilePath '%ComSpec%' -ArgumentList '/d', '/c', ('""' + '%~f0' + '""') -Verb RunAs -Wait -PassThru; exit $process.ExitCode"
   exit /b !errorlevel!
 )
 echo [INFO] Permisos de administrador confirmados.
@@ -61,7 +61,7 @@ if errorlevel 1 (
   echo [ERROR] Compilacion del frontend fallo con codigo %errorlevel%.
   exit /b 1
 )
-"%FRONTEND%\node_modules\electron\dist\electron.exe" "%FRONTEND%"
+call npm.cmd start
 set "ELECTRON_EXIT=%errorlevel%"
 
 exit /b %ELECTRON_EXIT%

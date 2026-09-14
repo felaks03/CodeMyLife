@@ -42,6 +42,7 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
 let sleepLockWindow: BrowserWindow | null = null;
+let quitInProgress = false;
 const dailyFocusLockWindows = new Map<number, BrowserWindow>();
 let dailyFocusLockComputerAllowed = false;
 let quitting = false;
@@ -192,7 +193,8 @@ function updateTray(state: BlockingState): void {
       { label: status, enabled: false },
       { type: 'separator' },
       { label: 'Abrir CodeMyLife', click: showMainWindow },
-      { label: 'Salir', click: () => void requestQuit() }
+      { label: 'Ocultar', click: () => mainWindow?.hide() },
+      { label: 'Salir y desactivar bloqueos', click: () => void requestQuit() }
     ])
   );
 }
@@ -318,6 +320,9 @@ function createDailyFocusLockWindow(display: Display): void {
 }
 
 async function requestQuit(): Promise<void> {
+  if (quitInProgress) return;
+  quitInProgress = true;
+
   if (scheduler.getState().enforcing) {
     const { response } = await dialog.showMessageBox({
       type: 'warning',
@@ -330,7 +335,10 @@ async function requestQuit(): Promise<void> {
       cancelId: 0
     });
 
-    if (response !== 1) return;
+    if (response !== 1) {
+      quitInProgress = false;
+      return;
+    }
   }
 
   quitting = true;
@@ -339,7 +347,18 @@ async function requestQuit(): Promise<void> {
   sleepLockWindow?.destroy();
   sleepLockWindow = null;
   destroyDailyFocusLockWindows();
-  await scheduler.stop();
+  let timeout: NodeJS.Timeout | null = null;
+  const stopTimeout = new Promise<void>((resolve) => {
+    timeout = setTimeout(resolve, 5000);
+  });
+  const stopScheduler = scheduler.stop().catch((error) => {
+    console.error('[CodeMyLife] No se pudo completar la limpieza al salir:', error);
+  });
+  await Promise.race([
+    stopScheduler,
+    stopTimeout
+  ]);
+  if (timeout) clearTimeout(timeout);
   app.quit();
 }
 

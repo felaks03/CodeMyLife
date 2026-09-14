@@ -81,6 +81,21 @@ test('el cierre y apagado pausan sesiones activas', () => {
   assert.match(main, /app:pause-timers/);
 });
 
+test('ocultar desde la bandeja conserva los bloqueos y salir los desactiva', () => {
+  const main = read('src/main/main.ts');
+  assert.match(main, /label: 'Ocultar', click: \(\) => mainWindow\?\.hide\(\)/);
+  assert.match(main, /label: 'Salir y desactivar bloqueos', click: \(\) => void requestQuit\(\)/);
+  assert.match(main, /scheduler\.stop\(\)/);
+});
+
+test('la salida protegida no se ejecuta dos veces y tiene timeout', () => {
+  const main = read('src/main/main.ts');
+  assert.match(main, /let quitInProgress = false/);
+  assert.match(main, /if \(quitInProgress\) return/);
+  assert.match(main, /Promise\.race\(\[/);
+  assert.match(main, /setTimeout\(resolve, 5000\)/);
+});
+
 test('el scheduler invalida excepciones temporales al refrescar compromisos', () => {
   const scheduler = read('src/main/scheduler.ts');
   assert.match(scheduler, /temporarilyAllowedDomains\.clear\(\)/);

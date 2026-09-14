@@ -62,6 +62,9 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] La hora sensible usa autoridad remota con fallback.
 - [x] Wallet, compromisos y foco diario usan escrituras atómicas.
 - [x] Los errores del scheduler deben aparecer en la interfaz.
+- [x] Cerrar u ocultar la ventana desde la bandeja mantiene activos los bloqueos.
+- [x] La salida explícita se identifica como “Salir y desactivar bloqueos” y limpia el scheduler de forma segura.
+- [x] La salida protegida evita carreras y tiene un timeout de cinco segundos.
 - [x] Revisar revalidación cuando un compromiso expira durante una compra o pausa.
 - [ ] Añadir pruebas E2E de rollback de wallet y compromisos con fallos reales de escritura.
 - [ ] Añadir pruebas E2E de reinicio y migración de inventario antiguo.
@@ -105,6 +108,8 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadido selector de aplicación para videojuegos, apertura desde el proceso principal y monitorización del cierre.
 - Implementado el flujo persistente de Instagram: el objeto comprado ya no se consume al activar, guarda `startedAt`/`remainingSeconds` y se pausa desde el mismo timer.
 - Añadida pausa automática de sesiones activas al cerrar la ventana, salir de la app o recibir el evento de apagado de Windows.
+- Separadas las acciones de ocultar y salir en la bandeja: ocultar conserva los bloqueos y salir los desactiva explícitamente.
+- Añadida protección contra doble salida y timeout para la limpieza del scheduler durante el cierre.
 - Eliminados los restos de preview, bloqueos de prueba y timer temporal de tareas; el foco diario solo usa la pantalla real de 08:00 a 15:00.
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.

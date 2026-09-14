@@ -96,10 +96,6 @@ function setupAutoUpdater(): void {
     mainWindow?.webContents.send('update:error', message);
   });
 
-ipcMain.handle('daily-focus:skip-today', async () => {
-  await dailyFocusStore.skipForToday();
-  await scheduler.refresh();
-});
   void autoUpdater.checkForUpdates().catch((error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[CodeMyLife] Update check error:', message);
@@ -406,6 +402,10 @@ function createMainWindow(): void {
 function registerIpcHandlers(): void {
   ipcMain.handle('session:get', () => sessionStore.session?.user ?? null);
   ipcMain.handle('app:version', () => app.getVersion());
+  ipcMain.handle('daily-focus:skip-today', async () => {
+    await dailyFocusStore.skipForToday();
+    await scheduler.refresh();
+  });
   ipcMain.handle('time:now', () => timeAuthority.now().toISOString());
 
   ipcMain.handle('commitments:overview', async () => {

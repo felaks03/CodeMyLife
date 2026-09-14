@@ -42,6 +42,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] El botón de desarrollo de saltar bloqueo aparece en la pantalla fullscreen de tareas.
 - [x] Las notificaciones aparecen como una capa fija y no desplazan la interfaz.
 - [x] La build empaquetada usa un directorio de datos de producción separado y no reutiliza datos de pruebas.
+- [x] La build empaquetada migra el wallet legacy si el almacén de producción aún no existe, conservando monedas y recompensas.
 
 ## Foco Diario
 

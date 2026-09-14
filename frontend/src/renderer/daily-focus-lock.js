@@ -12,7 +12,15 @@ void window.codeMyLife.isDevelopment().then((development) => {
 });
 
 skipButton.addEventListener('click', async () => {
-  await window.codeMyLife.skipDailyFocusToday();
+  skipButton.disabled = true;
+  skipButton.textContent = 'Saltando...';
+  try {
+    await window.codeMyLife.skipDailyFocusToday();
+  } catch (error) {
+    skipButton.disabled = false;
+    skipButton.textContent = 'Saltar bloqueo diario (desarrollo)';
+    document.getElementById('focus-note').textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+  }
 });
 
 function elapsedSeconds(task) {

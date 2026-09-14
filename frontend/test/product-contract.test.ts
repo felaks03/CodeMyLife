@@ -96,6 +96,7 @@ test('el salto del foco diario solo existe como accion de desarrollo', () => {
   assert.match(html, /skip-daily-focus/);
   assert.match(read('src/renderer/daily-focus-lock.html'), /skip-daily-focus/);
   assert.match(read('src/renderer/daily-focus-lock.js'), /skipDailyFocusToday/);
+  assert.match(main, /function registerIpcHandlers[\s\S]*daily-focus:skip-today/);
 });
 
 test('la UI muestra la version runtime en una esquina fija', () => {

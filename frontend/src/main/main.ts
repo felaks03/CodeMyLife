@@ -89,7 +89,10 @@ function setupAutoUpdater(): void {
   autoUpdater.on('update-available', (info) => mainWindow?.webContents.send('update:available', info.version));
   autoUpdater.on('update-not-available', () => mainWindow?.webContents.send('update:not-available'));
   autoUpdater.on('download-progress', (progress) => mainWindow?.webContents.send('update:download-progress', progress.percent));
-  autoUpdater.on('update-downloaded', (info) => mainWindow?.webContents.send('update:downloaded', info.version));
+  autoUpdater.on('update-downloaded', (info) => {
+    mainWindow?.webContents.send('update:downloaded', info.version);
+    setTimeout(() => autoUpdater.quitAndInstall(false, true), 2000);
+  });
   autoUpdater.on('error', (error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[CodeMyLife] Update error:', message);
@@ -524,7 +527,7 @@ if (!hasSingleInstanceLock) {
     await ensurePersonalProfile();
     registerIpcHandlers();
     createMainWindow();
-    setupAutoUpdater();
+    mainWindow?.webContents.once('did-finish-load', setupAutoUpdater);
     createTray();
     const reconcileDisplays = () => syncDailyFocusLockWindow(scheduler.getState().dailyFocusActive === true);
     screen.on('display-added', reconcileDisplays);

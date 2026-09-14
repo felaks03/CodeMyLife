@@ -753,7 +753,7 @@ window.codeMyLife.onUpdateAvailable((version) => {
   showNotice(`Actualizacion ${version} disponible. Se descargara automaticamente.`, 'success');
 });
 window.codeMyLife.onUpdateDownloaded((version) => {
-  showNotice(`Actualizacion ${version} descargada. Se instalara al cerrar la aplicacion.`, 'success');
+  showNotice(`Actualizacion ${version} descargada. Se instalara automaticamente.`, 'success');
 });
 window.codeMyLife.onUpdateError((message) => {
   showNotice(`No se pudo actualizar la aplicacion: ${message}`);

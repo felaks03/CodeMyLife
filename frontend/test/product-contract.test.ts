@@ -86,6 +86,17 @@ test('el scheduler invalida excepciones temporales al refrescar compromisos', ()
   assert.match(scheduler, /temporarilyAllowedDomains\.clear\(\)/);
 });
 
+test('la release compila antes de publicar y el updater instala automaticamente', () => {
+  const workflow = read('../.github/workflows/release.yml');
+  const main = read('src/main/main.ts');
+  const renderer = read('src/renderer/renderer.js');
+  assert.match(workflow, /name: Build[\s\S]*run: npm run build[\s\S]*name: Publish Windows release/);
+  assert.match(main, /update:downloaded/);
+  assert.match(main, /autoUpdater\.quitAndInstall\(false, true\)/);
+  assert.match(main, /did-finish-load.*setupAutoUpdater/);
+  assert.match(renderer, /Actualizacion.*instalara automaticamente/);
+});
+
 test('el salto del foco diario solo existe como accion de desarrollo', () => {
   const main = read('src/main/main.ts');
   const store = read('src/main/daily-focus-store.ts');

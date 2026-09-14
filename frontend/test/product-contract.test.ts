@@ -127,3 +127,9 @@ test('completar foco diario conecta progreso y recompensa de wallet', () => {
   assert.match(main, /walletStore\.completeTask\(taskId\)/);
   assert.match(main, /dailyFocusStore\.replace\(previousProgress\)/);
 });
+
+test('comprar videojuegos no activa un objeto pausado', () => {
+  const wallet = read('src/main/wallet-store.ts');
+  assert.match(wallet, /const sessionWasActive = activeSeconds > 0 \|\| unconsumed\.some/);
+  assert.match(wallet, /if \(games && sessionWasActive\)/);
+});

@@ -16,6 +16,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 ## Tienda E Inventario
 
 - [x] Comprar Tiempo de videojuegos crea o aumenta el inventario sin iniciar accidentalmente una sesión pausada.
+- [x] Comprar Tiempo de videojuegos no enciende automáticamente el timer; solo suma minutos hasta pulsar `Usar Juegos`.
 - [x] Comprar durante una sesión activa suma el tiempo restante real y no vuelve a 60 minutos.
 - [x] Varias compras de videojuegos se consolidan en los minutos totales disponibles.
 - [x] Pausar guarda el tiempo restante y no deja la interfaz atascada en `Guardando...`.

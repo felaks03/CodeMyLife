@@ -133,6 +133,7 @@ export const walletStore = {
       const activeSeconds = games?.unlockUntil && new Date(games.unlockUntil) > now
         ? Math.ceil((new Date(games.unlockUntil).getTime() - now.getTime()) / 1000)
         : 0;
+      const sessionWasActive = activeSeconds > 0 || unconsumed.some((entry) => Boolean(entry.startedAt));
       const pendingSeconds = unconsumed
         .filter((entry) => entry !== canonical && !entry.startedAt)
         .reduce((total, entry) => total + Number(entry.remainingSeconds ?? item.durationMinutes * 60), 0);
@@ -142,7 +143,7 @@ export const walletStore = {
       const totalSeconds = consolidatePurchaseSeconds(canonicalSeconds, pendingSeconds, item.durationMinutes);
       canonical.coins += item.costCoins;
       canonical.remainingSeconds = totalSeconds;
-      if (games) {
+      if (games && sessionWasActive) {
         const recheckNow = timeAuthority.now();
         if (games.status !== 'active' || new Date(games.endsAt) < recheckNow) {
           throw new Error('El bloqueo expiro durante la compra. Intenta de nuevo.');
@@ -158,7 +159,7 @@ export const walletStore = {
         if (entry !== canonical) entry.usedAt = now.toISOString();
       }
       if (!wallet.purchases.includes(canonical)) wallet.purchases.push(canonical);
-      if (games) await guestStore.replace(commitments);
+      if (games && sessionWasActive) await guestStore.replace(commitments);
       await writeWallet(wallet);
       return wallet;
     });

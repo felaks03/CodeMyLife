@@ -86,6 +86,16 @@ test('el scheduler invalida excepciones temporales al refrescar compromisos', ()
   assert.match(scheduler, /temporarilyAllowedDomains\.clear\(\)/);
 });
 
+test('el salto del foco diario solo existe como accion de desarrollo', () => {
+  const main = read('src/main/main.ts');
+  const store = read('src/main/daily-focus-store.ts');
+  const html = read('src/renderer/index.html');
+  assert.match(main, /app:is-development/);
+  assert.match(main, /daily-focus:skip-today/);
+  assert.match(store, /if \(app\.isPackaged\) throw/);
+  assert.match(html, /skip-daily-focus/);
+});
+
 test('completar foco diario conecta progreso y recompensa de wallet', () => {
   const main = read('src/main/main.ts');
   assert.match(main, /dailyFocusStore\.completeTask\(taskId\)/);

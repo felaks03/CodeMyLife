@@ -8,6 +8,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Un bloqueo solo puede afectar a los dominios o procesos que define su propio script.
 - [x] Activar el bloqueo de videojuegos no debe bloquear YouTube, Instagram ni otros dominios no relacionados.
 - [x] Activar el bloqueo semanal invalida excepciones temporales antiguas y aplica el bloqueo de Instagram inmediatamente.
+- [x] Bloquear semana no muestra el mensaje obsoleto de integración con Chrome para Instagram.
 - [x] El bloqueo de YouTube solo debe actuar dentro de su horario configurado.
 - [x] Las entradas antiguas de bloqueos no deben seguir activas fuera de su horario o después de cancelarse.
 - [x] Cualquier cambio en dominios bloqueados debe reflejarse en hosts sin borrar entradas ajenas del usuario.

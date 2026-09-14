@@ -694,9 +694,7 @@ el('lock-week').addEventListener('click', async () => {
   const scriptsToLock = availableScripts.filter((script) => !existingScripts.has(script._id));
 
   if (scriptsToLock.length === 0) {
-    showNotice(availableScripts.some((script) => script.blockingMode === 'daily-limit')
-      ? i18n.t('dailyLimitPending')
-      : i18n.t('lockWeekAlreadyActive'));
+    showNotice(i18n.t('lockWeekAlreadyActive'));
     return;
   }
 

@@ -1,13 +1,13 @@
 {
   "name": "codemylife-frontend",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "CodeMyLife desktop app (Electron)",
   "main": "dist/main/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "npm run build && electron .",
     "dev": "tsc -p tsconfig.json -w",
-    "test": "tsc -p tsconfig.test.json && node --test \"dist_test/test/**/*.test.js\"",
+    "test": "tsc -p tsconfig.test.json && node --test dist_test/test/*.test.js",
     "package": "npm run build && electron-builder --win --publish never"
   },
   "dependencies": {

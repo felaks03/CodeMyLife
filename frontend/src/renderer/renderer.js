@@ -773,6 +773,8 @@ window.addEventListener('beforeunload', () => {
 (async function init() {
   i18n.setLanguage('es');
 
+  const version = await window.codeMyLife.getAppVersion();
+  el('app-version').textContent = `v${version}`;
   const user = await window.codeMyLife.getSession();
   showApp(user || { name: 'Mi perfil', id: 'personal', email: '' });
 })();

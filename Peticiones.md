@@ -39,6 +39,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Cold shower dura 10 minutos.
 - [x] Gym dura 60 minutos.
 - [x] Existe un botón de desarrollo para saltar el bloqueo diario solo durante el día actual.
+- [x] El botón de desarrollo de saltar bloqueo aparece en la pantalla fullscreen de tareas.
 - [x] Las notificaciones aparecen como una capa fija y no desplazan la interfaz.
 - [x] La build empaquetada usa un directorio de datos de producción separado y no reutiliza datos de pruebas.
 

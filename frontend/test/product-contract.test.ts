@@ -94,6 +94,8 @@ test('el salto del foco diario solo existe como accion de desarrollo', () => {
   assert.match(main, /daily-focus:skip-today/);
   assert.match(store, /if \(app\.isPackaged\) throw/);
   assert.match(html, /skip-daily-focus/);
+  assert.match(read('src/renderer/daily-focus-lock.html'), /skip-daily-focus/);
+  assert.match(read('src/renderer/daily-focus-lock.js'), /skipDailyFocusToday/);
 });
 
 test('completar foco diario conecta progreso y recompensa de wallet', () => {

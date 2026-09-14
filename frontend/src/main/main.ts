@@ -385,6 +385,7 @@ function createMainWindow(): void {
 
 function registerIpcHandlers(): void {
   ipcMain.handle('session:get', () => sessionStore.session?.user ?? null);
+  ipcMain.handle('app:version', () => app.getVersion());
   ipcMain.handle('time:now', () => timeAuthority.now().toISOString());
 
   ipcMain.handle('commitments:overview', async () => {

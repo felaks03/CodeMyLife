@@ -29,5 +29,7 @@ h1 { margin: 0; font-size: clamp(30px, 5vw, 52px); }
 button { min-width: 88px; padding: 8px 12px; border: 1px solid var(--accent); border-radius: 7px; background: transparent; color: var(--accent-strong); font: inherit; cursor: pointer; }
 button:hover:not(:disabled) { background: rgba(99,194,165,.14); }
 button:disabled { border-color: rgba(255,255,255,.12); color: #607078; cursor: default; }
+.skip-daily-focus { border-color: rgba(240,179,93,.5); color: #f0b35d; margin-top: 18px; width: auto; }
+.skip-daily-focus:hover { background: rgba(240,179,93,.12); }
 @media (max-width: 640px) { body { padding: 16px; } .focus-lock { padding: 26px 20px; } .focus-row { align-items: flex-start; flex-direction: column; } .focus-actions { width: 100%; justify-content: space-between; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }

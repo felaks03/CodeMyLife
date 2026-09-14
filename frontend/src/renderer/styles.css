@@ -51,6 +51,17 @@ h2 {
   display: none !important;
 }
 
+.app-version {
+  bottom: 10px;
+  color: rgba(153, 168, 176, .72);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  position: fixed;
+  right: 14px;
+  z-index: 100;
+}
+
 .view {
   max-width: 1120px;
   margin: 0 auto;

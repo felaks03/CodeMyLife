@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('codeMyLife', {
     ipcRenderer.on('update:error', (_event, message: string) => callback(message));
   },
   getSession: (): Promise<AuthUser | null> => ipcRenderer.invoke('session:get'),
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
   getTrustedTime: (): Promise<string> => ipcRenderer.invoke('time:now'),
   getOverview: (): Promise<Overview> => ipcRenderer.invoke('commitments:overview'),
   createCommitment: (payload: NewCommitment): Promise<Commitment> =>

@@ -1,10 +1,19 @@
 let tasks = [];
 let progress = [];
 const list = document.getElementById('focus-list');
+const skipButton = document.getElementById('skip-daily-focus');
 
 document.getElementById('focus-mode-label').textContent = 'CodeMyLife · Bloqueo diario';
 document.getElementById('focus-note').textContent = 'Solo puedes usar los controles de esta pantalla hasta completar tus tareas.';
 document.title = 'CodeMyLife - Bloqueo diario';
+
+void window.codeMyLife.isDevelopment().then((development) => {
+  skipButton.classList.toggle('hidden', !development);
+});
+
+skipButton.addEventListener('click', async () => {
+  await window.codeMyLife.skipDailyFocusToday();
+});
 
 function elapsedSeconds(task) {
   const item = progress.find((entry) => entry.taskId === task.id);

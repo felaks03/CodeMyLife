@@ -10,11 +10,20 @@
     "test": "tsc -p tsconfig.test.json && node --test \"dist_test/test/**/*.test.js\"",
     "package": "npm run build && electron-builder --win --publish never"
   },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  },
   "build": {
     "appId": "com.codemylife.desktop",
     "productName": "CodeMyLife",
     "directories": {
       "output": "dist_electron"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "felaks03",
+      "repo": "CodeMyLife",
+      "releaseType": "release"
     },
     "files": [
       "dist/**/*",

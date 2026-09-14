@@ -11,6 +11,7 @@ import { walletStore } from './wallet-store';
 import { dailyFocusStore } from './daily-focus-store';
 import { visibleDailyFocusTasks } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
+import { autoUpdater } from 'electron-updater';
 
 if (app.isPackaged) {
   app.setPath('userData', path.join(app.getPath('appData'), 'CodeMyLife'));
@@ -57,6 +58,28 @@ ipcMain.handle('daily-focus:allow-computer', () => {
 
 function assetPath(file: string): string {
   return path.join(__dirname, '../../assets', file);
+}
+
+function setupAutoUpdater(): void {
+  if (!app.isPackaged) return;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on('checking-for-update', () => mainWindow?.webContents.send('update:checking'));
+  autoUpdater.on('update-available', (info) => mainWindow?.webContents.send('update:available', info.version));
+  autoUpdater.on('update-not-available', () => mainWindow?.webContents.send('update:not-available'));
+  autoUpdater.on('download-progress', (progress) => mainWindow?.webContents.send('update:download-progress', progress.percent));
+  autoUpdater.on('update-downloaded', (info) => mainWindow?.webContents.send('update:downloaded', info.version));
+  autoUpdater.on('error', (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[CodeMyLife] Update error:', message);
+    mainWindow?.webContents.send('update:error', message);
+  });
+  void autoUpdater.checkForUpdates().catch((error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[CodeMyLife] Update check error:', message);
+    mainWindow?.webContents.send('update:error', message);
+  });
 }
 
 function showMainWindow(): void {
@@ -463,6 +486,7 @@ if (!hasSingleInstanceLock) {
     await ensurePersonalProfile();
     registerIpcHandlers();
     createMainWindow();
+    setupAutoUpdater();
     createTray();
     const reconcileDisplays = () => syncDailyFocusLockWindow(scheduler.getState().dailyFocusActive === true);
     screen.on('display-added', reconcileDisplays);

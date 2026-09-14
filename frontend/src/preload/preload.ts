@@ -15,6 +15,15 @@ interface DailyFocusData {
 }
 
 contextBridge.exposeInMainWorld('codeMyLife', {
+  onUpdateAvailable: (callback: (version: string) => void): void => {
+    ipcRenderer.on('update:available', (_event, version: string) => callback(version));
+  },
+  onUpdateDownloaded: (callback: (version: string) => void): void => {
+    ipcRenderer.on('update:downloaded', (_event, version: string) => callback(version));
+  },
+  onUpdateError: (callback: (message: string) => void): void => {
+    ipcRenderer.on('update:error', (_event, message: string) => callback(message));
+  },
   getSession: (): Promise<AuthUser | null> => ipcRenderer.invoke('session:get'),
   getTrustedTime: (): Promise<string> => ipcRenderer.invoke('time:now'),
   getOverview: (): Promise<Overview> => ipcRenderer.invoke('commitments:overview'),

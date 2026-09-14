@@ -131,6 +131,14 @@ Al cerrar la ventana la aplicacion sigue ejecutandose en la bandeja del sistema 
 .\produccion.cmd
 ```
 
+Para publicar una nueva version y activar la actualizacion automatica de las instalaciones existentes:
+
+```powershell
+.\newversion.cmd patch
+```
+
+Tambien se admiten `minor` y `major`. El script actualiza la version del frontend, ejecuta tests y build, crea el commit/tag `vX.Y.Z` y lo sube a `origin/main`. GitHub Actions genera la Release de Windows; las instalaciones empaquetadas comprueban esa Release y descargan la actualizacion en segundo plano.
+
 Valida el repositorio, compila, ejecuta los tests, genera el instalador de Windows en `frontend/dist_electron/` y sube la version etiquetada. El despliegue del backend se ejecuta a traves de la variable `CODEMYLIFE_DEPLOY_CMD`.
 
 ## Estructura

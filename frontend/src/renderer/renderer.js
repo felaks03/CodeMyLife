@@ -739,6 +739,15 @@ document.addEventListener('keydown', (event) => {
 });
 
 window.codeMyLife.onBlockingState(renderBlockingState);
+window.codeMyLife.onUpdateAvailable((version) => {
+  showNotice(`Actualizacion ${version} disponible. Se descargara automaticamente.`, 'success');
+});
+window.codeMyLife.onUpdateDownloaded((version) => {
+  showNotice(`Actualizacion ${version} descargada. Se instalara al cerrar la aplicacion.`, 'success');
+});
+window.codeMyLife.onUpdateError((message) => {
+  showNotice(`No se pudo actualizar la aplicacion: ${message}`);
+});
 window.codeMyLife.onInstagramPaused(syncInstagramPaused);
 window.codeMyLife.onPauseTimers(() => {
   if (instagramTimer) void pauseInstagramTimer();

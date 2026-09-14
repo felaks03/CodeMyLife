@@ -98,6 +98,28 @@ test('el salto del foco diario solo existe como accion de desarrollo', () => {
   assert.match(read('src/renderer/daily-focus-lock.js'), /skipDailyFocusToday/);
 });
 
+test('la UI muestra la version runtime en una esquina fija', () => {
+  const main = read('src/main/main.ts');
+  const preload = read('src/preload/preload.ts');
+  const html = read('src/renderer/index.html');
+  const renderer = read('src/renderer/renderer.js');
+  const styles = read('src/renderer/styles.css');
+  assert.match(main, /app:getAppVersion|app:version/);
+  assert.match(preload, /getAppVersion/);
+  assert.match(html, /app-version/);
+  assert.match(renderer, /getAppVersion/);
+  assert.match(styles, /\.app-version/);
+  assert.match(styles, /position: fixed/);
+});
+
+test('la build empaquetada migra datos del directorio legacy antes de cargar la sesion', () => {
+  const main = read('src/main/main.ts');
+  assert.match(main, /codemylife-frontend/);
+  assert.match(main, /migrateLegacyUserData/);
+  assert.match(main, /wallet\.json/);
+  assert.match(main, /copyFile/);
+});
+
 test('completar foco diario conecta progreso y recompensa de wallet', () => {
   const main = read('src/main/main.ts');
   assert.match(main, /dailyFocusStore\.completeTask\(taskId\)/);

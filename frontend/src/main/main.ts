@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor, screen, Display } from 'electron';
 import * as path from 'path';
-import { watch } from 'fs';
+import { promises as fs, watch } from 'fs';
 import { SessionStore } from './session-store';
 import { BlockingScheduler } from './scheduler';
 import { guestStore } from './guest-store';
@@ -15,6 +15,26 @@ import { autoUpdater } from 'electron-updater';
 
 if (app.isPackaged) {
   app.setPath('userData', path.join(app.getPath('appData'), 'CodeMyLife'));
+}
+
+async function migrateLegacyUserData(): Promise<void> {
+  if (!app.isPackaged) return;
+  const legacyDirectory = path.join(app.getPath('appData'), 'codemylife-frontend');
+  const productionDirectory = app.getPath('userData');
+  await fs.mkdir(productionDirectory, { recursive: true });
+  for (const fileName of ['wallet.json', 'guest-commitments.json', 'guest-scripts.json', 'commitments-cache.json']) {
+    const legacyFile = path.join(legacyDirectory, fileName);
+    const productionFile = path.join(productionDirectory, fileName);
+    try {
+      await fs.access(productionFile);
+    } catch {
+      try {
+        await fs.copyFile(legacyFile, productionFile);
+      } catch {
+        // There may be no legacy file to migrate.
+      }
+    }
+  }
 }
 
 const sessionStore = new SessionStore();
@@ -499,6 +519,7 @@ if (!hasSingleInstanceLock) {
 
   app.whenReady().then(async () => {
     await timeAuthority.sync();
+    await migrateLegacyUserData();
     await sessionStore.load();
     await ensurePersonalProfile();
     registerIpcHandlers();

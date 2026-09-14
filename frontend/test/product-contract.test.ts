@@ -85,3 +85,10 @@ test('el scheduler invalida excepciones temporales al refrescar compromisos', ()
   const scheduler = read('src/main/scheduler.ts');
   assert.match(scheduler, /temporarilyAllowedDomains\.clear\(\)/);
 });
+
+test('completar foco diario conecta progreso y recompensa de wallet', () => {
+  const main = read('src/main/main.ts');
+  assert.match(main, /dailyFocusStore\.completeTask\(taskId\)/);
+  assert.match(main, /walletStore\.completeTask\(taskId\)/);
+  assert.match(main, /dailyFocusStore\.replace\(previousProgress\)/);
+});

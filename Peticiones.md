@@ -48,6 +48,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Solo puede haber una tarea activa.
 - [x] Gym no debe exigirse durante el fin de semana.
 - [x] La cuenta atrás de cada tarea debe actualizarse cada segundo en el bloqueo real.
+- [x] Completar una tarea diaria añade sus monedas al wallet y revierte el progreso si falla la recompensa.
 
 ## Estabilidad Y Seguridad
 

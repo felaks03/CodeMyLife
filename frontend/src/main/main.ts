@@ -441,7 +441,17 @@ function registerIpcHandlers(): void {
     progress: await dailyFocusStore.tick()
   }));
   ipcMain.handle('daily-focus:start', (_event, taskId: string) => dailyFocusStore.startTask(taskId));
-  ipcMain.handle('daily-focus:complete', (_event, taskId: string) => dailyFocusStore.completeTask(taskId));
+  ipcMain.handle('daily-focus:complete', async (_event, taskId: string) => {
+    const previousProgress = await dailyFocusStore.get();
+    const progress = await dailyFocusStore.completeTask(taskId);
+    try {
+      await walletStore.completeTask(taskId);
+      return progress;
+    } catch (error) {
+      await dailyFocusStore.replace(previousProgress);
+      throw error;
+    }
+  });
   ipcMain.handle('daily-focus:tick', () => dailyFocusStore.tick());
 
   ipcMain.handle('instagram:start-usage', async () => {

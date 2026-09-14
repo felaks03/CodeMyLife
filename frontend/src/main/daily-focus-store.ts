@@ -55,6 +55,10 @@ export const dailyFocusStore = {
     return readState();
   },
 
+  async replace(progress: DailyFocusStoreState): Promise<void> {
+    await writeState(progress);
+  },
+
   async startTask(taskId: string): Promise<DailyFocusStoreState> {
     if (!isDailyFocusWindow(timeAuthority.now())) {
       throw new Error('Las tareas solo se pueden iniciar durante el bloqueo diario, de 08:00 a 15:00.');

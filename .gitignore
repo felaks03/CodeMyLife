@@ -1,0 +1,22 @@
+# Dependencies and build output
+**/node_modules/
+**/dist/
+**/dist_test/
+**/dist_electron/
+CodeMyLifeBuild/
+
+# Runtime and debug logs
+*.log
+logs/
+**/logs/
+debug.log
+
+# Local environment and Electron user data
+.env
+.env.*
+!*.env.example
+.DS_Store
+Thumbs.db
+
+# Local packaged app copies
+*.asar.unpacked/

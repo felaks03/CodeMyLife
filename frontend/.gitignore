@@ -2,3 +2,6 @@ node_modules/
 dist/
 dist_test/
 dist_electron/
+*.log
+logs/
+debug.log

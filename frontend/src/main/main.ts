@@ -21,10 +21,7 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
 let sleepLockWindow: BrowserWindow | null = null;
-let dailyFocusPreviewWindow: BrowserWindow | null = null;
 let dailyFocusLockWindow: BrowserWindow | null = null;
-let dailyFocusPreviewTimer: ReturnType<typeof setTimeout> | null = null;
-let dailyFocusPreviewComputerAllowed = false;
 let dailyFocusLockComputerAllowed = false;
 let quitting = false;
 
@@ -41,44 +38,18 @@ const scheduler = new BlockingScheduler(loadCommitments, (state) => {
   syncDailyFocusLockWindow(state.dailyFocusActive === true);
 });
 
-ipcMain.handle('commitments:cancel-test-locks', async () => {
-  const cancelled = await guestStore.cancelTestLocks();
-  await scheduler.refresh();
-  return cancelled;
-});
-
-ipcMain.handle('daily-focus-preview:open', () => {
-  if (dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()) {
-    dailyFocusPreviewWindow.show();
-    dailyFocusPreviewWindow.focus();
-    return;
-  }
-
-  createDailyFocusPreviewWindow();
-});
-
-ipcMain.handle('daily-focus-preview:close', () => {
-  closeDailyFocusPreviewWindow();
-});
-
 ipcMain.handle('daily-focus-preview:allow-computer', () => {
-  const targetWindow = dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()
-    ? dailyFocusPreviewWindow
-    : dailyFocusLockWindow && !dailyFocusLockWindow.isDestroyed()
-      ? dailyFocusLockWindow
-      : null;
-  if (!targetWindow) return;
-  if (targetWindow === dailyFocusLockWindow) dailyFocusLockComputerAllowed = true;
-  dailyFocusPreviewComputerAllowed = true;
-  targetWindow.setKiosk(false);
-  targetWindow.setFullScreen(false);
-  targetWindow.setAlwaysOnTop(false);
-  targetWindow.setSkipTaskbar(false);
-  targetWindow.setResizable(true);
-  targetWindow.setSize(760, 700);
-  targetWindow.center();
-  targetWindow.show();
-  targetWindow.focus();
+  if (!dailyFocusLockWindow || dailyFocusLockWindow.isDestroyed()) return;
+  dailyFocusLockComputerAllowed = true;
+  dailyFocusLockWindow.setKiosk(false);
+  dailyFocusLockWindow.setFullScreen(false);
+  dailyFocusLockWindow.setAlwaysOnTop(false);
+  dailyFocusLockWindow.setSkipTaskbar(false);
+  dailyFocusLockWindow.setResizable(true);
+  dailyFocusLockWindow.setSize(760, 700);
+  dailyFocusLockWindow.center();
+  dailyFocusLockWindow.show();
+  dailyFocusLockWindow.focus();
 });
 
 function assetPath(file: string): string {
@@ -220,16 +191,6 @@ function createSleepLockWindow(): void {
   });
 }
 
-function closeDailyFocusPreviewWindow(): void {
-  if (dailyFocusPreviewTimer) clearTimeout(dailyFocusPreviewTimer);
-  dailyFocusPreviewTimer = null;
-  if (dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()) {
-    dailyFocusPreviewWindow.destroy();
-  }
-  dailyFocusPreviewWindow = null;
-  dailyFocusPreviewComputerAllowed = false;
-}
-
 function syncDailyFocusLockWindow(active: boolean): void {
   if (active) {
     if (!dailyFocusLockComputerAllowed && (!dailyFocusLockWindow || dailyFocusLockWindow.isDestroyed())) {
@@ -280,52 +241,6 @@ function createDailyFocusLockWindow(): void {
     dailyFocusLockWindow = null;
     dailyFocusLockComputerAllowed = false;
   });
-}
-
-function createDailyFocusPreviewWindow(): void {
-  dailyFocusPreviewComputerAllowed = false;
-  dailyFocusPreviewWindow = new BrowserWindow({
-    fullscreen: true,
-    frame: false,
-    show: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    closable: false,
-    minimizable: false,
-    maximizable: false,
-    resizable: false,
-    kiosk: true,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      preload: path.join(__dirname, '../preload/preload.js')
-    }
-  });
-
-  dailyFocusPreviewWindow.setAlwaysOnTop(true, 'screen-saver');
-  dailyFocusPreviewWindow.loadFile(path.join(__dirname, '../../src/renderer/daily-focus-preview.html'));
-  dailyFocusPreviewWindow.once('ready-to-show', () => {
-    dailyFocusPreviewWindow?.show();
-    dailyFocusPreviewWindow?.focus();
-  });
-  dailyFocusPreviewWindow.on('blur', () => {
-    if (!dailyFocusPreviewComputerAllowed && dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()) {
-      dailyFocusPreviewWindow.show();
-      dailyFocusPreviewWindow.focus();
-    }
-  });
-  dailyFocusPreviewWindow.on('close', (event) => {
-    if (!quitting && !dailyFocusPreviewComputerAllowed) event.preventDefault();
-  });
-  dailyFocusPreviewWindow.on('closed', () => {
-    if (dailyFocusPreviewTimer) clearTimeout(dailyFocusPreviewTimer);
-    dailyFocusPreviewTimer = null;
-    dailyFocusPreviewWindow = null;
-    dailyFocusPreviewComputerAllowed = false;
-  });
-
-  dailyFocusPreviewTimer = setTimeout(closeDailyFocusPreviewWindow, 30_000);
 }
 
 async function requestQuit(): Promise<void> {
@@ -388,51 +303,6 @@ function setupDevReloader(win: BrowserWindow): void {
   }
 }
 
-function createMainWindow(): void {
-  mainWindow = new BrowserWindow({
-    width: 1024,
-    height: 720,
-    backgroundColor: '#1e1e1e',
-    icon: assetPath('icon.png'),
-    webPreferences: {
-      preload: path.join(__dirname, '../preload/preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true
-    }
-  });
-
-  mainWindow.loadFile(path.join(__dirname, '../../src/renderer/index.html'));
-  setupDevReloader(mainWindow);
-
-  // Cerrar la ventana solo la oculta: el bloqueo debe seguir aplicandose.
-  mainWindow.on('close', (event) => {
-    if (!quitting) {
-      event.preventDefault();
-      mainWindow?.webContents.send('app:pause-timers');
-      void walletStore.pauseActiveSessions();
-      mainWindow?.hide();
-    }
-  });
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-}
-
-function registerIpcHandlers(): void {
-  ipcMain.handle('session:get', () => sessionStore.session?.user ?? null);
-  ipcMain.handle('time:now', () => timeAuthority.now().toISOString());
-
-  ipcMain.handle('commitments:overview', async () => {
-    const commitments = await guestStore.list();
-    const now = timeAuthority.now();
-    return {
-      commitments,
-      stats: commitmentStats(commitments, now),
-      calendar: buildCalendar(commitments, now).map((day) => ({
-        date: day.date.toISOString().slice(0, 10),
-        scheduled: day.scheduled
       }))
     };
   });
@@ -481,10 +351,6 @@ function registerIpcHandlers(): void {
   ipcMain.handle('daily-focus:get', async () => ({
     tasks: visibleDailyFocusTasks(timeAuthority.now()),
     progress: await dailyFocusStore.tick()
-  }));
-  ipcMain.handle('daily-focus:preview-get', async () => ({
-    tasks: visibleDailyFocusTasks(timeAuthority.now()),
-    progress: await dailyFocusStore.get()
   }));
   ipcMain.handle('daily-focus:start', (_event, taskId: string) => dailyFocusStore.startTask(taskId));
   ipcMain.handle('daily-focus:complete', (_event, taskId: string) => dailyFocusStore.completeTask(taskId));

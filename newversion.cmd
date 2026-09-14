@@ -20,7 +20,7 @@ for /f "delims=" %%V in ('powershell.exe -NoProfile -Command "(Get-Content packa
 popd
 
 pushd "%ROOT%"
-git.exe add frontend/package.json frontend/package-lock.json
+git.exe add -A
 git.exe commit -m "chore: release v%VERSION%"
 if errorlevel 1 exit /b 1
 git.exe tag -a "v%VERSION%" -m "Release v%VERSION%"

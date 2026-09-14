@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Moneda de CodeMyLife</title>
+  <desc id="desc">Moneda dorada con una estrella en el centro</desc>
+  <defs>
+    <linearGradient id="coin" x1="18" y1="12" x2="78" y2="86" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffe58a"/>
+      <stop offset=".45" stop-color="#f7bd3b"/>
+      <stop offset="1" stop-color="#c97816"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="23" y1="20" x2="72" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff0a8"/>
+      <stop offset="1" stop-color="#d9901f"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="48" cy="52" rx="31" ry="34" fill="#8e4d12" opacity=".35"/>
+  <path d="M17 43c0-18 13-31 31-31s31 13 31 31v10c0 18-13 31-31 31S17 71 17 53V43Z" fill="url(#edge)" stroke="#9b5b16" stroke-width="3"/>
+  <ellipse cx="48" cy="42" rx="31" ry="30" fill="url(#coin)" stroke="#fff0a8" stroke-width="3"/>
+  <ellipse cx="48" cy="42" rx="23" ry="22" fill="none" stroke="#d9901f" stroke-width="2" opacity=".8"/>
+  <path d="m48 25 4.8 10 11 1.3-8.2 7.5 2.2 10.8L48 49.2l-9.8 5.4 2.2-10.8-8.2-7.5 11-1.3L48 25Z" fill="#fff2a8" stroke="#bc7419" stroke-width="2" stroke-linejoin="round"/>
+</svg>

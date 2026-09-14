@@ -70,6 +70,7 @@ export interface BlockingState {
   hasAdminRights: boolean;
   lastError: string | null;
   lockScreenActive?: boolean;
+  dailyFocusActive?: boolean;
 }
 
 export interface TaskDefinition {
@@ -95,10 +96,21 @@ export interface ShopItem {
   targetScriptId: string;
 }
 
+export interface WalletPurchase {
+  id: string;
+  itemId: string;
+  coins: number;
+  purchasedAt: string;
+  startedAt?: string;
+  remainingSeconds?: number;
+  usedAt?: string;
+  unlockUntil?: string;
+}
+
 export interface WalletState {
   coins: number;
   earnedCoins: number;
   spentCoins: number;
   completions: TaskCompletion[];
-  purchases: { itemId: string; coins: number; purchasedAt: string; unlockUntil: string }[];
+  purchases: WalletPurchase[];
 }

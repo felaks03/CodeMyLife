@@ -21,7 +21,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Run 3k',
     description: 'Correr 3 km.',
     durationMinutes: 20,
-    rewardCoins: 12,
+    rewardCoins: 30,
     enabled: true
   },
   {
@@ -29,7 +29,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Desayunar',
     description: 'Desayuno completo antes del mediodía.',
     durationMinutes: 15,
-    rewardCoins: 8,
+    rewardCoins: 15,
     enabled: true
   },
   {
@@ -37,7 +37,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Cold shower',
     description: 'Ducha fría.',
     durationMinutes: 15,
-    rewardCoins: 7,
+    rewardCoins: 20,
     enabled: true
   },
   {
@@ -45,7 +45,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Gym',
     description: 'Entrenamiento de fuerza.',
     durationMinutes: 90,
-    rewardCoins: 20,
+    rewardCoins: 75,
     enabled: true
   },
   {
@@ -53,7 +53,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Backtesting',
     description: 'Analizar estrategia y revisar resultados.',
     durationMinutes: 60,
-    rewardCoins: 15,
+    rewardCoins: 100,
     enabled: true
   }
 ];
@@ -91,8 +91,12 @@ export function progressForDay(dayKey: string, items: DailyFocusState): DailyFoc
   }));
 }
 
-export function normalizeDailyFocusProgress(raw: Partial<DailyFocusProgress>[] | undefined, todayKey: string): DailyFocusState {
-  const tasks = visibleDailyFocusTasks(new Date());
+export function normalizeDailyFocusProgress(
+  raw: Partial<DailyFocusProgress>[] | undefined,
+  todayKey: string,
+  referenceDate = new Date()
+): DailyFocusState {
+  const tasks = visibleDailyFocusTasks(referenceDate);
   const defaults: DailyFocusState = tasks.map((task) => ({
     taskId: task.id,
     completed: false,

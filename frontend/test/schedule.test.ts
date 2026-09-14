@@ -70,6 +70,19 @@ test('combina dominios de varios compromisos sin duplicados', () => {
   assert.deepEqual(domains, ['tiktok.com', 'youtu.be', 'youtube.com']);
 });
 
+test('YouTube solo se bloquea dentro de su horario', () => {
+  const youtube = commitment({ scriptId: 'builtin-youtube', startTime: '09:00', endTime: '18:00' });
+  assert.equal(isCommitmentEnforcedNow(youtube, mondayAt('08:59')), false);
+  assert.equal(isCommitmentEnforcedNow(youtube, mondayAt('09:00')), true);
+  assert.equal(isCommitmentEnforcedNow(youtube, mondayAt('17:59')), true);
+  assert.equal(isCommitmentEnforcedNow(youtube, mondayAt('18:00')), false);
+});
+
+test('el bloqueo de videojuegos no aporta dominios de YouTube', () => {
+  const games = commitment({ scriptId: 'builtin-games', blockedDomains: [], alwaysBlocked: true });
+  assert.deepEqual(domainsToBlock([games], mondayAt('10:30')), []);
+});
+
 test('descarta dominios con formato invalido', () => {
   assert.deepEqual(sanitizeDomains([' YouTube.com ', 'no-es-un-dominio', '', 'youtube.com']), [
     'youtube.com'
@@ -83,6 +96,13 @@ test('anade el bloque gestionado sin tocar el contenido original', () => {
   assert.ok(result.startsWith('127.0.0.1 localhost\r\n10.0.0.1 intranet'));
   assert.ok(result.includes('127.0.0.1 youtube.com'));
   assert.ok(result.includes('127.0.0.1 www.youtube.com'));
+});
+
+test('preserva entradas manuales al reemplazar el bloque gestionado', () => {
+  const original = '127.0.0.1 localhost\r\n10.0.0.1 intranet\r\n# comentario manual\r\n';
+  const result = renderHostsFile(original, ['youtube.com']);
+  assert.ok(result.includes('10.0.0.1 intranet'));
+  assert.ok(result.includes('# comentario manual'));
 });
 
 test('quitar el bloqueo restaura exactamente el archivo original', () => {

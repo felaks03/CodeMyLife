@@ -4,6 +4,8 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { Commitment, NewCommitment, Script, NewScript } from '../shared/types';
 import { BUILTIN_SCRIPTS, searchBuiltinScripts } from '../shared/builtin-scripts';
+import { timeAuthority } from './time-authority';
+import { writeJsonAtomic } from './atomic-storage';
 
 // Almacena los compromisos del modo invitado solo en este dispositivo, sin backend.
 function commitmentsFile(): string {
@@ -17,7 +19,7 @@ function scriptsFile(): string {
 async function readCommitments(): Promise<Commitment[]> {
   try {
     const commitments = JSON.parse(await fs.readFile(commitmentsFile(), 'utf8')) as Commitment[];
-    const now = Date.now();
+    const now = timeAuthority.nowMs();
     let changed = false;
     for (const commitment of commitments) {
       if (commitment.status === 'active' && new Date(commitment.endsAt).getTime() < now) {
@@ -33,7 +35,7 @@ async function readCommitments(): Promise<Commitment[]> {
 }
 
 async function writeCommitments(commitments: Commitment[]): Promise<void> {
-  await fs.writeFile(commitmentsFile(), JSON.stringify(commitments), 'utf8');
+  await writeJsonAtomic(commitmentsFile(), commitments);
 }
 
 async function readScripts(): Promise<Script[]> {
@@ -45,7 +47,7 @@ async function readScripts(): Promise<Script[]> {
 }
 
 async function writeScripts(scripts: Script[]): Promise<void> {
-  await fs.writeFile(scriptsFile(), JSON.stringify(scripts), 'utf8');
+  await writeJsonAtomic(scriptsFile(), scripts);
 }
 
 export const guestStore = {
@@ -125,7 +127,7 @@ export const guestStore = {
       throw new Error('Compromiso no encontrado.');
     }
 
-    const now = new Date();
+    const now = timeAuthority.now();
     const isRunning =
       commitment.status === 'active' && new Date(commitment.startsAt) <= now && new Date(commitment.endsAt) >= now;
     if (isRunning) {

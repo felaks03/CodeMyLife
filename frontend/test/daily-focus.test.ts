@@ -11,6 +11,7 @@ import {
   progressForDay,
   tickDailyFocusProgress
 } from '../src/shared/daily-focus';
+import { normalizeDailyFocusProgress } from '../src/shared/daily-focus';
 
 test('la ventana de foco arranca a las 8:00 y termina a las 15:00', () => {
   const start = new Date('2026-09-13T08:00:00');
@@ -74,4 +75,23 @@ test('solo puede haber una tarea activa y el temporizador acumula el tiempo', ()
   const ticked = tickDailyFocusProgress(byDay, new Date('2026-09-13T09:02:00.000Z').getTime());
   assert.equal(ticked[1].elapsedMs, 150000);
   assert.equal(ticked[1].startedAt, '2026-09-13T09:02:00.000Z');
+});
+
+test('el gimnasio no bloquea el foco durante el fin de semana', () => {
+  const saturday = new Date('2026-09-05T09:00:00');
+  const normalized = normalizeDailyFocusProgress(undefined, '2026-09-05', saturday);
+  assert.equal(normalized.some((task) => task.taskId === 'gym'), false);
+});
+
+test('las tareas usan los premios de monedas acordados', () => {
+  assert.deepEqual(
+    DAILY_FOCUS_TASKS.map((task) => [task.id, task.rewardCoins]),
+    [
+      ['run3k', 30],
+      ['breakfast', 15],
+      ['cold-shower', 20],
+      ['gym', 75],
+      ['backtesting', 100]
+    ]
+  );
 });

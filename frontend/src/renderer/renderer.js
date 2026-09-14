@@ -5,17 +5,10 @@ let availableScripts = [];
 let instagramTimer = null;
 let instagramTimerInterval = null;
 let activeLocksInterval = null;
+let videoTimerInterval = null;
+let noticeTimer = null;
 let wallet = null;
-let taskDefinitions = [];
 let shopItems = [];
-let dailyFocusPreviewInterval = null;
-let previewTasks = [
-  { id: 'run3k', name: 'Run 3k', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 20 },
-  { id: 'breakfast', name: 'Desayunar', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 15 },
-  { id: 'cold-shower', name: 'Cold shower', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 15 },
-  { id: 'gym', name: 'Gym', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 90 },
-  { id: 'backtesting', name: 'Backtesting', status: 'pending', startedAt: null, elapsed: 0, targetMinutes: 60 }
-];
 
 const DEFAULT_LOCK_CONFIG = Object.freeze({
   nameSuffix: ' - Weekly lock',
@@ -49,12 +42,33 @@ function instagramUsageKey() {
   return `instagram-usage-${toIsoDate(new Date())}`;
 }
 
+function instagramBonusKey() {
+  return 'instagram-bonus-seconds';
+}
+
 function instagramUsedSeconds() {
   return Number(localStorage.getItem(instagramUsageKey()) ?? 0);
 }
 
+function instagramBonusSeconds() {
+  return Math.max(0, Number(localStorage.getItem(instagramBonusKey()) ?? 0));
+}
+
+function addInstagramBonusSeconds(seconds) {
+  localStorage.setItem(instagramBonusKey(), String(instagramBonusSeconds() + seconds));
+}
+
 function saveInstagramUsedSeconds(seconds) {
   localStorage.setItem(instagramUsageKey(), String(Math.min(15 * 60, Math.max(0, seconds))));
+}
+
+function saveInstagramSessionSeconds(seconds) {
+  const freeUsed = instagramUsedSeconds();
+  const freeRemaining = Math.max(0, 15 * 60 - freeUsed);
+  const nextFreeUsed = Math.min(15 * 60, freeUsed + seconds);
+  const bonusSpent = Math.max(0, seconds - freeRemaining);
+  saveInstagramUsedSeconds(nextFreeUsed);
+  localStorage.setItem(instagramBonusKey(), String(Math.max(0, instagramBonusSeconds() - bonusSpent)));
 }
 
 function formatRemaining(seconds) {
@@ -64,7 +78,14 @@ function formatRemaining(seconds) {
 }
 
 function renderInstagramTimer() {
-  const remaining = Math.max(0, 15 * 60 - instagramUsedSeconds() - (instagramTimer?.liveSeconds ?? 0));
+  const activePurchase = wallet?.purchases.find((purchase) => purchase.itemId === 'instagram-time' && purchase.startedAt && !purchase.usedAt);
+  const purchasedSeconds = wallet?.purchases
+    .filter((purchase) => purchase.itemId === 'instagram-time' && !purchase.usedAt && purchase !== activePurchase)
+    .reduce((total, purchase) => total + Number(purchase.remainingSeconds ?? 0), 0) ?? 0;
+  const sessionSeconds = activePurchase
+    ? Number(activePurchase.remainingSeconds ?? 0)
+    : 0;
+  const remaining = Math.max(0, 15 * 60 - instagramUsedSeconds() + purchasedSeconds + sessionSeconds - (instagramTimer?.liveSeconds ?? 0));
   document.querySelectorAll('[data-instagram-timer]').forEach((node) => {
     node.textContent = formatRemaining(remaining);
   });
@@ -80,19 +101,28 @@ async function pauseInstagramTimer() {
   instagramTimer = null;
   if (instagramTimerInterval) clearInterval(instagramTimerInterval);
   instagramTimerInterval = null;
-  await window.codeMyLife.pauseInstagramUsage();
-  saveInstagramUsedSeconds(instagramUsedSeconds() + usedSeconds);
+  if (instagramTimer.purchaseId) {
+    wallet = await window.codeMyLife.pauseShopItem(instagramTimer.purchaseId);
+    await window.codeMyLife.pauseInstagramUsage();
+  } else {
+    await window.codeMyLife.pauseInstagramUsage();
+    saveInstagramSessionSeconds(usedSeconds);
+  }
   renderInstagramTimer();
 }
 
-async function startInstagramTimer() {
+async function startInstagramTimer(purchaseId = null) {
   if (instagramTimer) return pauseInstagramTimer();
-  if (instagramUsedSeconds() >= 15 * 60) return;
-  instagramTimer = { startedAt: Date.now(), liveSeconds: 0 };
+  if (!purchaseId && instagramUsedSeconds() >= 15 * 60) return;
+  instagramTimer = { startedAt: Date.now(), liveSeconds: 0, purchaseId };
   await window.codeMyLife.startInstagramUsage();
   instagramTimerInterval = setInterval(() => {
     instagramTimer.liveSeconds = Math.floor((Date.now() - instagramTimer.startedAt) / 1000);
-    if (instagramUsedSeconds() + instagramTimer.liveSeconds >= 15 * 60) {
+    const activePurchase = purchaseId ? wallet?.purchases.find((purchase) => purchase.id === purchaseId) : null;
+    const sessionLimit = purchaseId
+      ? Number(activePurchase?.remainingSeconds ?? 0)
+      : Math.max(0, 15 * 60 - instagramUsedSeconds());
+    if (instagramTimer.liveSeconds >= sessionLimit) {
       void pauseInstagramTimer();
       return;
     }
@@ -106,7 +136,7 @@ function syncInstagramPaused() {
     renderInstagramTimer();
     return;
   }
-  saveInstagramUsedSeconds(instagramUsedSeconds() + instagramTimer.liveSeconds);
+  if (!instagramTimer.purchaseId) saveInstagramSessionSeconds(instagramTimer.liveSeconds);
   instagramTimer = null;
   if (instagramTimerInterval) clearInterval(instagramTimerInterval);
   instagramTimerInterval = null;
@@ -129,175 +159,40 @@ function showApp(user) {
   void loadEconomy();
 }
 
-function getTaskElapsedSeconds(task) {
-  if (task.status !== 'active' || !task.startedAt) return Math.max(0, Number(task.elapsed ?? 0));
-  const elapsedSinceStart = Math.floor((Date.now() - task.startedAt) / 1000);
-  return Math.max(0, Number(task.elapsed ?? 0) + elapsedSinceStart);
-}
-
-function formatTaskTimer(task) {
-  const elapsedTotal = Math.min(task.targetMinutes * 60, getTaskElapsedSeconds(task));
-  const remainingSeconds = Math.max(0, task.targetMinutes * 60 - elapsedTotal);
-  const minutes = Math.floor(remainingSeconds / 60);
-  const seconds = remainingSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function renderDailyFocusPreview() {
-  const preview = el('daily-focus-preview');
-  const list = el('preview-task-list');
-  const countdown = el('preview-countdown');
-
-  const updatePreview = () => {
-    const activeTask = previewTasks.find((task) => task.status === 'active');
-    list.replaceChildren();
-
-    previewTasks.forEach((task) => {
-      const liveElapsed = getTaskElapsedSeconds(task);
-      if (task.status === 'active' && task.startedAt) {
-        task.elapsed = liveElapsed;
-      }
-
-      const item = document.createElement('li');
-      item.className = 'daily-focus-row';
-
-      const left = document.createElement('div');
-      left.className = 'daily-focus-task-main';
-      const title = document.createElement('strong');
-      title.textContent = task.name;
-      const meta = document.createElement('span');
-      meta.textContent = formatTaskTimer(task);
-      left.append(title, meta);
-
-      const right = document.createElement('div');
-      right.className = 'daily-focus-actions';
-
-      const state = document.createElement('span');
-      state.className = `daily-focus-status ${task.status === 'pending' ? 'pending' : ''}`;
-      state.textContent = task.status === 'pending' ? 'Pendiente' : task.status === 'active' ? 'En curso' : 'Completada';
-
-      const action = document.createElement('button');
-      action.type = 'button';
-      action.className = 'daily-focus-action';
-      action.textContent = task.status === 'pending' ? 'Start' : task.status === 'active' ? 'Complete' : 'Hecho';
-      action.disabled = task.status === 'done' || Boolean(activeTask && activeTask.id !== task.id);
-      action.addEventListener('click', () => {
-        if (task.status === 'pending') {
-          if (previewTasks.some((candidate) => candidate.status === 'active')) {
-            return;
-          }
-          task.status = 'active';
-          task.startedAt = Date.now();
-          task.elapsed = Math.max(0, Number(task.elapsed ?? 0));
-        } else if (task.status === 'active') {
-          const totalRequired = task.targetMinutes * 60;
-          const elapsedForTask = getTaskElapsedSeconds(task);
-          if (elapsedForTask < totalRequired) {
-            return;
-          }
-          task.status = 'done';
-          task.elapsed = totalRequired;
-          task.startedAt = null;
-        }
-        updatePreview();
-      });
-
-      right.append(state, action);
-      item.append(left, right);
-      list.append(item);
-    });
-
-    const cutoffSeconds = 6 * 60 * 60 + 59 * 60;
-    const deadline = Date.now() + cutoffSeconds * 1000;
-    const tickCountdown = () => {
-      const remainingMs = Math.max(0, deadline - Date.now());
-      const remainingSeconds = Math.ceil(remainingMs / 1000);
-      const minutes = Math.floor(remainingSeconds / 60);
-      const seconds = remainingSeconds % 60;
-      countdown.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-      if (remainingSeconds <= 0) {
-        clearInterval(dailyFocusPreviewInterval);
-        dailyFocusPreviewInterval = null;
-        preview.classList.add('hidden');
-      }
-    };
-
-    if (dailyFocusPreviewInterval) {
-      clearInterval(dailyFocusPreviewInterval);
-    }
-    tickCountdown();
-    dailyFocusPreviewInterval = setInterval(() => {
-      previewTasks.forEach((task) => {
-        if (task.status === 'active' && task.startedAt) {
-          const liveElapsed = getTaskElapsedSeconds(task);
-          if (liveElapsed >= task.targetMinutes * 60) {
-            task.status = 'done';
-            task.elapsed = task.targetMinutes * 60;
-            task.startedAt = null;
-          }
-        }
-      });
-      tickCountdown();
-      updatePreview();
-    }, 1000);
-  };
-
-  updatePreview();
-  preview.classList.remove('hidden');
-}
-
-el('preview-daily-focus').addEventListener('click', () => {
-  void window.codeMyLife.openDailyFocusPreview();
-});
-
 function renderBlockingState(state) {
   lastBlockingState = state;
 
   const banner = el('banner');
   if (state.lastError) {
-    banner.textContent = state.lastError;
+    el('banner-message').textContent = state.lastError;
+    banner.classList.remove('success');
+    banner.classList.add('error');
     banner.classList.remove('hidden');
   } else {
     banner.classList.add('hidden');
   }
 }
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+function showNotice(message, type = 'error') {
+  const banner = el('banner');
+  el('banner-message').textContent = message;
+  banner.classList.toggle('success', type === 'success');
+  banner.classList.toggle('error', type !== 'success');
+  banner.classList.remove('hidden');
+  if (noticeTimer) clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => banner.classList.add('hidden'), 10000);
 }
 
-function showNotice(message) {
-  const banner = el('banner');
-  banner.textContent = message;
-  banner.classList.remove('hidden');
-}
+el('banner-close').addEventListener('click', () => {
+  el('banner').classList.add('hidden');
+  if (noticeTimer) clearTimeout(noticeTimer);
+  noticeTimer = null;
+});
 
 function renderEconomy() {
   if (!wallet) return;
   el('coin-balance').textContent = `${wallet.coins} ${i18n.t('coins')}`;
-  const taskList = el('tasks-list');
-  taskList.replaceChildren();
-  taskDefinitions.forEach((task) => {
-    const row = document.createElement('div');
-    row.className = 'economy-item';
-    const copy = document.createElement('div');
-    copy.className = 'economy-copy';
-    const name = document.createElement('strong');
-    name.textContent = task.name;
-    const description = document.createElement('span');
-    description.textContent = `${task.description} · +${task.rewardCoins} ${i18n.t('coins')}`;
-    copy.append(name, description);
-    const action = document.createElement('button');
-    action.className = 'economy-action';
-    action.type = 'button';
-    const completed = wallet.completions.some((item) => item.taskId === task.id && item.periodKey === todayKey());
-    action.textContent = completed ? i18n.t('completed') : i18n.t('completeTask');
-    action.disabled = completed;
-    action.addEventListener('click', () => void completeTask(task.id));
-    row.append(copy, action);
-    taskList.append(row);
-  });
-
+  renderInventory();
   const shopList = el('shop-list');
   shopList.replaceChildren();
   shopItems.forEach((item) => {
@@ -308,51 +203,239 @@ function renderEconomy() {
     const name = document.createElement('strong');
     name.textContent = item.name;
     const description = document.createElement('span');
-    description.textContent = `${item.description} · ${item.costCoins} ${i18n.t('coins')}`;
+    description.textContent = item.description;
     copy.append(name, description);
+    const duration = document.createElement('span');
+    duration.className = 'shop-duration';
+    duration.textContent = `${item.durationMinutes} min desbloqueados`;
+    copy.append(duration);
+    const offer = document.createElement('div');
+    offer.className = 'shop-offer';
+    const price = document.createElement('strong');
+    price.className = 'shop-price';
+    price.textContent = String(item.costCoins);
+    const priceLabel = document.createElement('span');
+    priceLabel.textContent = i18n.t('coins');
+    offer.append(price, priceLabel);
     const buy = document.createElement('button');
     buy.className = 'economy-action buy-action';
     buy.type = 'button';
     buy.textContent = i18n.t('buy');
     buy.disabled = wallet.coins < item.costCoins;
-    buy.addEventListener('click', () => void purchaseItem(item.id));
-    row.append(copy, buy);
+    buy.setAttribute('aria-label', `Comprar ${item.name}`);
+    if (buy.disabled) {
+      buy.setAttribute('aria-disabled', 'true');
+      buy.setAttribute('aria-description', `Necesitas ${item.costCoins - wallet.coins} monedas mas`);
+    }
+    buy.addEventListener('click', () => void purchaseItem(item.id, buy));
+    row.append(copy, offer, buy);
     shopList.append(row);
   });
 }
 
+function renderInventory() {
+  const list = el('inventory-list');
+  const count = el('inventory-count');
+  if (!list || !count || !wallet) return;
+  const itemsById = new Map(shopItems.map((item) => [item.id, item]));
+  const available = wallet.purchases.filter((purchase) => !purchase.usedAt);
+  const gamePurchases = available.filter((purchase) => purchase.itemId === 'games-time');
+  const activeGame = gamePurchases.find((purchase) => purchase.startedAt);
+  const gameItem = itemsById.get('games-time');
+  const activeSeconds = activeGame
+    ? Number(activeGame.remainingSeconds ?? gameItem?.durationMinutes * 60 ?? 0)
+    : 0;
+  const pendingSeconds = gamePurchases
+    .filter((purchase) => purchase !== activeGame)
+    .reduce((total, purchase) => total + Number(purchase.remainingSeconds ?? gameItem?.durationMinutes * 60 ?? 0), 0);
+  const gameSeconds = activeSeconds + pendingSeconds;
+  const canonicalGame = activeGame ?? gamePurchases[0] ?? null;
+  count.textContent = `${Math.ceil(gameSeconds / 60)} min disponibles`;
+  list.replaceChildren();
+
+  const instagramRow = document.createElement('div');
+  instagramRow.className = 'inventory-item inventory-time-row is-available inventory-instagram-item';
+  const instagramCopy = document.createElement('div');
+  instagramCopy.className = 'inventory-copy';
+  const instagramName = document.createElement('strong');
+  instagramName.textContent = 'Instagram';
+  const instagramDetail = document.createElement('span');
+  instagramDetail.textContent = '15 minutos gratis al dia + tiempo comprado';
+  instagramCopy.append(instagramName, instagramDetail);
+  const instagramStatus = document.createElement('span');
+  instagramStatus.className = 'inventory-timer inventory-instagram-timer';
+  instagramStatus.dataset.instagramTimer = '';
+  const instagramAction = document.createElement('button');
+  instagramAction.className = 'economy-action inventory-action';
+  instagramAction.type = 'button';
+  instagramAction.setAttribute('data-instagram-action', '');
+  instagramAction.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    try {
+      const activeInstagramPurchase = wallet.purchases.find((purchase) =>
+        purchase.itemId === 'instagram-time' && purchase.startedAt && !purchase.usedAt
+      );
+      const pendingInstagramPurchase = wallet.purchases.find((purchase) =>
+        purchase.itemId === 'instagram-time' && !purchase.startedAt && !purchase.usedAt
+      );
+      if (instagramTimer) {
+        await pauseInstagramTimer();
+      } else if (instagramUsedSeconds() < 15 * 60) {
+        await startInstagramTimer();
+      } else if (activeInstagramPurchase) {
+        await startInstagramTimer(activeInstagramPurchase.id);
+      } else if (pendingInstagramPurchase) {
+        await useShopItem(pendingInstagramPurchase.id, instagramAction);
+      }
+    } catch (error) {
+      instagramTimer = null;
+      if (instagramTimerInterval) clearInterval(instagramTimerInterval);
+      instagramTimerInterval = null;
+      showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
+      renderInstagramTimer();
+    }
+  });
+  instagramRow.append(instagramCopy, instagramStatus, instagramAction);
+  list.append(instagramRow);
+
+  if (!canonicalGame) {
+    const empty = document.createElement('p');
+    empty.className = 'inventory-empty';
+    empty.textContent = 'Todavia no tienes objetos. Compra una recompensa para verla aqui.';
+    list.append(empty);
+  } else {
+    const row = document.createElement('div');
+    row.className = `inventory-item inventory-time-row ${activeGame ? 'is-active' : 'is-available'}`;
+    const copy = document.createElement('div');
+    copy.className = 'inventory-copy';
+    const name = document.createElement('strong');
+    name.textContent = 'Tiempo de videojuegos';
+    const description = document.createElement('span');
+    description.textContent = 'Tiempo comprado acumulado';
+    copy.append(name, description);
+    const detail = document.createElement('span');
+    detail.className = 'inventory-timer inventory-video-timer';
+    detail.dataset.videoTimer = canonicalGame.id;
+    detail.textContent = formatVideoRemaining(gameSeconds);
+    const action = document.createElement('button');
+    action.className = 'economy-action inventory-action';
+    action.type = 'button';
+    action.textContent = activeGame ? 'Pausar' : 'Usar Juegos';
+    action.setAttribute('aria-label', activeGame ? 'Pausar tiempo de videojuegos' : 'Usar tiempo de videojuegos');
+    action.setAttribute('aria-pressed', String(Boolean(activeGame)));
+    action.addEventListener('click', () => void (activeGame
+      ? pauseShopItem(canonicalGame.id, action)
+      : useShopItem(canonicalGame.id, action)));
+    row.append(copy, detail, action);
+    list.append(row);
+  }
+  startVideoTimerTicker();
+  renderInstagramTimer();
+}
+
+function formatVideoRemaining(seconds) {
+  const totalSeconds = Math.max(0, Math.ceil(seconds));
+  return `${String(Math.floor(totalSeconds / 60)).padStart(2, '0')}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
+
+function startVideoTimerTicker() {
+  if (videoTimerInterval) clearInterval(videoTimerInterval);
+  const activePurchase = wallet?.purchases.find((purchase) => purchase.itemId === 'games-time' && purchase.startedAt && !purchase.usedAt);
+  if (!activePurchase) return;
+  videoTimerInterval = setInterval(async () => {
+    const current = wallet?.purchases.find((purchase) => purchase.id === activePurchase.id);
+    if (!current?.startedAt) {
+      clearInterval(videoTimerInterval);
+      videoTimerInterval = null;
+      return;
+    }
+    const trustedNow = new Date(await window.codeMyLife.getTrustedTime());
+    const elapsed = Math.max(0, Math.floor((trustedNow.getTime() - new Date(current.startedAt).getTime()) / 1000));
+    const unlockRemaining = current.unlockUntil
+      ? Math.max(0, Math.ceil((new Date(current.unlockUntil).getTime() - trustedNow.getTime()) / 1000))
+      : 0;
+    const remaining = Math.max(
+      0,
+      Number(current.remainingSeconds ?? 0) - elapsed,
+      unlockRemaining
+    );
+    document.querySelectorAll(`[data-video-timer="${current.id}"]`).forEach((node) => {
+      node.textContent = formatVideoRemaining(remaining);
+    });
+    if (remaining <= 0) {
+      await pauseShopItem(current.id, null);
+    }
+  }, 1000);
+}
+
 async function loadEconomy() {
   try {
-    [wallet, taskDefinitions, shopItems] = await Promise.all([
+    [wallet, shopItems] = await Promise.all([
       window.codeMyLife.getWallet(),
-      window.codeMyLife.listTasks(),
       window.codeMyLife.listShop()
     ]);
     renderEconomy();
   } catch {
-    el('tasks-list').textContent = i18n.t('economyOffline');
+    showNotice(i18n.t('economyOffline'));
   }
 }
 
-async function completeTask(taskId) {
-  try {
-    wallet = await window.codeMyLife.completeTask(taskId);
-    renderEconomy();
-    showNotice(i18n.t('taskCompleted'));
-  } catch (error) {
-    showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
-  }
-}
-
-async function purchaseItem(itemId) {
+async function purchaseItem(itemId, button) {
   if (!window.confirm(i18n.t('purchaseConfirm'))) return;
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Comprando...';
   try {
     wallet = await window.codeMyLife.purchaseShopItem(itemId);
     renderEconomy();
-    await refreshOverview();
-    showNotice(i18n.t('purchaseSuccess'));
+    showNotice('Objeto guardado en Mis objetos. Pulsa Usar cuando quieras activar el tiempo.', 'success');
   } catch (error) {
     showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
+    button.disabled = wallet.coins < (shopItems.find((item) => item.id === itemId)?.costCoins ?? 0);
+    button.textContent = originalLabel;
+  }
+}
+
+async function useShopItem(purchaseId, button) {
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Activando...';
+  try {
+    const purchase = wallet.purchases.find((entry) => entry.id === purchaseId);
+    const shopItem = shopItems.find((item) => item.id === purchase?.itemId);
+    wallet = await window.codeMyLife.useShopItem(purchaseId);
+    if (shopItem?.id === 'instagram-time') {
+      await startInstagramTimer(purchaseId);
+      renderInstagramTimer();
+    }
+    renderEconomy();
+    await refreshBlockingState();
+    showNotice(shopItem?.id === 'instagram-time'
+      ? 'Tiempo de Instagram activado.'
+      : 'Tiempo de videojuegos activado.', 'success');
+  } catch (error) {
+    showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
+}
+
+async function pauseShopItem(purchaseId, button) {
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Guardando...';
+  }
+  try {
+    wallet = await window.codeMyLife.pauseShopItem(purchaseId);
+    renderEconomy();
+    await refreshBlockingState();
+    showNotice('Tiempo restante guardado.', 'success');
+  } catch (error) {
+    showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Pausar';
+    }
   }
 }
 
@@ -362,18 +445,6 @@ async function refreshBlockingState() {
   } catch {
     // The scheduler pushes updates as soon as it has a state.
   }
-}
-
-function renderCalendar(calendar) {
-  const container = el('calendar');
-  container.replaceChildren();
-
-  calendar.forEach((day) => {
-    const cell = document.createElement('span');
-    cell.className = day.scheduled ? 'day on' : 'day';
-    cell.title = day.date;
-    container.append(cell);
-  });
 }
 
 function isRunning(commitment) {
@@ -404,8 +475,6 @@ function renderActiveLocks(commitments) {
   const section = el('active-locks');
   const list = el('active-lock-list');
   const activeLocks = commitments.filter(isRunning);
-  const activeTestLocks = activeLocks.filter((commitment) => commitment.name.endsWith(' - Test lock'));
-  el('exit-test-lock').classList.toggle('hidden', activeTestLocks.length === 0);
   list.replaceChildren();
 
   if (activeLocks.length === 0) {
@@ -443,139 +512,26 @@ function renderActiveLocks(commitments) {
   activeLocksInterval = setInterval(updateActiveLockCountdowns, 1000);
 }
 
-function renderCommitments(commitments) {
-  const list = el('commitments');
-  list.replaceChildren();
-
-  const visibleCommitments = commitments.filter((commitment) =>
-    commitment.status !== 'completed' || !commitment.name.endsWith(' - Test lock')
-  );
-
-  if (visibleCommitments.length === 0) {
-    const empty = document.createElement('li');
-    empty.textContent = i18n.t('empty');
-    list.append(empty);
-    return;
-  }
-
-  const dayNames = i18n.t('dayNames');
-
-  visibleCommitments.forEach((commitment) => {
-    const item = document.createElement('li');
-    item.className = 'commitment-card';
-
-    const header = document.createElement('div');
-    header.className = 'commitment-header';
-
-    const titleBlock = document.createElement('div');
-    titleBlock.className = 'commitment-title-block';
-    const eyebrow = document.createElement('span');
-    eyebrow.className = 'commitment-eyebrow';
-    eyebrow.textContent = commitment.scriptName;
-    const title = document.createElement('strong');
-    title.textContent = commitment.name;
-    titleBlock.append(eyebrow, title);
-    header.append(titleBlock);
-
-    if (isRunning(commitment)) {
-      const tag = document.createElement('span');
-      tag.className = 'tag active';
-      tag.textContent = i18n.t('statusActive');
-      header.append(tag);
-    } else if (commitment.status === 'active') {
-      const cancel = document.createElement('button');
-      cancel.type = 'button';
-      cancel.className = 'ghost small';
-      cancel.textContent = i18n.t('cancel');
-      cancel.addEventListener('click', () => void cancelCommitment(commitment._id));
-      header.append(cancel);
-    }
-
-    const details = document.createElement('div');
-    details.className = 'commitment-details';
-
-    const schedule = document.createElement('div');
-    schedule.className = 'commitment-detail';
-    const scheduleLabel = document.createElement('span');
-    scheduleLabel.className = 'detail-label';
-    scheduleLabel.textContent = i18n.t('scheduleLabel');
-    const scheduleValue = document.createElement('strong');
-    scheduleValue.textContent = `${commitment.days.map((day) => dayNames[day]).join(', ')} · ${commitment.startTime} - ${commitment.endTime}`;
-    schedule.append(scheduleLabel, scheduleValue);
-
-    const period = document.createElement('div');
-    period.className = 'commitment-detail';
-    const periodLabel = document.createElement('span');
-    periodLabel.className = 'detail-label';
-    periodLabel.textContent = i18n.t('periodLabel');
-    const periodValue = document.createElement('strong');
-    periodValue.textContent = `${commitment.startsAt.slice(0, 10)} → ${commitment.endsAt.slice(0, 10)}`;
-    period.append(periodLabel, periodValue);
-
-    const domains = document.createElement('div');
-    domains.className = 'commitment-domains';
-    const domainsLabel = document.createElement('span');
-    domainsLabel.className = 'detail-label';
-    domainsLabel.textContent = i18n.t('domainsLabel');
-    const domainList = document.createElement('div');
-    domainList.className = 'domain-list';
-    commitment.blockedDomains.forEach((domain) => {
-      const pill = document.createElement('span');
-      pill.className = 'domain-pill';
-      pill.textContent = domain;
-      domainList.append(pill);
-    });
-    domains.append(domainsLabel, domainList);
-
-    details.append(schedule, period);
-    item.append(header, details, domains);
-    list.append(item);
-  });
-}
-
 function renderOverview(overview) {
   lastOverview = overview;
-  const { stats } = overview;
-  el('stats').textContent = `${stats.running} ${i18n.t('running')} · ${stats.completed} ${i18n.t('completed')} · ${stats.total} ${i18n.t('total')} · ${stats.streak} ${i18n.t('streak')}`;
-  el('profile-stats-summary').textContent = `${stats.total} ${i18n.t('total')} · ${stats.streak} ${i18n.t('streak')}`;
-  renderCalendar(overview.calendar);
   renderActiveLocks(overview.commitments);
-  renderCommitments(overview.commitments.filter((commitment) => commitment.status !== 'cancelled'));
 }
 
 async function refreshOverview() {
   try {
     renderOverview(await window.codeMyLife.getOverview());
   } catch {
-    el('stats').textContent = i18n.t('offline');
+    showNotice(i18n.t('offline'));
   }
 }
 
-el('exit-test-lock').addEventListener('click', async () => {
-  const banner = el('banner');
-  try {
-    await window.codeMyLife.cancelTestLocks();
-    banner.textContent = i18n.t('exitTestLockSuccess');
-    banner.classList.remove('hidden');
-    await refreshOverview();
-    await refreshBlockingState();
-  } catch (error) {
-    banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
-    banner.classList.remove('hidden');
-  }
-});
-
 async function cancelCommitment(id) {
-  const errorLabel = el('banner');
-  errorLabel.textContent = '';
   try {
     await window.codeMyLife.cancelCommitment(id);
     await refreshOverview();
-    errorLabel.textContent = i18n.t('cancelSuccess');
-    errorLabel.classList.remove('hidden');
+    showNotice(i18n.t('cancelSuccess'), 'success');
   } catch (error) {
-    errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
-    errorLabel.classList.remove('hidden');
+    showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
   }
 }
 
@@ -670,9 +626,7 @@ function renderScriptResults(scripts) {
           instagramTimer = null;
           if (instagramTimerInterval) clearInterval(instagramTimerInterval);
           instagramTimerInterval = null;
-          const banner = el('banner');
-          banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
-          banner.classList.remove('hidden');
+          showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
           renderInstagramTimer();
         }
       });
@@ -709,8 +663,12 @@ async function loadScripts() {
   }
 }
 
-function weekBounds() {
-  const startsAt = new Date();
+async function trustedNow() {
+  return new Date(await window.codeMyLife.getTrustedTime());
+}
+
+function weekBounds(now) {
+  const startsAt = new Date(now);
   const sunday = new Date(startsAt);
   const daysUntilSunday = (7 - startsAt.getDay()) % 7;
   sunday.setDate(startsAt.getDate() + daysUntilSunday);
@@ -718,98 +676,15 @@ function weekBounds() {
   return { startsAt, sunday };
 }
 
-function timeValue(date) {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
-function testLockWindows(now) {
-  const end = new Date(now.getTime() + 5 * 60 * 1000);
-  const startTime = timeValue(now);
-  const endTime = timeValue(end);
-
-  if (now.toDateString() === end.toDateString()) {
-    return [{
-      days: [now.getDay()],
-      startTime,
-      endTime,
-      startsAt: now.toISOString(),
-      endsAt: end.toISOString()
-    }];
-  }
-
-  const endOfDay = new Date(now);
-  endOfDay.setHours(23, 59, 59, 999);
-  const nextDay = new Date(end);
-  return [
-    {
-      days: [now.getDay()],
-      startTime,
-      endTime: '23:59',
-      startsAt: now.toISOString(),
-      endsAt: endOfDay.toISOString()
-    },
-    {
-      days: [nextDay.getDay()],
-      startTime: '00:00',
-      endTime,
-      startsAt: new Date(endOfDay.getTime() + 1).toISOString(),
-      endsAt: end.toISOString()
-    }
-  ];
-}
-
-el('test-lock').addEventListener('click', async () => {
-  const banner = el('banner');
-  banner.textContent = '';
-
-  if (availableScripts.length === 0) {
-    banner.textContent = i18n.t('noScripts');
-    banner.classList.remove('hidden');
-    return;
-  }
-
-  if (!window.confirm(i18n.t('testLockConfirm'))) return;
-
-  const lockWindows = testLockWindows(new Date());
-  el('test-lock').disabled = true;
-
-  try {
-    const testScripts = availableScripts.filter((script) => !script.showLockScreen);
-    for (const script of testScripts) {
-      for (const lockWindow of lockWindows) {
-        await window.codeMyLife.createCommitment({
-          scriptId: script._id,
-          name: `${script.name} - Test lock`,
-          customDomains: [],
-          ...lockWindow
-        });
-      }
-    }
-    banner.textContent = i18n.t('testLockSuccess');
-    banner.classList.remove('hidden');
-    await refreshOverview();
-    await refreshBlockingState();
-  } catch (error) {
-    banner.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
-    banner.classList.remove('hidden');
-  } finally {
-    el('test-lock').disabled = false;
-  }
-});
-
 el('lock-week').addEventListener('click', async () => {
-  const errorLabel = el('banner');
-  errorLabel.textContent = '';
-
   if (availableScripts.length === 0) {
-    errorLabel.textContent = i18n.t('noScripts');
-    errorLabel.classList.remove('hidden');
+    showNotice(i18n.t('noScripts'));
     return;
   }
 
   if (!window.confirm(i18n.t('lockWeekConfirm'))) return;
 
-  const { startsAt, sunday } = weekBounds();
+  const { startsAt, sunday } = weekBounds(await trustedNow());
   const weekKey = startsAt.toISOString().slice(0, 10);
   const existingScripts = new Set(
     (lastOverview?.commitments ?? [])
@@ -819,14 +694,16 @@ el('lock-week').addEventListener('click', async () => {
   const scriptsToLock = availableScripts.filter((script) => !existingScripts.has(script._id));
 
   if (scriptsToLock.length === 0) {
-    errorLabel.textContent = availableScripts.some((script) => script.blockingMode === 'daily-limit')
+    showNotice(availableScripts.some((script) => script.blockingMode === 'daily-limit')
       ? i18n.t('dailyLimitPending')
-      : i18n.t('lockWeekAlreadyActive');
-    errorLabel.classList.remove('hidden');
+      : i18n.t('lockWeekAlreadyActive'));
     return;
   }
 
-  el('lock-week').disabled = true;
+  const lockButton = el('lock-week');
+  const lockButtonLabel = lockButton.textContent;
+  lockButton.disabled = true;
+  lockButton.textContent = 'Aplicando...';
 
   try {
     for (const script of scriptsToLock) {
@@ -843,14 +720,14 @@ el('lock-week').addEventListener('click', async () => {
         alwaysBlocked: config.alwaysBlocked ?? false
       });
     }
-    errorLabel.textContent = i18n.t('lockWeekSuccess');
-    errorLabel.classList.remove('hidden');
+    showNotice(i18n.t('lockWeekSuccess'), 'success');
     await refreshOverview();
     await refreshBlockingState();
   } catch (error) {
-    errorLabel.textContent = String(error.message ?? error).replace(/^Error:\s*/, '');
+    showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
   } finally {
-    el('lock-week').disabled = false;
+    lockButton.disabled = false;
+    lockButton.textContent = lockButtonLabel;
   }
 });
 
@@ -859,14 +736,23 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault();
     if (!el('lock-week').disabled) el('lock-week').click();
   }
+  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'p') {
+    event.preventDefault();
+    void window.codeMyLife.openDailyFocusPreview().catch(() => showNotice('No se pudo abrir la vista previa.'));
+  }
 });
 
 window.codeMyLife.onBlockingState(renderBlockingState);
 window.codeMyLife.onInstagramPaused(syncInstagramPaused);
+window.codeMyLife.onPauseTimers(() => {
+  if (instagramTimer) void pauseInstagramTimer();
+});
 window.codeMyLife.onInstagramError((message) => {
-  const banner = el('banner');
-  banner.textContent = message;
-  banner.classList.remove('hidden');
+  showNotice(message);
+});
+
+window.addEventListener('beforeunload', () => {
+  if (instagramTimer) saveInstagramSessionSeconds(instagramTimer.liveSeconds);
 });
 
 (async function init() {
@@ -875,3 +761,4 @@ window.codeMyLife.onInstagramError((message) => {
   const user = await window.codeMyLife.getSession();
   showApp(user || { name: 'Mi perfil', id: 'personal', email: '' });
 })();
+

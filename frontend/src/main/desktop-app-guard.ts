@@ -37,5 +37,23 @@ export class DesktopAppGuard {
         // The process is normally absent; taskkill returns an error in that case.
       }
     }
+    if (this.blockedProcesses.includes('steam.exe')) {
+      await this.closeSteamLibraryProcesses();
+    }
+  }
+
+  private async closeSteamLibraryProcesses(): Promise<void> {
+    const command = [
+      '$pattern = "\\\\steamapps\\\\common\\\\"',
+      'Get-CimInstance Win32_Process',
+      '| Where-Object { $_.ExecutablePath -and $_.ExecutablePath -match $pattern }',
+      '| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }'
+    ].join(' ');
+
+    try {
+      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command]);
+    } catch {
+      // Process enumeration is best-effort; known processes are still handled above.
+    }
   }
 }

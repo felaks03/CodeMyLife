@@ -81,6 +81,7 @@ const TRANSLATIONS = {
     ,taskCompleted: 'Tarea completada. Monedas añadidas.'
     ,purchaseConfirm: '¿Quieres comprar esta recompensa?'
     ,purchaseSuccess: 'Compra realizada. El desbloqueo ya está activo.'
+    ,instagramPurchaseSuccess: 'Tiempo de Instagram guardado en Mis objetos.'
     ,economyOffline: 'No se pudo cargar la tienda.'
   },
   en: {

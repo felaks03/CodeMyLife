@@ -1,30 +1,37 @@
-const tasks = [
-  { name: 'Run 3k', targetMinutes: 20, status: 'pending', startedAt: null, elapsed: 0 },
-  { name: 'Desayunar', targetMinutes: 15, status: 'pending', startedAt: null, elapsed: 0 },
-  { name: 'Cold shower', targetMinutes: 15, status: 'pending', startedAt: null, elapsed: 0 },
-  { name: 'Gym', targetMinutes: 90, status: 'pending', startedAt: null, elapsed: 0 },
-  { name: 'Backtesting', targetMinutes: 60, status: 'pending', startedAt: null, elapsed: 0 }
-];
+let tasks = [];
+let progress = [];
+const isLiveLock = new URLSearchParams(window.location.search).get('mode') === 'lock';
 
-const previewEndsAt = Date.now() + 30_000;
+const previewEndsAt = isLiveLock ? null : Date.now() + 30_000;
 const list = document.getElementById('focus-list');
 const remaining = document.getElementById('preview-remaining');
 
+if (isLiveLock) {
+  document.getElementById('focus-mode-label').textContent = 'CodeMyLife · Bloqueo diario';
+  document.getElementById('focus-note').textContent = 'Solo puedes usar los controles de esta pantalla hasta completar tus tareas.';
+  document.title = 'CodeMyLife - Bloqueo diario';
+}
+
 function elapsedSeconds(task) {
-  if (task.status !== 'active' || !task.startedAt) return task.elapsed;
-  return task.elapsed + Math.floor((Date.now() - task.startedAt) / 1000);
+  const item = progress.find((entry) => entry.taskId === task.id);
+  if (!item) return 0;
+  const storedElapsed = Math.floor(Number(item.elapsedMs ?? 0) / 1000);
+  if (!item.startedAt || item.completed) return storedElapsed;
+  return storedElapsed + Math.floor((Date.now() - new Date(item.startedAt).getTime()) / 1000);
 }
 
 function formatTaskTime(task) {
-  const left = Math.max(0, task.targetMinutes * 60 - elapsedSeconds(task));
+  const left = Math.max(0, task.durationMinutes * 60 - elapsedSeconds(task));
   return `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`;
 }
 
 function render() {
-  const activeTask = tasks.find((task) => task.status === 'active');
+  const activeTask = progress.find((item) => item.startedAt && !item.completed);
   list.replaceChildren();
 
   tasks.forEach((task) => {
+    const item = progress.find((entry) => entry.taskId === task.id);
+    const status = item?.completed ? 'done' : item?.startedAt ? 'active' : 'pending';
     const row = document.createElement('li');
     row.className = 'focus-row';
     const info = document.createElement('div');
@@ -37,50 +44,71 @@ function render() {
 
     const actions = document.createElement('div');
     actions.className = 'focus-actions';
-    const status = document.createElement('span');
-    status.className = `focus-status ${task.status}`;
-    status.textContent = task.status === 'pending' ? 'Pendiente' : task.status === 'active' ? 'En curso' : 'Completada';
+    const statusLabel = document.createElement('span');
+    statusLabel.className = `focus-status ${status}`;
+    statusLabel.textContent = status === 'pending' ? 'Pendiente' : status === 'active' ? 'En curso' : 'Completada';
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = task.status === 'pending' ? 'Empezar' : task.status === 'active' ? 'Completar' : 'Hecho';
-    button.disabled = task.status === 'done' || Boolean(activeTask && activeTask !== task) || (task.status === 'active' && elapsedSeconds(task) < task.targetMinutes * 60);
-    button.addEventListener('click', () => {
-      if (task.status === 'pending') {
-        task.status = 'active';
-        task.startedAt = Date.now();
-        if (task.name === 'Backtesting') {
-          void window.codeMyLife.allowComputerDuringDailyFocusPreview();
+    button.textContent = status === 'pending' ? 'Empezar' : status === 'active' ? 'Completar' : 'Hecho';
+    button.disabled = status === 'done' || Boolean(activeTask && activeTask.taskId !== task.id) || (status === 'active' && elapsedSeconds(task) < task.durationMinutes * 60);
+    button.addEventListener('click', async () => {
+      try {
+        if (status === 'pending') {
+          if (isLiveLock) {
+            progress = await window.codeMyLife.startDailyFocusTask(task.id);
+          } else {
+            const previewItem = progress.find((entry) => entry.taskId === task.id);
+            previewItem.startedAt = new Date().toISOString();
+          }
+          if (task.id === 'backtesting') {
+            void window.codeMyLife.allowComputerDuringDailyFocusPreview();
+          }
+        } else if (status === 'active') {
+          if (isLiveLock) {
+            progress = await window.codeMyLife.completeDailyFocusTask(task.id);
+          } else {
+            const previewItem = progress.find((entry) => entry.taskId === task.id);
+            previewItem.completed = true;
+            previewItem.startedAt = null;
+          }
         }
-      } else if (task.status === 'active') {
-        task.elapsed = task.targetMinutes * 60;
-        task.startedAt = null;
-        task.status = 'done';
+        render();
+      } catch {
+        render();
       }
-      render();
     });
-    actions.append(status, button);
+    actions.append(statusLabel, button);
     row.append(info, actions);
     list.append(row);
   });
 }
 
 function tick() {
-  const seconds = Math.ceil(Math.max(0, previewEndsAt - Date.now()) / 1000);
-  remaining.textContent = `00:${String(seconds).padStart(2, '0')}`;
-  tasks.forEach((task) => {
-    if (task.status === 'active' && elapsedSeconds(task) >= task.targetMinutes * 60) {
-      task.elapsed = task.targetMinutes * 60;
-      task.startedAt = null;
-      task.status = 'done';
-    }
-  });
-  render();
+  const seconds = previewEndsAt === null ? null : Math.ceil(Math.max(0, previewEndsAt - Date.now()) / 1000);
+  if (seconds !== null) remaining.textContent = `00:${String(seconds).padStart(2, '0')}`;
+  if (isLiveLock) {
+    void window.codeMyLife.tickDailyFocus().then((nextProgress) => {
+      progress = nextProgress;
+      render();
+    });
+  } else {
+    render();
+  }
   if (seconds === 0) {
     clearInterval(timer);
     void window.codeMyLife.closeDailyFocusPreview();
   }
 }
 
-render();
+async function initialize() {
+  const data = await (isLiveLock ? window.codeMyLife.getDailyFocus() : window.codeMyLife.getDailyFocusPreview());
+  tasks = data.tasks;
+  progress = isLiveLock
+    ? data.progress
+    : data.progress.map((item) => ({ ...item, completed: false, startedAt: null, elapsedMs: 0 }));
+  render();
+  tick();
+}
+
 const timer = setInterval(tick, 1000);
-tick();
+void initialize();

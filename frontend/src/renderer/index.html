@@ -7,7 +7,10 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="banner" class="banner hidden" role="status" aria-live="polite"></div>
+  <div id="banner" class="banner hidden" role="status" aria-live="polite">
+    <span id="banner-message"></span>
+    <button id="banner-close" class="banner-close" type="button" aria-label="Cerrar aviso">×</button>
+  </div>
 
   <section id="app-view" class="view">
     <p id="guest-banner" class="info-banner hidden" data-i18n="guestBanner"></p>
@@ -15,7 +18,6 @@
       <div>
         <strong id="user-name"></strong>
       </div>
-      <button id="preview-daily-focus" class="preview-button" type="button">Vista previa</button>
     </header>
     <section id="active-locks" class="active-locks hidden" aria-live="polite">
       <div class="active-locks-heading">
@@ -23,7 +25,6 @@
         <strong data-i18n="activeLocksTitle"></strong>
       </div>
       <div id="active-lock-list"></div>
-      <button id="exit-test-lock" class="exit-test-lock hidden" type="button" data-i18n="exitTestLock"></button>
     </section>
 
     <div id="tab-profile" class="tab-content">
@@ -35,7 +36,6 @@
               <div class="profile-info">
                 <h3 id="profile-name">Perfil</h3>
                 <p id="profile-email"></p>
-                <p id="profile-stats-summary"></p>
               </div>
             </div>
           </div>
@@ -49,8 +49,6 @@
               <div class="action-group">
                 <button id="lock-week" class="lock-week" type="button" data-i18n="lockWeek" aria-describedby="lock-week-hint"></button>
                 <p id="lock-week-hint" class="action-hint" data-i18n="lockWeekHint"></p>
-                <button id="test-lock" class="test-lock" type="button" data-i18n="testLock" aria-describedby="test-lock-hint"></button>
-                <p id="test-lock-hint" class="action-hint" data-i18n="testLockHint"></p>
               </div>
             </div>
             <div id="script-browser" class="scripts-browser-card">
@@ -61,20 +59,34 @@
         </div>
 
         <aside class="profile-sidebar">
-          <h2 data-i18n="myCommitments"></h2>
-          <div id="stats" class="stats"></div>
-          <p class="calendar-title" data-i18n="activity"></p>
-          <div id="calendar" class="calendar"></div>
-          <ul id="commitments" class="list"></ul>
-          <section class="card economy-card">
-            <div class="economy-header">
-              <h2 data-i18n="tasksTitle"></h2>
-              <strong id="coin-balance" class="coin-balance">0</strong>
+          <section class="card economy-card wallet-card">
+            <div class="wallet-balance">
+              <img class="coin-art coin-art-small" src="../../assets/coin.svg" alt="" />
+              <div>
+                <p class="wallet-label">Saldo disponible</p>
+                <strong id="coin-balance" class="coin-balance">0</strong>
+              </div>
+              <span class="wallet-status">LISTO</span>
             </div>
-            <div id="tasks-list" class="economy-list"></div>
           </section>
-          <section class="card economy-card">
-            <h2 data-i18n="shopTitle"></h2>
+          <section class="card economy-card inventory-card">
+            <div class="inventory-heading">
+              <div>
+                <p class="eyebrow">Inventario</p>
+                <h2>Mis objetos</h2>
+              </div>
+              <strong id="inventory-count" class="inventory-count">0 disponibles</strong>
+            </div>
+            <div id="inventory-list" class="inventory-list"></div>
+          </section>
+          <section class="card economy-card shop-card">
+            <div class="shop-heading">
+              <div>
+                <p class="eyebrow">Recompensas</p>
+                <h2 data-i18n="shopTitle"></h2>
+                <p class="shop-subtitle">Canjea tus monedas por tiempo desbloqueado.</p>
+              </div>
+            </div>
             <div id="shop-list" class="economy-list"></div>
           </section>
         </aside>

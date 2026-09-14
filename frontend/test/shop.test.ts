@@ -1,13 +1,28 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canPurchase, periodKey, SHOP_ITEMS, TASKS } from '../src/shared/shop';
+import { activeRemainingSeconds, addPurchasedSeconds, canPurchase, consolidatePurchaseSeconds, extendUnlockUntil, isPurchaseAvailable, periodKey, remainingSecondsAfterPause, SHOP_ITEMS, TASKS } from '../src/shared/shop';
 
 test('la tienda tiene una recompensa de tiempo de videojuegos', () => {
-  assert.equal(SHOP_ITEMS.length, 1);
-  assert.equal(SHOP_ITEMS[0].id, 'games-time');
-  assert.equal(SHOP_ITEMS[0].targetScriptId, 'builtin-games');
-  assert.ok(SHOP_ITEMS[0].costCoins > 0);
-  assert.ok(SHOP_ITEMS[0].durationMinutes > 0);
+  const games = SHOP_ITEMS.find((item) => item.id === 'games-time');
+  assert.ok(games);
+  assert.equal(games.targetScriptId, 'builtin-games');
+  assert.ok(games.costCoins > 0);
+  assert.ok(games.durationMinutes > 0);
+});
+
+test('la tienda ofrece 5 minutos extra de Instagram por 5 monedas', () => {
+  const instagram = SHOP_ITEMS.find((item) => item.id === 'instagram-time');
+  assert.ok(instagram);
+  assert.equal(instagram.targetScriptId, 'builtin-instagram');
+  assert.equal(instagram.costCoins, 5);
+  assert.equal(instagram.durationMinutes, 5);
+});
+
+test('videojuegos cuesta 20 monedas y ofrece 20 minutos', () => {
+  const games = SHOP_ITEMS.find((item) => item.id === 'games-time');
+  assert.ok(games);
+  assert.equal(games.costCoins, 20);
+  assert.equal(games.durationMinutes, 20);
 });
 
 test('la lista diaria incluye las cinco tareas del foco', () => {
@@ -43,5 +58,49 @@ test('las definiciones de tareas y tienda tienen ids unicos', () => {
 });
 
 test('la recompensa solo apunta al bloqueo de videojuegos', () => {
-  assert.equal(SHOP_ITEMS.every((item) => item.targetScriptId === 'builtin-games'), true);
+  assert.equal(SHOP_ITEMS.find((item) => item.id === 'games-time')?.targetScriptId, 'builtin-games');
+});
+
+test('una compra nueva esta disponible hasta que se usa', () => {
+  const purchase = { id: 'purchase-1', itemId: 'games-time', coins: 20, purchasedAt: '2026-09-14T10:00:00.000Z' };
+  assert.equal(isPurchaseAvailable(purchase), true);
+  assert.equal(isPurchaseAvailable({ ...purchase, usedAt: '2026-09-14T10:01:00.000Z' }), false);
+});
+
+test('usar un objeto acumula tiempo desde ahora o desde el desbloqueo vigente', () => {
+  const now = new Date('2026-09-14T10:00:00.000Z');
+  assert.equal(extendUnlockUntil(undefined, now, 60), '2026-09-14T11:00:00.000Z');
+  assert.equal(extendUnlockUntil('2026-09-14T10:30:00.000Z', now, 60), '2026-09-14T11:30:00.000Z');
+  assert.equal(extendUnlockUntil('2026-09-14T09:30:00.000Z', now, 60), '2026-09-14T11:00:00.000Z');
+});
+
+test('pausar guarda el tiempo restante transcurrido', () => {
+  assert.equal(
+    remainingSecondsAfterPause(3600, '2026-09-14T10:00:00.000Z', new Date('2026-09-14T10:12:30.000Z')),
+    2850
+  );
+});
+
+test('cada compra anade 60 minutos al objeto acumulado', () => {
+  assert.equal(addPurchasedSeconds(undefined, 60), 3600);
+  assert.equal(addPurchasedSeconds(3600, 60), 7200);
+  assert.equal(addPurchasedSeconds(42 * 60, 60), 102 * 60);
+});
+
+test('una compra activa conserva el mayor tiempo valido antes de acumular', () => {
+  const now = new Date('2026-09-14T10:18:00.000Z');
+  assert.equal(
+    activeRemainingSeconds(42 * 60, '2026-09-14T10:00:00.000Z', now, '2026-09-14T11:00:00.000Z'),
+    42 * 60
+  );
+  assert.equal(
+    addPurchasedSeconds(activeRemainingSeconds(42 * 60, '2026-09-14T10:00:00.000Z', now, '2026-09-14T11:00:00.000Z'), 60),
+    102 * 60
+  );
+});
+
+test('la consolidacion suma tiempo activo, inventario pendiente y la nueva compra', () => {
+  assert.equal(consolidatePurchaseSeconds(42 * 60, 0, 60), 102 * 60);
+  assert.equal(consolidatePurchaseSeconds(0, 60 * 60, 60), 120 * 60);
+  assert.equal(consolidatePurchaseSeconds(42 * 60, 60 * 60, 60), 162 * 60);
 });

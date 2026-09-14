@@ -21,9 +21,11 @@ async function flushDns(): Promise<void> {
 
 export class HostsBlocker {
   private appliedDomains: string[] = [];
+  private hasReconciled = false;
 
   forceReconcile(): void {
     this.appliedDomains = [];
+    this.hasReconciled = false;
   }
 
   async apply(domains: string[]): Promise<void> {
@@ -46,6 +48,7 @@ export class HostsBlocker {
     }
 
     this.appliedDomains = sanitized;
+    this.hasReconciled = true;
     await flushDns();
   }
 
@@ -64,6 +67,7 @@ export class HostsBlocker {
 
   private isSameAsApplied(domains: string[]): boolean {
     return (
+      this.hasReconciled &&
       domains.length === this.appliedDomains.length &&
       domains.every((domain, index) => domain === this.appliedDomains[index])
     );

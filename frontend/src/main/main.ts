@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor } from 'electron';
 import * as path from 'path';
 import { watch } from 'fs';
 import { SessionStore } from './session-store';
@@ -8,6 +8,13 @@ import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
 import { buildCalendar, commitmentStats } from '../shared/schedule';
 import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
 import { walletStore } from './wallet-store';
+import { dailyFocusStore } from './daily-focus-store';
+import { visibleDailyFocusTasks } from '../shared/daily-focus';
+import { timeAuthority } from './time-authority';
+
+if (app.isPackaged) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'CodeMyLife'));
+}
 
 const sessionStore = new SessionStore();
 let mainWindow: BrowserWindow | null = null;
@@ -15,8 +22,10 @@ let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
 let sleepLockWindow: BrowserWindow | null = null;
 let dailyFocusPreviewWindow: BrowserWindow | null = null;
+let dailyFocusLockWindow: BrowserWindow | null = null;
 let dailyFocusPreviewTimer: ReturnType<typeof setTimeout> | null = null;
 let dailyFocusPreviewComputerAllowed = false;
+let dailyFocusLockComputerAllowed = false;
 let quitting = false;
 
 Menu.setApplicationMenu(null);
@@ -29,6 +38,7 @@ const scheduler = new BlockingScheduler(loadCommitments, (state) => {
   mainWindow?.webContents.send('blocking:state', state);
   updateTray(state);
   syncSleepLockWindow(state.lockScreenActive === true);
+  syncDailyFocusLockWindow(state.dailyFocusActive === true);
 });
 
 ipcMain.handle('commitments:cancel-test-locks', async () => {
@@ -52,17 +62,23 @@ ipcMain.handle('daily-focus-preview:close', () => {
 });
 
 ipcMain.handle('daily-focus-preview:allow-computer', () => {
-  if (!dailyFocusPreviewWindow || dailyFocusPreviewWindow.isDestroyed()) return;
+  const targetWindow = dailyFocusPreviewWindow && !dailyFocusPreviewWindow.isDestroyed()
+    ? dailyFocusPreviewWindow
+    : dailyFocusLockWindow && !dailyFocusLockWindow.isDestroyed()
+      ? dailyFocusLockWindow
+      : null;
+  if (!targetWindow) return;
+  if (targetWindow === dailyFocusLockWindow) dailyFocusLockComputerAllowed = true;
   dailyFocusPreviewComputerAllowed = true;
-  dailyFocusPreviewWindow.setKiosk(false);
-  dailyFocusPreviewWindow.setFullScreen(false);
-  dailyFocusPreviewWindow.setAlwaysOnTop(false);
-  dailyFocusPreviewWindow.setSkipTaskbar(false);
-  dailyFocusPreviewWindow.setResizable(true);
-  dailyFocusPreviewWindow.setSize(760, 700);
-  dailyFocusPreviewWindow.center();
-  dailyFocusPreviewWindow.show();
-  dailyFocusPreviewWindow.focus();
+  targetWindow.setKiosk(false);
+  targetWindow.setFullScreen(false);
+  targetWindow.setAlwaysOnTop(false);
+  targetWindow.setSkipTaskbar(false);
+  targetWindow.setResizable(true);
+  targetWindow.setSize(760, 700);
+  targetWindow.center();
+  targetWindow.show();
+  targetWindow.focus();
 });
 
 function assetPath(file: string): string {
@@ -214,6 +230,58 @@ function closeDailyFocusPreviewWindow(): void {
   dailyFocusPreviewComputerAllowed = false;
 }
 
+function syncDailyFocusLockWindow(active: boolean): void {
+  if (active) {
+    if (!dailyFocusLockComputerAllowed && (!dailyFocusLockWindow || dailyFocusLockWindow.isDestroyed())) {
+      createDailyFocusLockWindow();
+    }
+    return;
+  }
+  if (dailyFocusLockWindow && !dailyFocusLockWindow.isDestroyed()) dailyFocusLockWindow.destroy();
+  dailyFocusLockWindow = null;
+  dailyFocusLockComputerAllowed = false;
+}
+
+function createDailyFocusLockWindow(): void {
+  dailyFocusLockWindow = new BrowserWindow({
+    fullscreen: true,
+    frame: false,
+    show: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    closable: false,
+    minimizable: false,
+    maximizable: false,
+    resizable: false,
+    kiosk: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(__dirname, '../preload/preload.js')
+    }
+  });
+  dailyFocusLockWindow.setAlwaysOnTop(true, 'screen-saver');
+  dailyFocusLockWindow.loadFile(path.join(__dirname, '../../src/renderer/daily-focus-preview.html'), { query: { mode: 'lock' } });
+  dailyFocusLockWindow.once('ready-to-show', () => {
+    dailyFocusLockWindow?.show();
+    dailyFocusLockWindow?.focus();
+  });
+  dailyFocusLockWindow.on('blur', () => {
+    if (!dailyFocusLockComputerAllowed && dailyFocusLockWindow && !dailyFocusLockWindow.isDestroyed()) {
+      dailyFocusLockWindow.show();
+      dailyFocusLockWindow.focus();
+    }
+  });
+  dailyFocusLockWindow.on('close', (event) => {
+    if (!quitting) event.preventDefault();
+  });
+  dailyFocusLockWindow.on('closed', () => {
+    dailyFocusLockWindow = null;
+    dailyFocusLockComputerAllowed = false;
+  });
+}
+
 function createDailyFocusPreviewWindow(): void {
   dailyFocusPreviewComputerAllowed = false;
   dailyFocusPreviewWindow = new BrowserWindow({
@@ -277,8 +345,12 @@ async function requestQuit(): Promise<void> {
   }
 
   quitting = true;
+  mainWindow?.webContents.send('app:pause-timers');
+  await walletStore.pauseActiveSessions();
   sleepLockWindow?.destroy();
   sleepLockWindow = null;
+  dailyFocusLockWindow?.destroy();
+  dailyFocusLockWindow = null;
   await scheduler.stop();
   app.quit();
 }
@@ -337,6 +409,8 @@ function createMainWindow(): void {
   mainWindow.on('close', (event) => {
     if (!quitting) {
       event.preventDefault();
+      mainWindow?.webContents.send('app:pause-timers');
+      void walletStore.pauseActiveSessions();
       mainWindow?.hide();
     }
   });
@@ -348,10 +422,11 @@ function createMainWindow(): void {
 
 function registerIpcHandlers(): void {
   ipcMain.handle('session:get', () => sessionStore.session?.user ?? null);
+  ipcMain.handle('time:now', () => timeAuthority.now().toISOString());
 
   ipcMain.handle('commitments:overview', async () => {
     const commitments = await guestStore.list();
-    const now = new Date();
+    const now = timeAuthority.now();
     return {
       commitments,
       stats: commitmentStats(commitments, now),
@@ -387,6 +462,33 @@ function registerIpcHandlers(): void {
     await scheduler.refresh();
     return wallet;
   });
+  ipcMain.handle('wallet:use-item', async (_event, purchaseId: string) => {
+    const wallet = await walletStore.useItem(purchaseId);
+    await scheduler.refresh();
+    return wallet;
+  });
+  ipcMain.handle('wallet:pause-item', async (_event, purchaseId: string) => {
+    const wallet = await walletStore.pauseItem(purchaseId);
+    void scheduler.refresh().catch((error) => {
+      mainWindow?.webContents.send('blocking:state', {
+        ...scheduler.getState(),
+        lastError: error instanceof Error ? error.message : 'No se pudo actualizar el bloqueo.'
+      });
+    });
+    return wallet;
+  });
+
+  ipcMain.handle('daily-focus:get', async () => ({
+    tasks: visibleDailyFocusTasks(timeAuthority.now()),
+    progress: await dailyFocusStore.tick()
+  }));
+  ipcMain.handle('daily-focus:preview-get', async () => ({
+    tasks: visibleDailyFocusTasks(timeAuthority.now()),
+    progress: await dailyFocusStore.get()
+  }));
+  ipcMain.handle('daily-focus:start', (_event, taskId: string) => dailyFocusStore.startTask(taskId));
+  ipcMain.handle('daily-focus:complete', (_event, taskId: string) => dailyFocusStore.completeTask(taskId));
+  ipcMain.handle('daily-focus:tick', () => dailyFocusStore.tick());
 
   ipcMain.handle('instagram:start-usage', async () => {
     await scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, true);
@@ -425,6 +527,7 @@ if (!hasSingleInstanceLock) {
   });
 
   app.whenReady().then(async () => {
+    await timeAuthority.sync();
     await sessionStore.load();
     await ensurePersonalProfile();
     registerIpcHandlers();
@@ -439,6 +542,10 @@ if (!hasSingleInstanceLock) {
     });
   }).catch((error) => {
     console.error('[CodeMyLife] Error fatal durante el arranque:', error);
+    dialog.showErrorBox(
+      'CodeMyLife no puede iniciar',
+      `No se pudo verificar la hora confiable. Comprueba tu conexion a Internet y vuelve a intentarlo.\n\n${(error as Error).message}`
+    );
     app.exit(1);
   });
 }
@@ -453,4 +560,9 @@ app.on('before-quit', (event) => {
     event.preventDefault();
     void requestQuit();
   }
+});
+
+powerMonitor.on('shutdown', () => {
+  mainWindow?.webContents.send('app:pause-timers');
+  void walletStore.pauseActiveSessions();
 });

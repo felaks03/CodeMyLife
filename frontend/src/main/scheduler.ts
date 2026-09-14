@@ -7,6 +7,10 @@ import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
 import { VIDEO_GAME_BLOCKED_PROCESSES } from '../shared/builtin-scripts';
 import { domainsToBlock, isCommitmentEnforcedNow, shouldShowLockScreen } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
+import { timeAuthority } from './time-authority';
+import { writeJsonAtomic } from './atomic-storage';
+import { dailyFocusStore } from './daily-focus-store';
+import { isDailyFocusBlocked } from '../shared/daily-focus';
 
 const CHECK_INTERVAL_MS = 30_000;
 
@@ -29,6 +33,7 @@ export class BlockingScheduler {
     hasAdminRights: true,
     lastError: null,
     lockScreenActive: false
+    ,dailyFocusActive: false
   };
 
   constructor(
@@ -66,7 +71,7 @@ export class BlockingScheduler {
 
   async setTemporarilyAllowed(domains: string[], allowed: boolean): Promise<void> {
     this.blocker.forceReconcile();
-    const now = new Date();
+    const now = timeAuthority.now();
     const instagramConfigured = this.commitments.some(
       (commitment) =>
         commitment.scriptId === 'builtin-instagram' &&
@@ -93,11 +98,22 @@ export class BlockingScheduler {
   }
 
   private async tick(): Promise<void> {
+    try {
+      await this.reconcile();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo actualizar el bloqueo.';
+      this.state = { ...this.state, lastError: message };
+      this.onStateChange(this.state);
+    }
+  }
+
+  private async reconcile(): Promise<void> {
     await this.syncFromServer();
 
-    const scheduledDomains = domainsToBlock(this.commitments, new Date());
-    const now = new Date();
+    const now = timeAuthority.now();
+    const scheduledDomains = domainsToBlock(this.commitments, now);
     const lockScreenActive = shouldShowLockScreen(this.commitments, now);
+    const dailyFocusActive = isDailyFocusBlocked(now, await dailyFocusStore.tick());
     const gamesActive = this.commitments.some(
       (commitment) => commitment.scriptId === 'builtin-games' && isCommitmentEnforcedNow(commitment, now)
     );
@@ -115,7 +131,8 @@ export class BlockingScheduler {
         blockedDomains: domains,
         hasAdminRights: true,
         lastError: null,
-        lockScreenActive
+        lockScreenActive,
+        dailyFocusActive
       };
     } catch (error) {
       const hasAdminRights = await this.blocker.canWrite();
@@ -124,7 +141,8 @@ export class BlockingScheduler {
         blockedDomains: domains,
         hasAdminRights,
         lastError: hasAdminRights ? (error as Error).message : 'Se requieren permisos de administrador para aplicar el bloqueo.',
-        lockScreenActive
+        lockScreenActive,
+        dailyFocusActive
       };
     }
 
@@ -163,7 +181,7 @@ export class BlockingScheduler {
   }
 
   private async normalizeCommitments(commitments: Commitment[]): Promise<Commitment[]> {
-    const now = Date.now();
+    const now = timeAuthority.nowMs();
     const valid = commitments.filter((commitment) =>
       commitment && typeof commitment.startsAt === 'string' && typeof commitment.endsAt === 'string'
     );
@@ -179,6 +197,6 @@ export class BlockingScheduler {
   }
 
   private async writeCache(commitments: Commitment[]): Promise<void> {
-    await fs.writeFile(cacheFile(), JSON.stringify(commitments), 'utf8');
+    await writeJsonAtomic(cacheFile(), commitments);
   }
 }

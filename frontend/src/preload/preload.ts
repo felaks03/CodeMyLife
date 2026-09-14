@@ -1,6 +1,7 @@
 // Bridges main and renderer processes with a minimal, explicit API surface.
 import { contextBridge, ipcRenderer } from 'electron';
 import { AuthUser, BlockingState, Commitment, NewCommitment, Script, ShopItem, TaskDefinition, WalletState } from '../shared/types';
+import { DailyFocusState, DailyFocusTask } from '../shared/daily-focus';
 
 interface Overview {
   commitments: Commitment[];
@@ -8,8 +9,14 @@ interface Overview {
   calendar: { date: string; scheduled: boolean }[];
 }
 
+interface DailyFocusData {
+  tasks: DailyFocusTask[];
+  progress: DailyFocusState;
+}
+
 contextBridge.exposeInMainWorld('codeMyLife', {
   getSession: (): Promise<AuthUser | null> => ipcRenderer.invoke('session:get'),
+  getTrustedTime: (): Promise<string> => ipcRenderer.invoke('time:now'),
   getOverview: (): Promise<Overview> => ipcRenderer.invoke('commitments:overview'),
   createCommitment: (payload: NewCommitment): Promise<Commitment> =>
     ipcRenderer.invoke('commitments:create', payload),
@@ -36,5 +43,15 @@ contextBridge.exposeInMainWorld('codeMyLife', {
   listTasks: (): Promise<TaskDefinition[]> => ipcRenderer.invoke('wallet:tasks'),
   listShop: (): Promise<ShopItem[]> => ipcRenderer.invoke('wallet:shop'),
   completeTask: (taskId: string): Promise<WalletState> => ipcRenderer.invoke('wallet:complete-task', taskId),
-  purchaseShopItem: (itemId: string): Promise<WalletState> => ipcRenderer.invoke('wallet:purchase', itemId)
+  purchaseShopItem: (itemId: string): Promise<WalletState> => ipcRenderer.invoke('wallet:purchase', itemId),
+  useShopItem: (purchaseId: string): Promise<WalletState> => ipcRenderer.invoke('wallet:use-item', purchaseId),
+  pauseShopItem: (purchaseId: string): Promise<WalletState> => ipcRenderer.invoke('wallet:pause-item', purchaseId)
+  ,onPauseTimers: (callback: () => void): void => {
+    ipcRenderer.on('app:pause-timers', () => callback());
+  }
+  ,getDailyFocus: (): Promise<DailyFocusData> => ipcRenderer.invoke('daily-focus:get')
+  ,getDailyFocusPreview: (): Promise<DailyFocusData> => ipcRenderer.invoke('daily-focus:preview-get')
+  ,startDailyFocusTask: (taskId: string): Promise<DailyFocusState> => ipcRenderer.invoke('daily-focus:start', taskId)
+  ,completeDailyFocusTask: (taskId: string): Promise<DailyFocusState> => ipcRenderer.invoke('daily-focus:complete', taskId)
+  ,tickDailyFocus: (): Promise<DailyFocusState> => ipcRenderer.invoke('daily-focus:tick')
 });

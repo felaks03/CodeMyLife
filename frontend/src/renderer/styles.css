@@ -52,14 +52,33 @@ h2 {
 }
 
 .app-version {
-  bottom: 10px;
   color: rgba(153, 168, 176, .72);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
-  pointer-events: none;
+}
+
+.version-control {
+  bottom: 10px;
+  display: block;
   position: fixed;
   right: 14px;
   z-index: 100;
+}
+
+.version-control .update-button {
+  bottom: calc(100% + 8px);
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  transition: opacity 160ms ease;
+  white-space: nowrap;
+}
+
+.version-control:hover .update-button,
+.version-control:focus-within .update-button {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .view {
@@ -73,6 +92,10 @@ h2 {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 18px;
+}
+
+.update-button {
+  min-height: 36px;
 }
 
 .daily-focus-action:disabled {

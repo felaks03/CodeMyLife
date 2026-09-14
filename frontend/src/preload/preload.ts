@@ -18,6 +18,12 @@ contextBridge.exposeInMainWorld('codeMyLife', {
   onUpdateAvailable: (callback: (version: string) => void): void => {
     ipcRenderer.on('update:available', (_event, version: string) => callback(version));
   },
+  onUpdateChecking: (callback: () => void): void => {
+    ipcRenderer.on('update:checking', () => callback());
+  },
+  onUpdateNotAvailable: (callback: () => void): void => {
+    ipcRenderer.on('update:not-available', () => callback());
+  },
   onUpdateDownloaded: (callback: (version: string) => void): void => {
     ipcRenderer.on('update:downloaded', (_event, version: string) => callback(version));
   },
@@ -26,6 +32,7 @@ contextBridge.exposeInMainWorld('codeMyLife', {
   },
   getSession: (): Promise<AuthUser | null> => ipcRenderer.invoke('session:get'),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
+  checkForUpdates: (): Promise<void> => ipcRenderer.invoke('app:check-for-updates'),
   getTrustedTime: (): Promise<string> => ipcRenderer.invoke('time:now'),
   getOverview: (): Promise<Overview> => ipcRenderer.invoke('commitments:overview'),
   createCommitment: (payload: NewCommitment): Promise<Commitment> =>

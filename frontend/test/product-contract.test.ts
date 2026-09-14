@@ -96,6 +96,30 @@ test('la salida protegida no se ejecuta dos veces y tiene timeout', () => {
   assert.match(main, /setTimeout\(resolve, 5000\)/);
 });
 
+test('el updater comprueba al iniciar y una vez al dia', () => {
+  const main = read('src/main/main.ts');
+  assert.match(main, /const UPDATE_CHECK_INTERVAL_MS = 24 \* 60 \* 60 \* 1000/);
+  assert.match(main, /autoUpdater\.checkForUpdates\(\)/);
+  assert.match(main, /setInterval\(\(\) => \{[\s\S]*UPDATE_CHECK_INTERVAL_MS/);
+});
+
+test('la UI permite buscar actualizaciones manualmente', () => {
+  const html = read('src/renderer/index.html');
+  const renderer = read('src/renderer/renderer.js');
+  const preload = read('src/preload/preload.ts');
+  const main = read('src/main/main.ts');
+  assert.match(html, /id="check-for-updates"/);
+  assert.match(html, /class="version-control"[\s\S]*id="app-version"[\s\S]*id="check-for-updates"/);
+  const styles = read('src/renderer/styles.css');
+  assert.match(styles, /\.version-control:hover \.update-button/);
+  assert.match(styles, /\.version-control \{[\s\S]*position: fixed[\s\S]*right: 14px/);
+  assert.match(styles, /\.version-control \.update-button \{[\s\S]*position: absolute/);
+  assert.match(renderer, /checkForUpdates\(\)/);
+  assert.match(preload, /app:check-for-updates/);
+  assert.match(main, /ipcMain\.handle\('app:check-for-updates'/);
+  assert.match(main, /mainWindow\?\.webContents\.send\('update:checking'/);
+});
+
 test('el scheduler invalida excepciones temporales al refrescar compromisos', () => {
   const scheduler = read('src/main/scheduler.ts');
   assert.match(scheduler, /temporarilyAllowedDomains\.clear\(\)/);

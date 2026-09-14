@@ -752,11 +752,36 @@ window.codeMyLife.onBlockingState(renderBlockingState);
 window.codeMyLife.onUpdateAvailable((version) => {
   showNotice(`Actualizacion ${version} disponible. Se descargara automaticamente.`, 'success');
 });
+window.codeMyLife.onUpdateChecking(() => {
+  const button = el('check-for-updates');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Buscando actualizaciones...';
+  }
+});
+window.codeMyLife.onUpdateNotAvailable(() => {
+  const button = el('check-for-updates');
+  if (button) {
+    button.disabled = false;
+    button.textContent = 'Buscar actualizaciones';
+  }
+  showNotice('Ya tienes la ultima version.', 'success');
+});
 window.codeMyLife.onUpdateDownloaded((version) => {
   showNotice(`Actualizacion ${version} descargada. Se instalara automaticamente.`, 'success');
 });
 window.codeMyLife.onUpdateError((message) => {
+  const button = el('check-for-updates');
+  if (button) {
+    button.disabled = false;
+    button.textContent = 'Buscar actualizaciones';
+  }
   showNotice(`No se pudo actualizar la aplicacion: ${message}`);
+});
+el('check-for-updates')?.addEventListener('click', () => {
+  void window.codeMyLife.checkForUpdates().catch((error) => {
+    showNotice(`No se pudo buscar actualizaciones: ${String(error.message ?? error)}`);
+  });
 });
 window.codeMyLife.onInstagramPaused(syncInstagramPaused);
 window.codeMyLife.onPauseTimers(() => {

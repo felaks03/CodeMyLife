@@ -13,6 +13,8 @@ import { visibleDailyFocusTasks } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
 
+const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
 if (app.isPackaged) {
   app.setPath('userData', path.join(app.getPath('appData'), 'CodeMyLife'));
 }
@@ -108,6 +110,17 @@ function setupAutoUpdater(): void {
   void autoUpdater.checkForUpdates().catch((error) => {
     reportUpdateError(error);
   });
+  setInterval(() => {
+    void checkForUpdates(reportUpdateError);
+  }, UPDATE_CHECK_INTERVAL_MS);
+}
+
+async function checkForUpdates(reportError: (error: unknown) => void): Promise<void> {
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch (error) {
+    reportError(error);
+  }
 }
 
 function showMainWindow(): void {
@@ -427,6 +440,17 @@ function createMainWindow(): void {
 function registerIpcHandlers(): void {
   ipcMain.handle('session:get', () => sessionStore.session?.user ?? null);
   ipcMain.handle('app:version', () => app.getVersion());
+  ipcMain.handle('app:check-for-updates', async () => {
+    mainWindow?.webContents.send('update:checking');
+    if (!app.isPackaged) {
+      mainWindow?.webContents.send('update:not-available');
+      return;
+    }
+    await checkForUpdates((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      mainWindow?.webContents.send('update:error', message);
+    });
+  });
   ipcMain.handle('daily-focus:skip-today', async () => {
     await dailyFocusStore.skipForToday();
     await scheduler.refresh();

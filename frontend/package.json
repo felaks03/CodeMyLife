@@ -1,6 +1,6 @@
 {
   "name": "codemylife-frontend",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "CodeMyLife desktop app (Electron)",
   "main": "dist/main/main.js",
   "scripts": {
@@ -43,7 +43,7 @@
     }
   },
   "devDependencies": {
-    "electron": "^38.8.6",
+    "electron": "^44.3.0",
     "electron-builder": "^26.15.3",
     "typescript": "^5.5.0"
   },

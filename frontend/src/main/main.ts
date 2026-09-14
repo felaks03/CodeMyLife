@@ -83,6 +83,13 @@ function assetPath(file: string): string {
 function setupAutoUpdater(): void {
   if (!app.isPackaged) return;
 
+  const reportUpdateError = (error: unknown): void => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[CodeMyLife] Update error:', message);
+    if (/404|releases\.atom|double check that your authentication token/i.test(message)) return;
+    mainWindow?.webContents.send('update:error', message);
+  };
+
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.on('checking-for-update', () => mainWindow?.webContents.send('update:checking'));
@@ -94,15 +101,11 @@ function setupAutoUpdater(): void {
     setTimeout(() => autoUpdater.quitAndInstall(false, true), 2000);
   });
   autoUpdater.on('error', (error) => {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('[CodeMyLife] Update error:', message);
-    mainWindow?.webContents.send('update:error', message);
+    reportUpdateError(error);
   });
 
   void autoUpdater.checkForUpdates().catch((error) => {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('[CodeMyLife] Update check error:', message);
-    mainWindow?.webContents.send('update:error', message);
+    reportUpdateError(error);
   });
 }
 

@@ -14,6 +14,7 @@ import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
 
 const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+let updateCheckInProgress = false;
 
 if (app.isPackaged) {
   app.setPath('userData', path.join(app.getPath('appData'), 'CodeMyLife'));
@@ -89,7 +90,10 @@ function setupAutoUpdater(): void {
   const reportUpdateError = (error: unknown): void => {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[CodeMyLife] Update error:', message);
-    if (/404|releases\.atom|double check that your authentication token/i.test(message)) return;
+    if (/404|releases\.atom|double check that your authentication token/i.test(message)) {
+      mainWindow?.webContents.send('update:not-available');
+      return;
+    }
     mainWindow?.webContents.send('update:error', message);
   };
 
@@ -116,10 +120,14 @@ function setupAutoUpdater(): void {
 }
 
 async function checkForUpdates(reportError: (error: unknown) => void): Promise<void> {
+  if (updateCheckInProgress) return;
+  updateCheckInProgress = true;
   try {
     await autoUpdater.checkForUpdates();
   } catch (error) {
     reportError(error);
+  } finally {
+    updateCheckInProgress = false;
   }
 }
 

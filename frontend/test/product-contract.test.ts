@@ -118,6 +118,9 @@ test('la UI permite buscar actualizaciones manualmente', () => {
   assert.match(preload, /app:check-for-updates/);
   assert.match(main, /ipcMain\.handle\('app:check-for-updates'/);
   assert.match(main, /mainWindow\?\.webContents\.send\('update:checking'/);
+  assert.match(main, /let updateCheckInProgress = false/);
+  assert.match(main, /if \(updateCheckInProgress\) return/);
+  assert.match(main, /update:not-available/);
 });
 
 test('el scheduler invalida excepciones temporales al refrescar compromisos', () => {

@@ -11,8 +11,8 @@ REM La terminal debe estar elevada para modificar hosts.
 net session >nul 2>&1
 if not "%errorlevel%"=="0" (
   echo [INFO] Solicitando permisos de administrador para aplicar los bloqueos...
-  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
-  exit /b 0
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$process = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d', '/c', ('""' + '%~f0' + '""') -Verb RunAs -Wait -PassThru; exit $process.ExitCode"
+  exit /b !errorlevel!
 )
 echo [INFO] Permisos de administrador confirmados.
 

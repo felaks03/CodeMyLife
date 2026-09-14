@@ -37,6 +37,7 @@
       "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
+      "oneClick": false,
       "perMachine": true,
       "allowToChangeInstallationDirectory": true
     }

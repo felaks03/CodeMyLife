@@ -157,7 +157,19 @@ function showApp(user) {
   void refreshBlockingState();
   void loadScripts();
   void loadEconomy();
+  void window.codeMyLife.isDevelopment().then((development) => {
+    el('skip-daily-focus').classList.toggle('hidden', !development);
+  });
 }
+
+el('skip-daily-focus').addEventListener('click', async () => {
+  try {
+    await window.codeMyLife.skipDailyFocusToday();
+    showNotice('Bloqueo diario omitido solo por hoy.', 'success');
+  } catch (error) {
+    showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
+  }
+});
 
 function renderBlockingState(state) {
   lastBlockingState = state;

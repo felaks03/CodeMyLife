@@ -75,6 +75,11 @@ function setupAutoUpdater(): void {
     console.error('[CodeMyLife] Update error:', message);
     mainWindow?.webContents.send('update:error', message);
   });
+
+ipcMain.handle('daily-focus:skip-today', async () => {
+  await dailyFocusStore.skipForToday();
+  await scheduler.refresh();
+});
   void autoUpdater.checkForUpdates().catch((error) => {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[CodeMyLife] Update check error:', message);
@@ -440,6 +445,7 @@ function registerIpcHandlers(): void {
     tasks: visibleDailyFocusTasks(timeAuthority.now()),
     progress: await dailyFocusStore.tick()
   }));
+  ipcMain.handle('app:is-development', () => !app.isPackaged);
   ipcMain.handle('daily-focus:start', (_event, taskId: string) => dailyFocusStore.startTask(taskId));
   ipcMain.handle('daily-focus:complete', async (_event, taskId: string) => {
     const previousProgress = await dailyFocusStore.get();

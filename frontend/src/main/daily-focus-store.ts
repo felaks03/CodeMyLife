@@ -22,6 +22,10 @@ function storeFile(): string {
   return path.join(app.getPath('userData'), 'daily-focus.json');
 }
 
+function skipFile(): string {
+  return path.join(app.getPath('userData'), 'daily-focus-skip.json');
+}
+
 function seedState(dayKey: string): DailyFocusProgress[] {
   return visibleDailyFocusTasks(timeAuthority.now()).map((task: DailyFocusTask) => ({
     taskId: task.id,
@@ -51,6 +55,20 @@ async function writeState(progress: DailyFocusStoreState): Promise<void> {
 }
 
 export const dailyFocusStore = {
+  async isSkippedForToday(): Promise<boolean> {
+    try {
+      const raw = JSON.parse(await fs.readFile(skipFile(), 'utf8')) as { dayKey?: string };
+      return raw.dayKey === currentDayKey();
+    } catch {
+      return false;
+    }
+  },
+
+  async skipForToday(): Promise<void> {
+    if (app.isPackaged) throw new Error('El salto de desarrollo no esta disponible en la version instalada.');
+    await writeJsonAtomic(skipFile(), { dayKey: currentDayKey() });
+  },
+
   async get(): Promise<DailyFocusStoreState> {
     return readState();
   },

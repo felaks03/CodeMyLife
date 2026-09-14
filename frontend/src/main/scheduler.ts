@@ -114,7 +114,8 @@ export class BlockingScheduler {
     const now = timeAuthority.now();
     const scheduledDomains = domainsToBlock(this.commitments, now);
     const lockScreenActive = shouldShowLockScreen(this.commitments, now);
-    const dailyFocusActive = isDailyFocusBlocked(now, await dailyFocusStore.tick());
+    const dailyFocusActive = !await dailyFocusStore.isSkippedForToday() &&
+      isDailyFocusBlocked(now, await dailyFocusStore.tick());
     const gamesActive = this.commitments.some(
       (commitment) => commitment.scriptId === 'builtin-games' && isCommitmentEnforcedNow(commitment, now)
     );

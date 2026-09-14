@@ -22,10 +22,7 @@ contextBridge.exposeInMainWorld('codeMyLife', {
     ipcRenderer.invoke('commitments:create', payload),
   cancelCommitment: (id: string): Promise<Commitment> =>
     ipcRenderer.invoke('commitments:cancel', id),
-  cancelTestLocks: (): Promise<number> => ipcRenderer.invoke('commitments:cancel-test-locks'),
-  openDailyFocusPreview: (): Promise<void> => ipcRenderer.invoke('daily-focus-preview:open'),
-  allowComputerDuringDailyFocusPreview: (): Promise<void> => ipcRenderer.invoke('daily-focus-preview:allow-computer'),
-  closeDailyFocusPreview: (): Promise<void> => ipcRenderer.invoke('daily-focus-preview:close'),
+  allowComputerDuringDailyFocus: (): Promise<void> => ipcRenderer.invoke('daily-focus:allow-computer'),
   listScripts: (): Promise<Script[]> => ipcRenderer.invoke('scripts:list'),
   startInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:start-usage'),
   pauseInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:pause-usage'),
@@ -50,7 +47,6 @@ contextBridge.exposeInMainWorld('codeMyLife', {
     ipcRenderer.on('app:pause-timers', () => callback());
   }
   ,getDailyFocus: (): Promise<DailyFocusData> => ipcRenderer.invoke('daily-focus:get')
-  ,getDailyFocusPreview: (): Promise<DailyFocusData> => ipcRenderer.invoke('daily-focus:preview-get')
   ,startDailyFocusTask: (taskId: string): Promise<DailyFocusState> => ipcRenderer.invoke('daily-focus:start', taskId)
   ,completeDailyFocusTask: (taskId: string): Promise<DailyFocusState> => ipcRenderer.invoke('daily-focus:complete', taskId)
   ,tickDailyFocus: (): Promise<DailyFocusState> => ipcRenderer.invoke('daily-focus:tick')

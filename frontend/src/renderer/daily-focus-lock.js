@@ -1,16 +1,10 @@
 let tasks = [];
 let progress = [];
-const isLiveLock = new URLSearchParams(window.location.search).get('mode') === 'lock';
-
-const previewEndsAt = isLiveLock ? null : Date.now() + 30_000;
 const list = document.getElementById('focus-list');
-const remaining = document.getElementById('preview-remaining');
 
-if (isLiveLock) {
-  document.getElementById('focus-mode-label').textContent = 'CodeMyLife · Bloqueo diario';
-  document.getElementById('focus-note').textContent = 'Solo puedes usar los controles de esta pantalla hasta completar tus tareas.';
-  document.title = 'CodeMyLife - Bloqueo diario';
-}
+document.getElementById('focus-mode-label').textContent = 'CodeMyLife · Bloqueo diario';
+document.getElementById('focus-note').textContent = 'Solo puedes usar los controles de esta pantalla hasta completar tus tareas.';
+document.title = 'CodeMyLife - Bloqueo diario';
 
 function elapsedSeconds(task) {
   const item = progress.find((entry) => entry.taskId === task.id);
@@ -54,23 +48,12 @@ function render() {
     button.addEventListener('click', async () => {
       try {
         if (status === 'pending') {
-          if (isLiveLock) {
-            progress = await window.codeMyLife.startDailyFocusTask(task.id);
-          } else {
-            const previewItem = progress.find((entry) => entry.taskId === task.id);
-            previewItem.startedAt = new Date().toISOString();
-          }
+          progress = await window.codeMyLife.startDailyFocusTask(task.id);
           if (task.id === 'backtesting') {
-            void window.codeMyLife.allowComputerDuringDailyFocusPreview();
+            void window.codeMyLife.allowComputerDuringDailyFocus();
           }
         } else if (status === 'active') {
-          if (isLiveLock) {
-            progress = await window.codeMyLife.completeDailyFocusTask(task.id);
-          } else {
-            const previewItem = progress.find((entry) => entry.taskId === task.id);
-            previewItem.completed = true;
-            previewItem.startedAt = null;
-          }
+          progress = await window.codeMyLife.completeDailyFocusTask(task.id);
         }
         render();
       } catch {
@@ -84,31 +67,19 @@ function render() {
 }
 
 function tick() {
-  const seconds = previewEndsAt === null ? null : Math.ceil(Math.max(0, previewEndsAt - Date.now()) / 1000);
-  if (seconds !== null) remaining.textContent = `00:${String(seconds).padStart(2, '0')}`;
-  if (isLiveLock) {
-    void window.codeMyLife.tickDailyFocus().then((nextProgress) => {
-      progress = nextProgress;
-      render();
-    });
-  } else {
+  void window.codeMyLife.tickDailyFocus().then((nextProgress) => {
+    progress = nextProgress;
     render();
-  }
-  if (seconds === 0) {
-    clearInterval(timer);
-    void window.codeMyLife.closeDailyFocusPreview();
-  }
+  });
 }
 
 async function initialize() {
-  const data = await (isLiveLock ? window.codeMyLife.getDailyFocus() : window.codeMyLife.getDailyFocusPreview());
+  const data = await window.codeMyLife.getDailyFocus();
   tasks = data.tasks;
-  progress = isLiveLock
-    ? data.progress
-    : data.progress.map((item) => ({ ...item, completed: false, startedAt: null, elapsedMs: 0 }));
+  progress = data.progress;
   render();
   tick();
 }
 
-const timer = setInterval(tick, 1000);
+setInterval(tick, 1000);
 void initialize();

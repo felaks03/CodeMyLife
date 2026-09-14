@@ -36,7 +36,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     id: 'cold-shower',
     name: 'Cold shower',
     description: 'Ducha fría.',
-    durationMinutes: 15,
+    durationMinutes: 10,
     rewardCoins: 20,
     enabled: true
   },
@@ -44,7 +44,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     id: 'gym',
     name: 'Gym',
     description: 'Entrenamiento de fuerza.',
-    durationMinutes: 90,
+    durationMinutes: 60,
     rewardCoins: 75,
     enabled: true
   },

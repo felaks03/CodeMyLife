@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor, screen, Display } from 'electron';
 import * as path from 'path';
 import { watch } from 'fs';
 import { SessionStore } from './session-store';
@@ -21,7 +21,7 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
 let sleepLockWindow: BrowserWindow | null = null;
-let dailyFocusLockWindow: BrowserWindow | null = null;
+const dailyFocusLockWindows = new Map<number, BrowserWindow>();
 let dailyFocusLockComputerAllowed = false;
 let quitting = false;
 
@@ -38,18 +38,21 @@ const scheduler = new BlockingScheduler(loadCommitments, (state) => {
   syncDailyFocusLockWindow(state.dailyFocusActive === true);
 });
 
-ipcMain.handle('daily-focus-preview:allow-computer', () => {
-  if (!dailyFocusLockWindow || dailyFocusLockWindow.isDestroyed()) return;
+ipcMain.handle('daily-focus:allow-computer', () => {
+  if (dailyFocusLockWindows.size === 0) return;
   dailyFocusLockComputerAllowed = true;
-  dailyFocusLockWindow.setKiosk(false);
-  dailyFocusLockWindow.setFullScreen(false);
-  dailyFocusLockWindow.setAlwaysOnTop(false);
-  dailyFocusLockWindow.setSkipTaskbar(false);
-  dailyFocusLockWindow.setResizable(true);
-  dailyFocusLockWindow.setSize(760, 700);
-  dailyFocusLockWindow.center();
-  dailyFocusLockWindow.show();
-  dailyFocusLockWindow.focus();
+  for (const window of dailyFocusLockWindows.values()) {
+    if (window.isDestroyed()) continue;
+    window.setKiosk(false);
+    window.setFullScreen(false);
+    window.setAlwaysOnTop(false);
+    window.setSkipTaskbar(false);
+    window.setResizable(true);
+    window.setSize(760, 700);
+    window.center();
+    window.show();
+    window.focus();
+  }
 });
 
 function assetPath(file: string): string {
@@ -192,20 +195,37 @@ function createSleepLockWindow(): void {
 }
 
 function syncDailyFocusLockWindow(active: boolean): void {
-  if (active) {
-    if (!dailyFocusLockComputerAllowed && (!dailyFocusLockWindow || dailyFocusLockWindow.isDestroyed())) {
-      createDailyFocusLockWindow();
+  const displays = screen.getAllDisplays();
+  const displayIds = new Set(displays.map((display) => display.id));
+  for (const [displayId, window] of dailyFocusLockWindows) {
+    if (!displayIds.has(displayId) || window.isDestroyed()) {
+      if (!window.isDestroyed()) window.destroy();
+      dailyFocusLockWindows.delete(displayId);
     }
+  }
+  if (!active || dailyFocusLockComputerAllowed) {
+    destroyDailyFocusLockWindows();
     return;
   }
-  if (dailyFocusLockWindow && !dailyFocusLockWindow.isDestroyed()) dailyFocusLockWindow.destroy();
-  dailyFocusLockWindow = null;
+  for (const display of displays) {
+    if (!dailyFocusLockWindows.has(display.id)) createDailyFocusLockWindow(display);
+  }
+}
+
+function destroyDailyFocusLockWindows(): void {
+  for (const window of dailyFocusLockWindows.values()) {
+    if (!window.isDestroyed()) window.destroy();
+  }
+  dailyFocusLockWindows.clear();
   dailyFocusLockComputerAllowed = false;
 }
 
-function createDailyFocusLockWindow(): void {
-  dailyFocusLockWindow = new BrowserWindow({
-    fullscreen: true,
+function createDailyFocusLockWindow(display: Display): void {
+  const lockWindow = new BrowserWindow({
+    x: display.bounds.x,
+    y: display.bounds.y,
+    width: display.bounds.width,
+    height: display.bounds.height,
     frame: false,
     show: false,
     alwaysOnTop: true,
@@ -222,24 +242,28 @@ function createDailyFocusLockWindow(): void {
       preload: path.join(__dirname, '../preload/preload.js')
     }
   });
-  dailyFocusLockWindow.setAlwaysOnTop(true, 'screen-saver');
-  dailyFocusLockWindow.loadFile(path.join(__dirname, '../../src/renderer/daily-focus-preview.html'), { query: { mode: 'lock' } });
-  dailyFocusLockWindow.once('ready-to-show', () => {
-    dailyFocusLockWindow?.show();
-    dailyFocusLockWindow?.focus();
-  });
-  dailyFocusLockWindow.on('blur', () => {
-    if (!dailyFocusLockComputerAllowed && dailyFocusLockWindow && !dailyFocusLockWindow.isDestroyed()) {
-      dailyFocusLockWindow.show();
-      dailyFocusLockWindow.focus();
+  dailyFocusLockWindows.set(display.id, lockWindow);
+  lockWindow.setAlwaysOnTop(true, 'screen-saver');
+  lockWindow.loadFile(path.join(__dirname, '../../src/renderer/daily-focus-lock.html'));
+  lockWindow.once('ready-to-show', () => {
+    if (!lockWindow.isDestroyed()) {
+      lockWindow.show();
+      lockWindow.focus();
     }
   });
-  dailyFocusLockWindow.on('close', (event) => {
+  lockWindow.on('blur', () => {
+    if (!dailyFocusLockComputerAllowed && !lockWindow.isDestroyed()) {
+      lockWindow.show();
+      lockWindow.focus();
+    }
+  });
+  lockWindow.on('close', (event) => {
     if (!quitting) event.preventDefault();
   });
-  dailyFocusLockWindow.on('closed', () => {
-    dailyFocusLockWindow = null;
-    dailyFocusLockComputerAllowed = false;
+  lockWindow.on('closed', () => {
+    if (dailyFocusLockWindows.get(display.id) === lockWindow) {
+      dailyFocusLockWindows.delete(display.id);
+    }
   });
 }
 
@@ -264,8 +288,7 @@ async function requestQuit(): Promise<void> {
   await walletStore.pauseActiveSessions();
   sleepLockWindow?.destroy();
   sleepLockWindow = null;
-  dailyFocusLockWindow?.destroy();
-  dailyFocusLockWindow = null;
+  destroyDailyFocusLockWindows();
   await scheduler.stop();
   app.quit();
 }
@@ -303,6 +326,48 @@ function setupDevReloader(win: BrowserWindow): void {
   }
 }
 
+function createMainWindow(): void {
+  mainWindow = new BrowserWindow({
+    width: 1024,
+    height: 720,
+    backgroundColor: '#1e1e1e',
+    icon: assetPath('icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+
+  mainWindow.loadFile(path.join(__dirname, '../../src/renderer/index.html'));
+  setupDevReloader(mainWindow);
+  mainWindow.on('close', (event) => {
+    if (!quitting) {
+      event.preventDefault();
+      mainWindow?.webContents.send('app:pause-timers');
+      void walletStore.pauseActiveSessions();
+      mainWindow?.hide();
+    }
+  });
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+function registerIpcHandlers(): void {
+  ipcMain.handle('session:get', () => sessionStore.session?.user ?? null);
+  ipcMain.handle('time:now', () => timeAuthority.now().toISOString());
+
+  ipcMain.handle('commitments:overview', async () => {
+    const commitments = await guestStore.list();
+    const now = timeAuthority.now();
+    return {
+      commitments,
+      stats: commitmentStats(commitments, now),
+      calendar: buildCalendar(commitments, now).map((day) => ({
+        date: day.date.toISOString().slice(0, 10),
+        scheduled: day.scheduled
       }))
     };
   });
@@ -399,6 +464,10 @@ if (!hasSingleInstanceLock) {
     registerIpcHandlers();
     createMainWindow();
     createTray();
+    const reconcileDisplays = () => syncDailyFocusLockWindow(scheduler.getState().dailyFocusActive === true);
+    screen.on('display-added', reconcileDisplays);
+    screen.on('display-removed', reconcileDisplays);
+    screen.on('display-metrics-changed', reconcileDisplays);
     await scheduler.start();
 
     app.on('activate', () => {

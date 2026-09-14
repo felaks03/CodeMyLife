@@ -139,19 +139,6 @@ export const guestStore = {
     return commitment;
   },
 
-  async cancelTestLocks(): Promise<number> {
-    const commitments = await readCommitments();
-    let cancelled = 0;
-    for (const commitment of commitments) {
-      if (commitment.status === 'active' && commitment.name.endsWith(' - Test lock')) {
-        commitment.status = 'cancelled';
-        cancelled++;
-      }
-    }
-    if (cancelled > 0) await writeCommitments(commitments);
-    return cancelled;
-  },
-
   async replace(commitments: Commitment[]): Promise<void> {
     await writeCommitments(commitments);
   }

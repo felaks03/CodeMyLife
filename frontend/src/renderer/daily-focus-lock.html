@@ -3,18 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self';" />
-  <title>CodeMyLife - Vista previa</title>
-  <link rel="stylesheet" href="daily-focus-preview.css" />
+  <title>CodeMyLife - Bloqueo diario</title>
+  <link rel="stylesheet" href="daily-focus-lock.css" />
 </head>
 <body>
   <main class="focus-lock" aria-live="polite">
-    <p id="focus-mode-label" class="focus-eyebrow">CodeMyLife · Vista previa</p>
+    <p id="focus-mode-label" class="focus-eyebrow">CodeMyLife · Bloqueo diario</p>
     <h1 id="focus-title">Bloqueo diario activo</h1>
     <p class="focus-subtitle">Completa la lista antes de las 15:00</p>
-    <div class="preview-remaining" id="preview-remaining">00:30</div>
-    <p id="focus-note" class="focus-note">Esta vista se cerrara automaticamente en 30 segundos.</p>
+    <p id="focus-note" class="focus-note">Solo puedes usar los controles de esta pantalla hasta completar tus tareas.</p>
     <ul class="focus-list" id="focus-list"></ul>
   </main>
-  <script src="daily-focus-preview.js"></script>
+  <script src="daily-focus-lock.js"></script>
 </body>
 </html>

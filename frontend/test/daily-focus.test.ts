@@ -48,8 +48,8 @@ test('las tareas usan las duraciones diarias acordadas', () => {
     [
       ['run3k', 20],
       ['breakfast', 15],
-      ['cold-shower', 15],
-      ['gym', 90],
+      ['cold-shower', 10],
+      ['gym', 60],
       ['backtesting', 60]
     ]
   );

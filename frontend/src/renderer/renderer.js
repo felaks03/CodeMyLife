@@ -736,10 +736,6 @@ document.addEventListener('keydown', (event) => {
     event.preventDefault();
     if (!el('lock-week').disabled) el('lock-week').click();
   }
-  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'p') {
-    event.preventDefault();
-    void window.codeMyLife.openDailyFocusPreview().catch(() => showNotice('No se pudo abrir la vista previa.'));
-  }
 });
 
 window.codeMyLife.onBlockingState(renderBlockingState);

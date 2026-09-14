@@ -33,13 +33,16 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Las filas usan una cuadrícula común fija para que timer y botón queden en la misma posición real.
 - [x] Los mensajes de éxito aparecen en verde y los mensajes de error aparecen en rojo.
 - [x] Se eliminaron de la interfaz las vistas previas y los bloqueos de prueba.
+- [x] El bloqueo diario cubre todos los monitores conectados con una ventana kiosk por pantalla.
+- [x] Cold shower dura 10 minutos.
+- [x] Gym dura 60 minutos.
 - [x] Las notificaciones aparecen como una capa fija y no desplazan la interfaz.
 - [x] La build empaquetada usa un directorio de datos de producción separado y no reutiliza datos de pruebas.
 
 ## Foco Diario
 
-- [x] La preview dura 30 segundos.
-- [x] La preview no debe modificar el progreso real de la mañana.
+- [x] Se eliminó la preview temporal de 30 segundos.
+- [x] El bloqueo diario usa únicamente el progreso real de la mañana.
 - [x] El bloqueo real de 08:00 a 15:00 debe usar el progreso persistente.
 - [x] Solo puede haber una tarea activa.
 - [x] Gym no debe exigirse durante el fin de semana.
@@ -91,6 +94,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadido selector de aplicación para videojuegos, apertura desde el proceso principal y monitorización del cierre.
 - Implementado el flujo persistente de Instagram: el objeto comprado ya no se consume al activar, guarda `startedAt`/`remainingSeconds` y se pausa desde el mismo timer.
 - Añadida pausa automática de sesiones activas al cerrar la ventana, salir de la app o recibir el evento de apagado de Windows.
+- Eliminados los restos de preview, bloqueos de prueba y timer temporal de tareas; el foco diario solo usa la pantalla real de 08:00 a 15:00.
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.
 - Añadidos estados ARIA para botones de compra y uso/pausa.

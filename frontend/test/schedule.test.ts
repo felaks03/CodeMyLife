@@ -72,12 +72,21 @@ test('combina dominios de varios compromisos sin duplicados', () => {
   assert.deepEqual(domains, ['tiktok.com', 'youtu.be', 'youtube.com']);
 });
 
-test('YouTube solo se bloquea dentro de su horario', () => {
-  const youtube = commitment({ scriptId: 'builtin-youtube', startTime: '09:00', endTime: '18:00' });
-  assert.equal(isCommitmentEnforcedNow(youtube, mondayAt('08:59')), false);
-  assert.equal(isCommitmentEnforcedNow(youtube, mondayAt('09:00')), true);
-  assert.equal(isCommitmentEnforcedNow(youtube, mondayAt('17:59')), true);
-  assert.equal(isCommitmentEnforcedNow(youtube, mondayAt('18:00')), false);
+test('YouTube se bloquea de lunes a sabado durante todo el dia', () => {
+  const youtube = commitment({
+    scriptId: 'builtin-youtube',
+    blockedDomains: ['youtube.com', 'youtu.be'],
+    days: [1, 2, 3, 4, 5, 6],
+    startTime: '00:00',
+    endTime: '24:00'
+  });
+
+  assert.equal(isCommitmentEnforcedNow(youtube, mondayAt('00:00')), true);
+  assert.equal(isCommitmentEnforcedNow(youtube, fridayAt('23:59')), true);
+  assert.equal(isCommitmentEnforcedNow(youtube, saturdayAt('12:00')), true);
+  assert.equal(isCommitmentEnforcedNow(youtube, sundayAt('12:00')), false);
+  assert.deepEqual(domainsToBlock([youtube], saturdayAt('12:00')), ['youtu.be', 'youtube.com']);
+  assert.deepEqual(domainsToBlock([youtube], sundayAt('12:00')), []);
 });
 
 test('el bloqueo de videojuegos no aporta dominios de YouTube', () => {

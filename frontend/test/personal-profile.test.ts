@@ -32,7 +32,7 @@ const mondayAt = (time: string) => new Date(`2026-09-07T${time}:00`);
 const tuesdayAt = (time: string) => new Date(`2026-09-08T${time}:00`);
 const fridayAt = (time: string) => new Date(`2026-09-11T${time}:00`);
 const sundayAt = (time: string) => new Date(`2026-09-13T${time}:00`);
-const saturdayAt = (time: string) => new Date(`2026-09-05T${time}:00`);
+const saturdayAt = (time: string) => new Date(`2026-09-12T${time}:00`);
 
 test('el perfil personal incluye todos los scripts integrados', () => {
   assert.ok(BUILTIN_SCRIPTS.length > 0);
@@ -189,21 +189,22 @@ test('Lock week crea una configuracion para cada script', () => {
   );
 });
 
-test('el bloqueo de YouTube solo funciona de lunes a viernes', () => {
+test('el bloqueo de YouTube funciona de lunes a sabado', () => {
   const youtube = commitment(BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-youtube')!);
 
-  assert.deepEqual(youtube.days, [1, 2, 3, 4, 5]);
+  assert.deepEqual(youtube.days, [1, 2, 3, 4, 5, 6]);
   assert.equal(isCommitmentEnforcedNow(youtube, fridayAt('15:30')), true);
+  assert.equal(isCommitmentEnforcedNow(youtube, saturdayAt('15:30')), true);
   assert.equal(isCommitmentEnforcedNow(youtube, sundayAt('15:30')), false);
 });
 
-test('el bloqueo de YouTube respeta el horario de 15 a 17', () => {
+test('el bloqueo de YouTube cubre el dia completo hasta medianoche', () => {
   const lock = commitment(BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-youtube')!);
 
-  assert.equal(lock.startTime, '15:00');
-  assert.equal(lock.endTime, '17:00');
-  assert.equal(isCommitmentEnforcedNow(lock, fridayAt('14:59')), false);
-  assert.equal(isCommitmentEnforcedNow(lock, fridayAt('17:00')), false);
+  assert.equal(lock.startTime, '00:00');
+  assert.equal(lock.endTime, '24:00');
+  assert.equal(isCommitmentEnforcedNow(lock, fridayAt('00:00')), true);
+  assert.equal(isCommitmentEnforcedNow(lock, fridayAt('23:59')), true);
 });
 
 test('los dominios de todos los scripts se combinan sin duplicados', () => {

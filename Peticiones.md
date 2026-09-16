@@ -7,7 +7,8 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Los bloqueos activos no deben cortar la conexión general a Internet.
 - [x] Un bloqueo solo puede afectar a los dominios o procesos que define su propio script.
 - [x] Activar el bloqueo de videojuegos no debe bloquear YouTube, Instagram ni otros dominios no relacionados.
-- [x] YouTube Shorts (`/shorts`) se bloquea de forma permanente dentro de las ventanas controladas por CodeMyLife sin bloquear YouTube normal.
+- [x] YouTube completo se bloquea de lunes a sábado por `hosts`; el domingo YouTube normal queda libre.
+- [x] YouTube Shorts (`/shorts`) mantiene una capa específica best-effort el domingo sin bloquear YouTube normal.
 - [x] YouTube Shorts (`/shorts`) se bloquea en Chrome y Edge mediante políticas nativas `URLBlocklist`, sin extensión.
 - [x] Si YouTube usa navegación SPA y esquiva `URLBlocklist`, CodeMyLife cierra ventanas externas de navegador que detecte en Shorts.
 - [x] Activar el bloqueo semanal invalida excepciones temporales antiguas y aplica el bloqueo de Instagram inmediatamente.

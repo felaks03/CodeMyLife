@@ -147,15 +147,15 @@ export const BUILTIN_SCRIPTS: Script[] = [
     _id: 'builtin-youtube',
     authorName: 'CodeMyLife',
     name: 'Bloqueo de YouTube',
-    description: 'Bloquea YouTube y sus enlaces cortos de lunes a viernes, de 15:00 a 17:00.',
+    description: 'Bloquea YouTube completo de lunes a sábado; el domingo YouTube normal queda libre y Shorts usa una capa específica.',
     category: 'Video',
     blockedDomains: ['youtube.com', 'youtu.be'],
     allowCustomDomains: true,
     usageCount: 0,
     schedule: {
-      days: [1, 2, 3, 4, 5],
-      startTime: '15:00',
-      endTime: '17:00'
+      days: [1, 2, 3, 4, 5, 6],
+      startTime: '00:00',
+      endTime: '24:00'
     }
   },
   {

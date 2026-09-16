@@ -184,13 +184,19 @@ test('la UI permite buscar actualizaciones manualmente', () => {
   assert.match(main, /update:not-available/);
 });
 
-test('YouTube Shorts se bloquea por URL sin meter YouTube en hosts', () => {
+test('YouTube se bloquea por hosts de lunes a sabado y Shorts mantiene capa de domingo', () => {
   const shorts = read('src/shared/youtube-shorts.ts');
+  const builtinScripts = read('src/shared/builtin-scripts.ts');
+  const backendCommitments = read('../backend/src/routes/commitment.routes.ts');
   const main = read('src/main/main.ts');
   const preload = read('src/preload/preload.ts');
   const renderer = read('src/renderer/renderer.js');
   const browserPolicy = read('src/main/browser-policy.ts');
   const nsis = read('installer/setup.nsh');
+  assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*days: \[1, 2, 3, 4, 5, 6\]/);
+  assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*startTime: '00:00'[\s\S]*endTime: '24:00'/);
+  assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*blockedDomains: \['youtube\.com', 'youtu\.be'\]/);
+  assert.match(backendCommitments, /END_TIME_PATTERN[\s\S]*24:00/);
   assert.match(shorts, /isYoutubeShortsUrl/);
   assert.match(shorts, /\/\^\\\/shorts/);
   assert.match(main, /blocking:youtube-shorts/);

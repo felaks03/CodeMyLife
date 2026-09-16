@@ -8,15 +8,16 @@ import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
 export const commitmentRouter = Router();
 
 const DOMAIN_PATTERN = /^(?!-)[a-z0-9-]{1,63}(\.[a-z0-9-]{1,63})+$/i;
-const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const START_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const END_TIME_PATTERN = /^(([01]\d|2[0-3]):[0-5]\d|24:00)$/;
 
 const createSchema = z.object({
   scriptId: z.string().refine((value) => Types.ObjectId.isValid(value), 'Invalid scriptId'),
   name: z.string().min(1).max(80),
   customDomains: z.array(z.string().regex(DOMAIN_PATTERN)).max(50).optional(),
   days: z.array(z.number().int().min(0).max(6)).min(1).max(7),
-  startTime: z.string().regex(TIME_PATTERN),
-  endTime: z.string().regex(TIME_PATTERN),
+  startTime: z.string().regex(START_TIME_PATTERN),
+  endTime: z.string().regex(END_TIME_PATTERN),
   startsAt: z.coerce.date(),
   endsAt: z.coerce.date()
 });

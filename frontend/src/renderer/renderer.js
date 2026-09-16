@@ -408,6 +408,7 @@ function renderInventory() {
   youtubeAction.className = 'economy-action inventory-action';
   youtubeAction.type = 'button';
   youtubeAction.setAttribute('data-youtube-action', '');
+  youtubeAction.setAttribute('aria-label', 'Usar YouTube');
   youtubeAction.addEventListener('click', async (event) => {
     event.stopPropagation();
     try {
@@ -743,6 +744,7 @@ function renderScriptResults(scripts) {
       usageButton.className = 'instagram-action';
       usageButton.setAttribute('data-youtube-action', '');
       usageButton.textContent = i18n.t('useYoutube');
+      usageButton.setAttribute('aria-label', 'Usar YouTube');
       usageButton.addEventListener('click', async (event) => {
         event.stopPropagation();
         try {

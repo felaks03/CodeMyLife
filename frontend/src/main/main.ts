@@ -14,6 +14,7 @@ import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
 import { isYoutubeShortsUrl } from '../shared/youtube-shorts';
 import { ensureYoutubeShortsBrowserPolicy } from './browser-policy';
+import { youtubeShortsWindowGuard } from './youtube-shorts-window-guard';
 import {
   disableWatchdogUntilManualLaunch,
   enableWatchdogAfterManualLaunch,
@@ -182,7 +183,7 @@ function blockYoutubeShortsNavigation(window: BrowserWindow): void {
       notifyYoutubeShortsBlocked(url);
       return { action: 'deny' };
     }
-    return { action: 'deny' };
+    return { action: 'allow' };
   });
 }
 
@@ -662,6 +663,7 @@ if (!hasSingleInstanceLock) {
       console.error('[CodeMyLife] No se pudo registrar el bloqueo de YouTube Shorts en navegador:', error);
       mainWindow?.webContents.send('blocking:youtube-shorts-policy-error');
     });
+    youtubeShortsWindowGuard.start();
     await ensureWatchdogTask(process.execPath).catch((error) => {
       console.error('[CodeMyLife] No se pudo registrar el watchdog:', error);
     });

@@ -58,7 +58,7 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
 let youtubeWindow: BrowserWindow | null = null;
-let sleepLockWindow: BrowserWindow | null = null;
+const sleepLockWindows = new Map<number, BrowserWindow>();
 let quitInProgress = false;
 const dailyFocusLockWindows = new Map<number, BrowserWindow>();
 let dailyFocusLockComputerAllowed = false;
@@ -330,17 +330,36 @@ function updateTray(state: BlockingState): void {
 }
 
 function syncSleepLockWindow(active: boolean): void {
+  const displays = screen.getAllDisplays();
+  const displayIds = new Set(displays.map((display) => display.id));
+  for (const [displayId, window] of sleepLockWindows) {
+    if (!displayIds.has(displayId) || window.isDestroyed()) {
+      if (!window.isDestroyed()) window.destroy();
+      sleepLockWindows.delete(displayId);
+    }
+  }
   if (active) {
-    if (!sleepLockWindow || sleepLockWindow.isDestroyed()) createSleepLockWindow();
+    for (const display of displays) {
+      if (!sleepLockWindows.has(display.id)) createSleepLockWindow(display);
+    }
     return;
   }
-  if (sleepLockWindow && !sleepLockWindow.isDestroyed()) sleepLockWindow.destroy();
-  sleepLockWindow = null;
+  destroySleepLockWindows();
 }
 
-function createSleepLockWindow(): void {
-  sleepLockWindow = new BrowserWindow({
-    fullscreen: true,
+function destroySleepLockWindows(): void {
+  for (const window of sleepLockWindows.values()) {
+    if (!window.isDestroyed()) window.destroy();
+  }
+  sleepLockWindows.clear();
+}
+
+function createSleepLockWindow(display: Display): void {
+  const sleepLockWindow = new BrowserWindow({
+    x: display.bounds.x,
+    y: display.bounds.y,
+    width: display.bounds.width,
+    height: display.bounds.height,
     frame: false,
     show: false,
     alwaysOnTop: true,
@@ -356,14 +375,17 @@ function createSleepLockWindow(): void {
     }
   });
 
+  sleepLockWindows.set(display.id, sleepLockWindow);
   sleepLockWindow.setAlwaysOnTop(true, 'screen-saver');
   sleepLockWindow.loadFile(path.join(__dirname, '../../src/renderer/lock-screen.html'));
   sleepLockWindow.once('ready-to-show', () => {
-    sleepLockWindow?.show();
-    sleepLockWindow?.focus();
+    if (!sleepLockWindow.isDestroyed()) {
+      sleepLockWindow.show();
+      sleepLockWindow.focus();
+    }
   });
   sleepLockWindow.on('blur', () => {
-    if (sleepLockWindow && !sleepLockWindow.isDestroyed()) {
+    if (!sleepLockWindow.isDestroyed()) {
       sleepLockWindow.show();
       sleepLockWindow.focus();
     }
@@ -372,7 +394,9 @@ function createSleepLockWindow(): void {
     if (!quitting) event.preventDefault();
   });
   sleepLockWindow.on('closed', () => {
-    sleepLockWindow = null;
+    if (sleepLockWindows.get(display.id) === sleepLockWindow) {
+      sleepLockWindows.delete(display.id);
+    }
   });
 }
 
@@ -531,8 +555,7 @@ async function requestQuit(disableWatchdog = true): Promise<void> {
   if (disableWatchdog) await disableWatchdogUntilManualLaunch();
   mainWindow?.webContents.send('app:pause-timers');
   await walletStore.pauseActiveSessions();
-  sleepLockWindow?.destroy();
-  sleepLockWindow = null;
+  destroySleepLockWindows();
   destroyDailyFocusLockWindows();
   let timeout: NodeJS.Timeout | null = null;
   const stopTimeout = new Promise<void>((resolve) => {
@@ -776,7 +799,11 @@ if (!hasSingleInstanceLock) {
     if (silent) setupAutoUpdater();
     else createMainWindow();
     createTray();
-    const reconcileDisplays = () => syncDailyFocusLockWindow(scheduler.getState().dailyFocusActive === true);
+    const reconcileDisplays = () => {
+      const state = scheduler.getState();
+      syncSleepLockWindow(state.lockScreenActive === true);
+      syncDailyFocusLockWindow(state.dailyFocusActive === true);
+    };
     screen.on('display-added', reconcileDisplays);
     screen.on('display-removed', reconcileDisplays);
     screen.on('display-metrics-changed', reconcileDisplays);

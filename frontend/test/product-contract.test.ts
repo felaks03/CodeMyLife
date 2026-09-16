@@ -55,6 +55,14 @@ test('el bloqueo diario se reconcilia por pantalla', () => {
   assert.match(main, /display-metrics-changed/);
 });
 
+test('el bloqueo de dormir crea una ventana por monitor', () => {
+  const main = read('src/main/main.ts');
+  assert.match(main, /sleepLockWindows = new Map/);
+  assert.match(main, /const displays = screen\.getAllDisplays\(\)/);
+  assert.match(main, /sleepLockWindows\.set\(display\.id, sleepLockWindow\)/);
+  assert.match(main, /destroySleepLockWindows\(\)/);
+});
+
 test('el updater solo se configura para builds empaquetadas', () => {
   const main = read('src/main/main.ts');
   const packageJson = JSON.parse(read('package.json')) as { dependencies?: Record<string, string>; build?: { publish?: { provider?: string; owner?: string; repo?: string } } };

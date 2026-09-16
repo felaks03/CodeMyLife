@@ -77,13 +77,21 @@ function formatRemaining(seconds) {
   return `${minutes}:${String(rest).padStart(2, '0')}`;
 }
 
+function instagramPurchaseSeconds(purchase) {
+  return Math.max(0, Number(purchase.remainingSeconds ?? 0));
+}
+
+function hasInstagramPurchaseTime(purchase) {
+  return purchase.itemId === 'instagram-time' && !purchase.usedAt && instagramPurchaseSeconds(purchase) > 0;
+}
+
 function renderInstagramTimer() {
-  const activePurchase = wallet?.purchases.find((purchase) => purchase.itemId === 'instagram-time' && purchase.startedAt && !purchase.usedAt);
+  const activePurchase = wallet?.purchases.find((purchase) => hasInstagramPurchaseTime(purchase) && purchase.startedAt);
   const purchasedSeconds = wallet?.purchases
-    .filter((purchase) => purchase.itemId === 'instagram-time' && !purchase.usedAt && purchase !== activePurchase)
-    .reduce((total, purchase) => total + Number(purchase.remainingSeconds ?? 0), 0) ?? 0;
+    .filter((purchase) => hasInstagramPurchaseTime(purchase) && purchase !== activePurchase)
+    .reduce((total, purchase) => total + instagramPurchaseSeconds(purchase), 0) ?? 0;
   const sessionSeconds = activePurchase
-    ? Number(activePurchase.remainingSeconds ?? 0)
+    ? instagramPurchaseSeconds(activePurchase)
     : 0;
   const remaining = Math.max(0, 15 * 60 - instagramUsedSeconds() + purchasedSeconds + sessionSeconds - (instagramTimer?.liveSeconds ?? 0));
   document.querySelectorAll('[data-instagram-timer]').forEach((node) => {
@@ -98,11 +106,12 @@ function renderInstagramTimer() {
 async function pauseInstagramTimer() {
   if (!instagramTimer) return;
   const usedSeconds = instagramTimer.liveSeconds;
+  const purchaseId = instagramTimer.purchaseId;
   instagramTimer = null;
   if (instagramTimerInterval) clearInterval(instagramTimerInterval);
   instagramTimerInterval = null;
-  if (instagramTimer.purchaseId) {
-    wallet = await window.codeMyLife.pauseShopItem(instagramTimer.purchaseId);
+  if (purchaseId) {
+    wallet = await window.codeMyLife.pauseShopItem(purchaseId);
     await window.codeMyLife.pauseInstagramUsage();
   } else {
     await window.codeMyLife.pauseInstagramUsage();
@@ -114,6 +123,10 @@ async function pauseInstagramTimer() {
 async function startInstagramTimer(purchaseId = null) {
   if (instagramTimer) return pauseInstagramTimer();
   if (!purchaseId && instagramUsedSeconds() >= 15 * 60) return;
+  if (purchaseId) {
+    const activePurchase = wallet?.purchases.find((purchase) => purchase.id === purchaseId && hasInstagramPurchaseTime(purchase));
+    if (!activePurchase) return;
+  }
   instagramTimer = { startedAt: Date.now(), liveSeconds: 0, purchaseId };
   await window.codeMyLife.startInstagramUsage();
   instagramTimerInterval = setInterval(() => {
@@ -285,10 +298,10 @@ function renderInventory() {
     event.stopPropagation();
     try {
       const activeInstagramPurchase = wallet.purchases.find((purchase) =>
-        purchase.itemId === 'instagram-time' && purchase.startedAt && !purchase.usedAt
+        hasInstagramPurchaseTime(purchase) && purchase.startedAt
       );
       const pendingInstagramPurchase = wallet.purchases.find((purchase) =>
-        purchase.itemId === 'instagram-time' && !purchase.startedAt && !purchase.usedAt
+        hasInstagramPurchaseTime(purchase) && !purchase.startedAt
       );
       if (instagramTimer) {
         await pauseInstagramTimer();

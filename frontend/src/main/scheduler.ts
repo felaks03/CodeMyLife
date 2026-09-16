@@ -27,6 +27,7 @@ export class BlockingScheduler {
   private commitments: Commitment[] = [];
   private temporarilyAllowedDomains = new Set<string>();
   private manuallyBlockedDomains = new Set<string>();
+  private sleepWarningNotifiedDate: string | null = null;
   private state: BlockingState = {
     enforcing: false,
     blockedDomains: [],
@@ -114,6 +115,7 @@ export class BlockingScheduler {
     const now = timeAuthority.now();
     const scheduledDomains = domainsToBlock(this.commitments, now);
     const lockScreenActive = shouldShowLockScreen(this.commitments, now);
+    this.maybeNotifySleepWarning(now, lockScreenActive);
     const dailyFocusActive = !await dailyFocusStore.isSkippedForToday() &&
       isDailyFocusBlocked(now, await dailyFocusStore.tick());
     const gamesActive = this.commitments.some(
@@ -159,6 +161,32 @@ export class BlockingScheduler {
     new Notification({
       title: 'CodeMyLife',
       body: enforcing ? 'Un bloqueo acaba de empezar.' : 'El bloqueo ha terminado.'
+    }).show();
+  }
+
+  private maybeNotifySleepWarning(now: Date, lockScreenActive: boolean): void {
+    if (lockScreenActive) return;
+    const minutesOfDay = now.getHours() * 60 + now.getMinutes();
+    if (minutesOfDay < 23 * 60 + 55) return;
+
+    const tomorrow = (now.getDay() + 1) % 7;
+    const sleepCommitment = this.commitments.find((commitment) =>
+      commitment.scriptId === 'builtin-sleep' &&
+      commitment.status === 'active' &&
+      commitment.days.includes(tomorrow) &&
+      new Date(commitment.startsAt) <= now &&
+      new Date(commitment.endsAt) >= now
+    );
+    if (!sleepCommitment) return;
+
+    const todayKey = now.toISOString().slice(0, 10);
+    if (this.sleepWarningNotifiedDate === todayKey) return;
+    this.sleepWarningNotifiedDate = todayKey;
+
+    if (!Notification.isSupported()) return;
+    new Notification({
+      title: 'CodeMyLife',
+      body: 'El bloqueo de dormir empieza en 5 minutos.'
     }).show();
   }
 

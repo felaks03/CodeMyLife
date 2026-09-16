@@ -78,6 +78,7 @@ test('una compra nueva esta disponible hasta que se usa', () => {
   const purchase = { id: 'purchase-1', itemId: 'games-time', coins: 20, purchasedAt: '2026-09-14T10:00:00.000Z' };
   assert.equal(isPurchaseAvailable(purchase), true);
   assert.equal(isPurchaseAvailable({ ...purchase, usedAt: '2026-09-14T10:01:00.000Z' }), false);
+  assert.equal(isPurchaseAvailable({ ...purchase, remainingSeconds: 0 }), false);
 });
 
 test('usar un objeto acumula tiempo desde ahora o desde el desbloqueo vigente', () => {

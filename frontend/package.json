@@ -1,6 +1,6 @@
 {
   "name": "codemylife-frontend",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "description": "CodeMyLife desktop app (Electron)",
   "main": "dist/main/main.js",
   "scripts": {

@@ -92,7 +92,7 @@ export function canPurchase(walletCoins: number, item: ShopItem): boolean {
 }
 
 export function isPurchaseAvailable(purchase: WalletPurchase): boolean {
-  return !purchase.usedAt;
+  return !purchase.usedAt && Number(purchase.remainingSeconds ?? 1) > 0;
 }
 
 export function extendUnlockUntil(currentUnlock: string | undefined, now: Date, durationMinutes: number): string {

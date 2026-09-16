@@ -11,6 +11,7 @@ import { timeAuthority } from './time-authority';
 import { writeJsonAtomic } from './atomic-storage';
 import { dailyFocusStore } from './daily-focus-store';
 import { isDailyFocusBlocked } from '../shared/daily-focus';
+import { filterTradingDomains, isTradingAccessWindow, TRADING_ALLOWED_PROCESSES } from '../shared/trading-access';
 
 const CHECK_INTERVAL_MS = 30_000;
 
@@ -121,11 +122,12 @@ export class BlockingScheduler {
     const gamesActive = this.commitments.some(
       (commitment) => commitment.scriptId === 'builtin-games' && isCommitmentEnforcedNow(commitment, now)
     );
-    await this.desktopAppGuard.setBlocked(VIDEO_GAME_BLOCKED_PROCESSES, gamesActive);
-    const domains = [...new Set([
+    const protectedProcesses = isTradingAccessWindow(now) ? TRADING_ALLOWED_PROCESSES : [];
+    await this.desktopAppGuard.setBlocked(VIDEO_GAME_BLOCKED_PROCESSES, gamesActive, protectedProcesses);
+    const domains = filterTradingDomains([...new Set([
       ...scheduledDomains,
       ...this.manuallyBlockedDomains
-    ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain));
+    ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain)), now);
     const wasEnforcing = this.state.enforcing;
 
     try {

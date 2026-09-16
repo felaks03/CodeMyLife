@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor, screen, Display } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor, screen, Display, Rectangle } from 'electron';
 import * as path from 'path';
 import { promises as fs, watch } from 'fs';
 import { SessionStore } from './session-store';
@@ -13,6 +13,7 @@ import { visibleDailyFocusTasks } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
 import { isYoutubeShortsUrl } from '../shared/youtube-shorts';
+import { isTradingAccessWindow } from '../shared/trading-access';
 import { ensureYoutubeShortsBrowserPolicy } from './browser-policy';
 import { youtubeShortsWindowGuard } from './youtube-shorts-window-guard';
 import {
@@ -318,13 +319,50 @@ function syncDailyFocusLockWindow(active: boolean): void {
       dailyFocusLockWindows.delete(displayId);
     }
   }
-  if (!active || dailyFocusLockComputerAllowed) {
+  if (!active) {
     destroyDailyFocusLockWindows();
     return;
   }
+  const computerAllowed = isDailyFocusComputerAllowed();
   for (const display of displays) {
-    if (!dailyFocusLockWindows.has(display.id)) createDailyFocusLockWindow(display);
+    const lockWindow = dailyFocusLockWindows.get(display.id);
+    if (lockWindow && !lockWindow.isDestroyed()) {
+      applyDailyFocusLockMode(lockWindow, display, computerAllowed);
+    } else {
+      createDailyFocusLockWindow(display, computerAllowed);
+    }
   }
+}
+
+function isDailyFocusComputerAllowed(): boolean {
+  return dailyFocusLockComputerAllowed || isTradingAccessWindow(timeAuthority.now());
+}
+
+function dailyFocusPanelBounds(display: Display): Rectangle {
+  return {
+    x: display.bounds.x + Math.max(0, Math.floor((display.bounds.width - 760) / 2)),
+    y: display.bounds.y + Math.max(0, Math.floor((display.bounds.height - 700) / 2)),
+    width: 760,
+    height: 700
+  };
+}
+
+function applyDailyFocusLockMode(lockWindow: BrowserWindow, display: Display, computerAllowed: boolean): void {
+  if (computerAllowed) {
+    lockWindow.setKiosk(false);
+    lockWindow.setFullScreen(false);
+    lockWindow.setAlwaysOnTop(false);
+    lockWindow.setSkipTaskbar(false);
+    lockWindow.setResizable(true);
+    lockWindow.setBounds(dailyFocusPanelBounds(display));
+    return;
+  }
+  lockWindow.setResizable(false);
+  lockWindow.setSkipTaskbar(true);
+  lockWindow.setAlwaysOnTop(true, 'screen-saver');
+  lockWindow.setBounds(display.bounds);
+  lockWindow.setFullScreen(true);
+  lockWindow.setKiosk(true);
 }
 
 function destroyDailyFocusLockWindows(): void {
@@ -335,21 +373,22 @@ function destroyDailyFocusLockWindows(): void {
   dailyFocusLockComputerAllowed = false;
 }
 
-function createDailyFocusLockWindow(display: Display): void {
+function createDailyFocusLockWindow(display: Display, computerAllowed = false): void {
+  const panelBounds = dailyFocusPanelBounds(display);
   const lockWindow = new BrowserWindow({
-    x: display.bounds.x,
-    y: display.bounds.y,
-    width: display.bounds.width,
-    height: display.bounds.height,
+    x: computerAllowed ? panelBounds.x : display.bounds.x,
+    y: computerAllowed ? panelBounds.y : display.bounds.y,
+    width: computerAllowed ? panelBounds.width : display.bounds.width,
+    height: computerAllowed ? panelBounds.height : display.bounds.height,
     frame: false,
     show: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
+    alwaysOnTop: !computerAllowed,
+    skipTaskbar: !computerAllowed,
     closable: false,
     minimizable: false,
     maximizable: false,
-    resizable: false,
-    kiosk: true,
+    resizable: computerAllowed,
+    kiosk: !computerAllowed,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -358,7 +397,7 @@ function createDailyFocusLockWindow(display: Display): void {
     }
   });
   dailyFocusLockWindows.set(display.id, lockWindow);
-  lockWindow.setAlwaysOnTop(true, 'screen-saver');
+  applyDailyFocusLockMode(lockWindow, display, computerAllowed);
   lockWindow.loadFile(path.join(__dirname, '../../src/renderer/daily-focus-lock.html'));
   lockWindow.once('ready-to-show', () => {
     if (!lockWindow.isDestroyed()) {
@@ -367,7 +406,7 @@ function createDailyFocusLockWindow(display: Display): void {
     }
   });
   lockWindow.on('blur', () => {
-    if (!dailyFocusLockComputerAllowed && !lockWindow.isDestroyed()) {
+    if (!isDailyFocusComputerAllowed() && !lockWindow.isDestroyed()) {
       lockWindow.show();
       lockWindow.focus();
     }

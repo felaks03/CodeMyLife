@@ -18,12 +18,16 @@ function scriptsFile(): string {
 
 async function readCommitments(): Promise<Commitment[]> {
   try {
-    const commitments = JSON.parse(await fs.readFile(commitmentsFile(), 'utf8')) as Commitment[];
+    const raw = await fs.readFile(commitmentsFile(), 'utf8');
+    const commitments = JSON.parse(raw.replace(/^\uFEFF/, '')) as Commitment[];
     const now = timeAuthority.nowMs();
     let changed = false;
     for (const commitment of commitments) {
       if (commitment.status === 'active' && new Date(commitment.endsAt).getTime() < now) {
         commitment.status = 'completed';
+        changed = true;
+      }
+      if (commitment.status === 'active' && syncBuiltinCommitment(commitment)) {
         changed = true;
       }
     }
@@ -32,6 +36,53 @@ async function readCommitments(): Promise<Commitment[]> {
   } catch {
     return [];
   }
+}
+
+function syncBuiltinCommitment(commitment: Commitment): boolean {
+  const script = BUILTIN_SCRIPTS.find((candidate) => candidate._id === commitment.scriptId);
+  if (!script) return false;
+  let changed = false;
+
+  if (commitment.scriptName !== script.name) {
+    commitment.scriptName = script.name;
+    changed = true;
+  }
+
+  const domains = [...new Set([...script.blockedDomains, ...commitment.blockedDomains])];
+  if (JSON.stringify(domains) !== JSON.stringify(commitment.blockedDomains)) {
+    commitment.blockedDomains = domains;
+    changed = true;
+  }
+
+  if (script.schedule) {
+    const days = [...script.schedule.days].sort();
+    if (JSON.stringify(commitment.days) !== JSON.stringify(days)) {
+      commitment.days = days;
+      changed = true;
+    }
+    if (commitment.startTime !== script.schedule.startTime) {
+      commitment.startTime = script.schedule.startTime;
+      changed = true;
+    }
+    if (commitment.endTime !== script.schedule.endTime) {
+      commitment.endTime = script.schedule.endTime;
+      changed = true;
+    }
+  }
+
+  const alwaysBlocked = commitment.alwaysBlocked || script.blockingMode === 'always';
+  if (commitment.alwaysBlocked !== alwaysBlocked) {
+    commitment.alwaysBlocked = alwaysBlocked;
+    changed = true;
+  }
+
+  const showLockScreen = commitment.showLockScreen || script.showLockScreen === true;
+  if (commitment.showLockScreen !== showLockScreen) {
+    commitment.showLockScreen = showLockScreen;
+    changed = true;
+  }
+
+  return changed;
 }
 
 async function writeCommitments(commitments: Commitment[]): Promise<void> {

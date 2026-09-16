@@ -72,18 +72,18 @@ export class BlockingScheduler {
     await this.tick();
   }
 
-  async setTemporarilyAllowed(domains: string[], allowed: boolean): Promise<void> {
+  async setTemporarilyAllowed(domains: string[], allowed: boolean, requiredScriptId = 'builtin-instagram'): Promise<void> {
     this.blocker.forceReconcile();
     const now = timeAuthority.now();
-    const instagramConfigured = this.commitments.some(
+    const targetConfigured = this.commitments.some(
       (commitment) =>
-        commitment.scriptId === 'builtin-instagram' &&
+        commitment.scriptId === requiredScriptId &&
         commitment.status === 'active' &&
         new Date(commitment.startsAt) <= now &&
         new Date(commitment.endsAt) >= now
     );
 
-    if (!instagramConfigured) {
+    if (!targetConfigured) {
       await this.tick();
       return;
     }
@@ -206,7 +206,8 @@ export class BlockingScheduler {
 
   private async readCache(): Promise<Commitment[]> {
     try {
-      return JSON.parse(await fs.readFile(cacheFile(), 'utf8')) as Commitment[];
+      const raw = await fs.readFile(cacheFile(), 'utf8');
+      return JSON.parse(raw.replace(/^\uFEFF/, '')) as Commitment[];
     } catch {
       return [];
     }

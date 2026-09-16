@@ -37,6 +37,17 @@ export function deleteWatchdogTaskArgs(): string[] {
 export async function ensureWatchdogTask(executablePath: string): Promise<void> {
   if (!app.isPackaged) return;
   await execFileAsync('schtasks.exe', createWatchdogTaskArgs(executablePath));
+  await allowWatchdogOnBattery().catch(() => undefined);
+}
+
+async function allowWatchdogOnBattery(): Promise<void> {
+  const command = [
+    `$task = Get-ScheduledTask -TaskName '${WATCHDOG_TASK_NAME}'`,
+    '$task.Settings.DisallowStartIfOnBatteries = $false',
+    '$task.Settings.StopIfGoingOnBatteries = $false',
+    'Set-ScheduledTask -InputObject $task | Out-Null'
+  ].join('; ');
+  await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command]);
 }
 
 export async function removeWatchdogTask(): Promise<void> {

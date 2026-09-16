@@ -189,13 +189,13 @@ test('Lock week crea una configuracion para cada script', () => {
   );
 });
 
-test('el bloqueo de YouTube funciona de lunes a sabado', () => {
+test('el bloqueo de YouTube funciona todos los dias', () => {
   const youtube = commitment(BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-youtube')!);
 
-  assert.deepEqual(youtube.days, [1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(youtube.days, [0, 1, 2, 3, 4, 5, 6]);
   assert.equal(isCommitmentEnforcedNow(youtube, fridayAt('15:30')), true);
   assert.equal(isCommitmentEnforcedNow(youtube, saturdayAt('15:30')), true);
-  assert.equal(isCommitmentEnforcedNow(youtube, sundayAt('15:30')), false);
+  assert.equal(isCommitmentEnforcedNow(youtube, sundayAt('15:30')), true);
 });
 
 test('el bloqueo de YouTube cubre el dia completo hasta medianoche', () => {

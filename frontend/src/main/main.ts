@@ -4,7 +4,7 @@ import { promises as fs, watch } from 'fs';
 import { SessionStore } from './session-store';
 import { BlockingScheduler } from './scheduler';
 import { guestStore } from './guest-store';
-import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
+import { INSTAGRAM_DOMAINS, YOUTUBE_DOMAINS } from '../shared/builtin-scripts';
 import { buildCalendar, commitmentStats } from '../shared/schedule';
 import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
 import { walletStore } from './wallet-store';
@@ -57,6 +57,7 @@ const sessionStore = new SessionStore();
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
+let youtubeWindow: BrowserWindow | null = null;
 let sleepLockWindow: BrowserWindow | null = null;
 let quitInProgress = false;
 const dailyFocusLockWindows = new Map<number, BrowserWindow>();
@@ -169,6 +170,15 @@ function isInstagramUrl(value: string): boolean {
   }
 }
 
+function isYoutubeUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === 'youtube.com' || hostname.endsWith('.youtube.com') || hostname === 'youtu.be' || hostname.endsWith('.youtu.be');
+  } catch {
+    return false;
+  }
+}
+
 function notifyYoutubeShortsBlocked(url: string): void {
   mainWindow?.webContents.send('blocking:youtube-shorts', url);
 }
@@ -191,6 +201,11 @@ function blockYoutubeShortsNavigation(window: BrowserWindow): void {
 function notifyInstagramPaused(): void {
   scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, false).catch(() => undefined);
   mainWindow?.webContents.send('instagram:paused');
+}
+
+function notifyYoutubePaused(): void {
+  scheduler.setTemporarilyAllowed(YOUTUBE_DOMAINS, false, 'builtin-youtube').catch(() => undefined);
+  mainWindow?.webContents.send('youtube:paused');
 }
 
 async function openInstagramBrowser(): Promise<void> {
@@ -241,6 +256,57 @@ async function openInstagramBrowser(): Promise<void> {
   instagramWindow.on('closed', () => {
     instagramWindow = null;
     notifyInstagramPaused();
+  });
+}
+
+async function openYoutubeBrowser(): Promise<void> {
+  if (youtubeWindow && !youtubeWindow.isDestroyed()) {
+    youtubeWindow.show();
+    youtubeWindow.focus();
+    return;
+  }
+
+  youtubeWindow = new BrowserWindow({
+    width: 1200,
+    height: 780,
+    title: 'YouTube - CodeMyLife',
+    show: true,
+    backgroundColor: '#101418',
+    parent: mainWindow ?? undefined,
+    webPreferences: {
+      partition: 'persist:codemylife-youtube',
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+
+  blockYoutubeShortsNavigation(youtubeWindow);
+
+  youtubeWindow.webContents.on('will-navigate', (event, url) => {
+    if (isYoutubeShortsUrl(url)) return;
+    if (!isYoutubeUrl(url)) event.preventDefault();
+  });
+  youtubeWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    mainWindow?.webContents.send('youtube:error', `${errorDescription} (${errorCode})`);
+  });
+  youtubeWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isYoutubeShortsUrl(url)) {
+      notifyYoutubeShortsBlocked(url);
+      return { action: 'deny' };
+    }
+    return { action: isYoutubeUrl(url) ? 'allow' : 'deny' };
+  });
+  youtubeWindow.once('ready-to-show', () => {
+    youtubeWindow?.show();
+    youtubeWindow?.focus();
+  });
+  youtubeWindow.show();
+  youtubeWindow.focus();
+  youtubeWindow.on('minimize', notifyYoutubePaused);
+  youtubeWindow.on('closed', () => {
+    youtubeWindow = null;
+    notifyYoutubePaused();
   });
 }
 
@@ -655,6 +721,23 @@ function registerIpcHandlers(): void {
   ipcMain.handle('instagram:pause-usage', async () => {
     if (instagramWindow && !instagramWindow.isDestroyed()) instagramWindow.close();
     else await scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, false);
+  });
+
+  ipcMain.handle('youtube:start-usage', async () => {
+    await scheduler.setTemporarilyAllowed(YOUTUBE_DOMAINS, true, 'builtin-youtube');
+    await openYoutubeBrowser();
+    if (youtubeWindow && !youtubeWindow.isDestroyed()) {
+      try {
+        await youtubeWindow.loadURL('https://www.youtube.com/');
+      } catch (error) {
+        mainWindow?.webContents.send('youtube:error', (error as Error).message);
+      }
+    }
+  });
+
+  ipcMain.handle('youtube:pause-usage', async () => {
+    if (youtubeWindow && !youtubeWindow.isDestroyed()) youtubeWindow.close();
+    else await scheduler.setTemporarilyAllowed(YOUTUBE_DOMAINS, false, 'builtin-youtube');
   });
 
   ipcMain.handle('blocking:state', (): BlockingState => scheduler.getState());

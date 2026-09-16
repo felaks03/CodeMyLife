@@ -17,8 +17,24 @@ test('el inventario usa filas de tiempo con layout comun', () => {
   const styles = read('src/renderer/styles.css');
   assert.match(renderer, /inventory-time-row/);
   assert.match(renderer, /inventory-instagram-timer/);
+  assert.match(renderer, /data-youtube-timer/);
   assert.match(renderer, /inventory-video-timer/);
   assert.match(styles, /grid-template-columns: minmax\(0, 1fr\) 52px 116px/);
+});
+
+test('YouTube tiene uso diario manual de media hora', () => {
+  const renderer = read('src/renderer/renderer.js');
+  const preload = read('src/preload/preload.ts');
+  const main = read('src/main/main.ts');
+  const scripts = read('src/shared/builtin-scripts.ts');
+  assert.match(scripts, /YOUTUBE_DOMAINS = \['youtube\.com', 'youtu\.be'\]/);
+  assert.match(renderer, /youtube-usage-/);
+  assert.match(renderer, /30 \* 60/);
+  assert.match(renderer, /startYoutubeTimer/);
+  assert.match(preload, /youtube:start-usage/);
+  assert.match(preload, /youtube:pause-usage/);
+  assert.match(main, /scheduler\.setTemporarilyAllowed\(YOUTUBE_DOMAINS, true, 'builtin-youtube'\)/);
+  assert.match(main, /openYoutubeBrowser/);
 });
 
 test('las notificaciones tienen estados success y error fijos', () => {
@@ -106,6 +122,8 @@ test('el watchdog relanza la app en modo silencioso cada cinco minutos', () => {
   assert.match(watchdog, /'\/SC'[\s\S]*'MINUTE'[\s\S]*'\/MO'[\s\S]*'5'/);
   assert.match(watchdog, /`"\$\{executablePath\}" --silent`/);
   assert.match(watchdog, /'\/RL'[\s\S]*'HIGHEST'/);
+  assert.match(watchdog, /DisallowStartIfOnBatteries = \$false/);
+  assert.match(watchdog, /StopIfGoingOnBatteries = \$false/);
   assert.equal(packageJson.build?.nsis?.include, 'installer/setup.nsh');
   assert.match(read('package.json'), /"artifactName": "\$\{productName\}-Setup-\$\{version\}\.\$\{ext\}"/);
   assert.match(nsis, /customUnInstall/);
@@ -184,7 +202,7 @@ test('la UI permite buscar actualizaciones manualmente', () => {
   assert.match(main, /update:not-available/);
 });
 
-test('YouTube se bloquea por hosts de lunes a sabado y Shorts mantiene capa de domingo', () => {
+test('YouTube se bloquea por hosts todos los dias y mantiene capa de Shorts', () => {
   const shorts = read('src/shared/youtube-shorts.ts');
   const builtinScripts = read('src/shared/builtin-scripts.ts');
   const backendCommitments = read('../backend/src/routes/commitment.routes.ts');
@@ -193,9 +211,10 @@ test('YouTube se bloquea por hosts de lunes a sabado y Shorts mantiene capa de d
   const renderer = read('src/renderer/renderer.js');
   const browserPolicy = read('src/main/browser-policy.ts');
   const nsis = read('installer/setup.nsh');
-  assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*days: \[1, 2, 3, 4, 5, 6\]/);
+  assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*days: \[0, 1, 2, 3, 4, 5, 6\]/);
   assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*startTime: '00:00'[\s\S]*endTime: '24:00'/);
-  assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*blockedDomains: \['youtube\.com', 'youtu\.be'\]/);
+  assert.match(builtinScripts, /YOUTUBE_DOMAINS = \['youtube\.com', 'youtu\.be'\]/);
+  assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*blockedDomains: YOUTUBE_DOMAINS/);
   assert.match(backendCommitments, /END_TIME_PATTERN[\s\S]*24:00/);
   assert.match(shorts, /isYoutubeShortsUrl/);
   assert.match(shorts, /\/\^\\\/shorts/);

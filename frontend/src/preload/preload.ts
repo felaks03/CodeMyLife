@@ -45,11 +45,19 @@ contextBridge.exposeInMainWorld('codeMyLife', {
   listScripts: (): Promise<Script[]> => ipcRenderer.invoke('scripts:list'),
   startInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:start-usage'),
   pauseInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:pause-usage'),
+  startYoutubeUsage: (): Promise<void> => ipcRenderer.invoke('youtube:start-usage'),
+  pauseYoutubeUsage: (): Promise<void> => ipcRenderer.invoke('youtube:pause-usage'),
   onInstagramPaused: (callback: () => void): void => {
     ipcRenderer.on('instagram:paused', () => callback());
   },
+  onYoutubePaused: (callback: () => void): void => {
+    ipcRenderer.on('youtube:paused', () => callback());
+  },
   onInstagramError: (callback: (message: string) => void): void => {
     ipcRenderer.on('instagram:error', (_event, message: string) => callback(message));
+  },
+  onYoutubeError: (callback: (message: string) => void): void => {
+    ipcRenderer.on('youtube:error', (_event, message: string) => callback(message));
   },
   getBlockingState: (): Promise<BlockingState> => ipcRenderer.invoke('blocking:state'),
   onBlockingState: (callback: (state: BlockingState) => void): void => {

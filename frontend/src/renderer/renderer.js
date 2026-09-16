@@ -4,6 +4,8 @@ let lastBlockingState = null;
 let availableScripts = [];
 let instagramTimer = null;
 let instagramTimerInterval = null;
+let youtubeTimer = null;
+let youtubeTimerInterval = null;
 let activeLocksInterval = null;
 let videoTimerInterval = null;
 let noticeTimer = null;
@@ -42,12 +44,20 @@ function instagramUsageKey() {
   return `instagram-usage-${toIsoDate(new Date())}`;
 }
 
+function youtubeUsageKey() {
+  return `youtube-usage-${toIsoDate(new Date())}`;
+}
+
 function instagramBonusKey() {
   return 'instagram-bonus-seconds';
 }
 
 function instagramUsedSeconds() {
   return Number(localStorage.getItem(instagramUsageKey()) ?? 0);
+}
+
+function youtubeUsedSeconds() {
+  return Number(localStorage.getItem(youtubeUsageKey()) ?? 0);
 }
 
 function instagramBonusSeconds() {
@@ -62,6 +72,10 @@ function saveInstagramUsedSeconds(seconds) {
   localStorage.setItem(instagramUsageKey(), String(Math.min(15 * 60, Math.max(0, seconds))));
 }
 
+function saveYoutubeUsedSeconds(seconds) {
+  localStorage.setItem(youtubeUsageKey(), String(Math.min(30 * 60, Math.max(0, seconds))));
+}
+
 function saveInstagramSessionSeconds(seconds) {
   const freeUsed = instagramUsedSeconds();
   const freeRemaining = Math.max(0, 15 * 60 - freeUsed);
@@ -69,6 +83,10 @@ function saveInstagramSessionSeconds(seconds) {
   const bonusSpent = Math.max(0, seconds - freeRemaining);
   saveInstagramUsedSeconds(nextFreeUsed);
   localStorage.setItem(instagramBonusKey(), String(Math.max(0, instagramBonusSeconds() - bonusSpent)));
+}
+
+function saveYoutubeSessionSeconds(seconds) {
+  saveYoutubeUsedSeconds(youtubeUsedSeconds() + seconds);
 }
 
 function formatRemaining(seconds) {
@@ -100,6 +118,17 @@ function renderInstagramTimer() {
   document.querySelectorAll('[data-instagram-action]').forEach((node) => {
     node.textContent = instagramTimer ? i18n.t('pauseInstagram') : i18n.t('useInstagram');
     node.disabled = remaining <= 0 && !instagramTimer;
+  });
+}
+
+function renderYoutubeTimer() {
+  const remaining = Math.max(0, 30 * 60 - youtubeUsedSeconds() - (youtubeTimer?.liveSeconds ?? 0));
+  document.querySelectorAll('[data-youtube-timer]').forEach((node) => {
+    node.textContent = formatRemaining(remaining);
+  });
+  document.querySelectorAll('[data-youtube-action]').forEach((node) => {
+    node.textContent = youtubeTimer ? i18n.t('pauseYoutube') : i18n.t('useYoutube');
+    node.disabled = remaining <= 0 && !youtubeTimer;
   });
 }
 
@@ -144,6 +173,34 @@ async function startInstagramTimer(purchaseId = null) {
   renderInstagramTimer();
 }
 
+async function pauseYoutubeTimer() {
+  if (!youtubeTimer) return;
+  const usedSeconds = youtubeTimer.liveSeconds;
+  youtubeTimer = null;
+  if (youtubeTimerInterval) clearInterval(youtubeTimerInterval);
+  youtubeTimerInterval = null;
+  await window.codeMyLife.pauseYoutubeUsage();
+  saveYoutubeSessionSeconds(usedSeconds);
+  renderYoutubeTimer();
+}
+
+async function startYoutubeTimer() {
+  if (youtubeTimer) return pauseYoutubeTimer();
+  if (youtubeUsedSeconds() >= 30 * 60) return;
+  youtubeTimer = { startedAt: Date.now(), liveSeconds: 0 };
+  await window.codeMyLife.startYoutubeUsage();
+  youtubeTimerInterval = setInterval(() => {
+    youtubeTimer.liveSeconds = Math.floor((Date.now() - youtubeTimer.startedAt) / 1000);
+    const sessionLimit = Math.max(0, 30 * 60 - youtubeUsedSeconds());
+    if (youtubeTimer.liveSeconds >= sessionLimit) {
+      void pauseYoutubeTimer();
+      return;
+    }
+    renderYoutubeTimer();
+  }, 1000);
+  renderYoutubeTimer();
+}
+
 function syncInstagramPaused() {
   if (!instagramTimer) {
     renderInstagramTimer();
@@ -154,6 +211,18 @@ function syncInstagramPaused() {
   if (instagramTimerInterval) clearInterval(instagramTimerInterval);
   instagramTimerInterval = null;
   renderInstagramTimer();
+}
+
+function syncYoutubePaused() {
+  if (!youtubeTimer) {
+    renderYoutubeTimer();
+    return;
+  }
+  saveYoutubeSessionSeconds(youtubeTimer.liveSeconds);
+  youtubeTimer = null;
+  if (youtubeTimerInterval) clearInterval(youtubeTimerInterval);
+  youtubeTimerInterval = null;
+  renderYoutubeTimer();
 }
 
 function showApp(user) {
@@ -322,6 +391,37 @@ function renderInventory() {
   });
   instagramRow.append(instagramCopy, instagramStatus, instagramAction);
   list.append(instagramRow);
+
+  const youtubeRow = document.createElement('div');
+  youtubeRow.className = 'inventory-item inventory-time-row is-available inventory-instagram-item';
+  const youtubeCopy = document.createElement('div');
+  youtubeCopy.className = 'inventory-copy';
+  const youtubeName = document.createElement('strong');
+  youtubeName.textContent = 'YouTube';
+  const youtubeDetail = document.createElement('span');
+  youtubeDetail.textContent = '30 minutos gratis al dia';
+  youtubeCopy.append(youtubeName, youtubeDetail);
+  const youtubeStatus = document.createElement('span');
+  youtubeStatus.className = 'inventory-timer inventory-instagram-timer';
+  youtubeStatus.dataset.youtubeTimer = '';
+  const youtubeAction = document.createElement('button');
+  youtubeAction.className = 'economy-action inventory-action';
+  youtubeAction.type = 'button';
+  youtubeAction.setAttribute('data-youtube-action', '');
+  youtubeAction.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    try {
+      await startYoutubeTimer();
+    } catch (error) {
+      youtubeTimer = null;
+      if (youtubeTimerInterval) clearInterval(youtubeTimerInterval);
+      youtubeTimerInterval = null;
+      showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
+      renderYoutubeTimer();
+    }
+  });
+  youtubeRow.append(youtubeCopy, youtubeStatus, youtubeAction);
+  list.append(youtubeRow);
 
   if (!canonicalGame) {
     const empty = document.createElement('p');
@@ -633,6 +733,32 @@ function renderScriptResults(scripts) {
 
     details.append(meta, domains, configuration);
 
+    if (script._id === 'builtin-youtube') {
+      const usage = document.createElement('div');
+      usage.className = 'instagram-usage';
+      const usageText = document.createElement('span');
+      usageText.innerHTML = `${i18n.t('youtubeRemaining')}: <strong data-youtube-timer>30:00</strong>`;
+      const usageButton = document.createElement('button');
+      usageButton.type = 'button';
+      usageButton.className = 'instagram-action';
+      usageButton.setAttribute('data-youtube-action', '');
+      usageButton.textContent = i18n.t('useYoutube');
+      usageButton.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        try {
+          await startYoutubeTimer();
+        } catch (error) {
+          youtubeTimer = null;
+          if (youtubeTimerInterval) clearInterval(youtubeTimerInterval);
+          youtubeTimerInterval = null;
+          showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
+          renderYoutubeTimer();
+        }
+      });
+      usage.append(usageText, usageButton);
+      details.append(usage);
+    }
+
     if (script._id === 'builtin-instagram') {
       const usage = document.createElement('div');
       usage.className = 'instagram-usage';
@@ -677,6 +803,7 @@ function renderScriptResults(scripts) {
     list.append(item);
   });
   renderInstagramTimer();
+  renderYoutubeTimer();
 }
 
 async function loadScripts() {
@@ -803,15 +930,21 @@ el('check-for-updates')?.addEventListener('click', () => {
   });
 });
 window.codeMyLife.onInstagramPaused(syncInstagramPaused);
+window.codeMyLife.onYoutubePaused(syncYoutubePaused);
 window.codeMyLife.onPauseTimers(() => {
   if (instagramTimer) void pauseInstagramTimer();
+  if (youtubeTimer) void pauseYoutubeTimer();
 });
 window.codeMyLife.onInstagramError((message) => {
+  showNotice(message);
+});
+window.codeMyLife.onYoutubeError((message) => {
   showNotice(message);
 });
 
 window.addEventListener('beforeunload', () => {
   if (instagramTimer) saveInstagramSessionSeconds(instagramTimer.liveSeconds);
+  if (youtubeTimer) saveYoutubeSessionSeconds(youtubeTimer.liveSeconds);
 });
 
 (async function init() {

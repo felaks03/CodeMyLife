@@ -51,8 +51,9 @@ test('el workflow publica tags de release en GitHub', () => {
   const workflow = read('../.github/workflows/release.yml');
   assert.match(workflow, /tags:/);
   assert.match(workflow, /'v\*'/);
-  assert.match(workflow, /electron-builder --win --publish always/);
-  assert.match(workflow, /GH_TOKEN/);
+  assert.match(workflow, /electron-builder --win --publish never/);
+  assert.match(workflow, /softprops\/action-gh-release@v2/);
+  assert.match(workflow, /latest\.yml/);
 });
 
 test('newversion valida y publica patch minor o major', () => {
@@ -176,6 +177,7 @@ test('la release compila antes de publicar y el updater instala automaticamente'
   const main = read('src/main/main.ts');
   const renderer = read('src/renderer/renderer.js');
   assert.match(workflow, /name: Build[\s\S]*run: npm run build[\s\S]*name: Publish Windows release/);
+  assert.match(workflow, /name: Verify updater assets[\s\S]*Missing latest\.yml/);
   assert.match(main, /update:downloaded/);
   assert.match(main, /autoUpdater\.quitAndInstall\(false, true\)/);
   assert.match(main, /did-finish-load.*setupAutoUpdater/);

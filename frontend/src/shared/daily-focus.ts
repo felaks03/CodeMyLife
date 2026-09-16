@@ -55,6 +55,22 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     durationMinutes: 60,
     rewardCoins: 50,
     enabled: true
+  },
+  {
+    id: 'reading',
+    name: 'Leer',
+    description: 'Leer durante 30 minutos.',
+    durationMinutes: 30,
+    rewardCoins: 30,
+    enabled: true
+  },
+  {
+    id: 'meditation',
+    name: 'Meditar',
+    description: 'Meditar durante 15 minutos.',
+    durationMinutes: 15,
+    rewardCoins: 15,
+    enabled: true
   }
 ];
 

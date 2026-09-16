@@ -34,12 +34,14 @@ test('si no hay tareas completadas dentro de la ventana, se activa el bloqueo', 
     { taskId: 'breakfast', completed: true },
     { taskId: 'cold-shower', completed: false },
     { taskId: 'gym', completed: false },
-    { taskId: 'backtesting', completed: false }
+    { taskId: 'backtesting', completed: false },
+    { taskId: 'reading', completed: false },
+    { taskId: 'meditation', completed: false }
   ]);
 
   assert.equal(isDailyFocusBlocked(now, state), true);
-  assert.equal(DAILY_FOCUS_TASKS.length, 5);
-  assert.deepEqual(dailyFocusTaskIds(), ['run3k', 'breakfast', 'cold-shower', 'gym', 'backtesting']);
+  assert.equal(DAILY_FOCUS_TASKS.length, 7);
+  assert.deepEqual(dailyFocusTaskIds(), ['run3k', 'breakfast', 'cold-shower', 'gym', 'backtesting', 'reading', 'meditation']);
 });
 
 test('las tareas usan las duraciones diarias acordadas', () => {
@@ -50,7 +52,9 @@ test('las tareas usan las duraciones diarias acordadas', () => {
       ['breakfast', 15],
       ['cold-shower', 10],
       ['gym', 60],
-      ['backtesting', 60]
+      ['backtesting', 60],
+      ['reading', 30],
+      ['meditation', 15]
     ]
   );
 });
@@ -91,7 +95,9 @@ test('las tareas usan los premios de monedas acordados', () => {
       ['breakfast', 10],
       ['cold-shower', 10],
       ['gym', 45],
-      ['backtesting', 50]
+      ['backtesting', 50],
+      ['reading', 30],
+      ['meditation', 15]
     ]
   );
 });

@@ -59,6 +59,8 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Las tareas diarias se resetean al cambiar de día y no reutilizan completados de días anteriores.
 - [x] El progreso de una tarea del mismo día se conserva al recargar la app.
 - [x] La pantalla de tareas diarias muestra las monedas que da cada tarea.
+- [x] Añadir tarea diaria Leer: 30 minutos, 30 monedas.
+- [x] Añadir tarea diaria Meditar: 15 minutos, 15 monedas.
 
 ## Estabilidad Y Seguridad
 
@@ -124,6 +126,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadido modo antievasión seguro: `Salir y desactivar bloqueos` inicia un retardo de 30 minutos antes de permitir la desactivación.
 - Corregido el reset diario del foco: el progreso antiguo ya no cuenta como completado hoy y se añadieron tests multi-día.
 - Añadidas recompensas visibles en la lista de tareas del bloqueo diario.
+- Añadidas tareas diarias Leer y Meditar con sus duraciones y recompensas.
 - Eliminados los restos de preview, bloqueos de prueba y timer temporal de tareas; el foco diario solo usa la pantalla real de 08:00 a 15:00.
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.

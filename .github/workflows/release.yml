@@ -27,8 +27,22 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
-      - name: Publish Windows release
+      - name: Package Windows release
         working-directory: frontend
-        run: npx electron-builder --win --publish always
+        run: npx electron-builder --win --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify updater assets
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem frontend/dist_electron -Filter 'CodeMyLife Setup *.exe' -File | Select-Object -First 1
+          if (-not $installer) { throw 'Missing NSIS installer exe.' }
+          if (-not (Test-Path 'frontend/dist_electron/latest.yml')) { throw 'Missing latest.yml.' }
+          if (-not (Test-Path "$($installer.FullName).blockmap")) { throw 'Missing installer blockmap.' }
+      - name: Publish Windows release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            frontend/dist_electron/CodeMyLife Setup *.exe
+            frontend/dist_electron/CodeMyLife Setup *.exe.blockmap
+            frontend/dist_electron/latest.yml

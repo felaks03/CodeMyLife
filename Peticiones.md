@@ -65,6 +65,12 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Cerrar u ocultar la ventana desde la bandeja mantiene activos los bloqueos.
 - [x] La salida explícita se identifica como “Salir y desactivar bloqueos” y limpia el scheduler de forma segura.
 - [x] La salida protegida evita carreras y tiene un timeout de cinco segundos.
+- [x] La app soporta arranque silencioso para recuperar bloqueos sin abrir la ventana principal.
+- [x] Una tarea programada de Windows relanza CodeMyLife cada 5 minutos si el proceso no está activo.
+- [x] La salida explícita desactiva el relanzamiento silencioso hasta el siguiente inicio manual.
+- [x] La desinstalación elimina la tarea programada `CodeMyLife Watchdog`.
+- [x] Con bloqueos activos, el modo antievasión impide desactivarlos al instante y exige un retardo de seguridad.
+- [x] Los intentos de desactivar bloqueos se registran de forma persistente con escritura atómica.
 - [x] Revisar revalidación cuando un compromiso expira durante una compra o pausa.
 - [ ] Añadir pruebas E2E de rollback de wallet y compromisos con fallos reales de escritura.
 - [ ] Añadir pruebas E2E de reinicio y migración de inventario antiguo.
@@ -110,6 +116,9 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadida pausa automática de sesiones activas al cerrar la ventana, salir de la app o recibir el evento de apagado de Windows.
 - Separadas las acciones de ocultar y salir en la bandeja: ocultar conserva los bloqueos y salir los desactiva explícitamente.
 - Añadida protección contra doble salida y timeout para la limpieza del scheduler durante el cierre.
+- Añadido watchdog mediante Windows Task Scheduler: `CodeMyLife.exe --silent` cada 5 minutos, sin abrir UI si ya hay instancia activa.
+- Añadido hook NSIS de desinstalación para borrar `CodeMyLife Watchdog`.
+- Añadido modo antievasión seguro: `Salir y desactivar bloqueos` inicia un retardo de 30 minutos antes de permitir la desactivación.
 - Eliminados los restos de preview, bloqueos de prueba y timer temporal de tareas; el foco diario solo usa la pantalla real de 08:00 a 15:00.
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.

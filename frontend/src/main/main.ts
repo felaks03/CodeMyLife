@@ -12,9 +12,18 @@ import { dailyFocusStore } from './daily-focus-store';
 import { visibleDailyFocusTasks } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
+import {
+  disableWatchdogUntilManualLaunch,
+  enableWatchdogAfterManualLaunch,
+  ensureWatchdogTask,
+  isSilentLaunch,
+  isWatchdogDisabled
+} from './watchdog-task';
+import { antiEvasionStore } from './anti-evasion-store';
 
 const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 let updateCheckInProgress = false;
+let updaterStarted = false;
 
 if (app.isPackaged) {
   app.setPath('userData', path.join(app.getPath('appData'), 'CodeMyLife'));
@@ -86,6 +95,8 @@ function assetPath(file: string): string {
 
 function setupAutoUpdater(): void {
   if (!app.isPackaged) return;
+  if (updaterStarted) return;
+  updaterStarted = true;
 
   const reportUpdateError = (error: unknown): void => {
     const message = error instanceof Error ? error.message : String(error);
@@ -129,6 +140,10 @@ async function checkForUpdates(reportError: (error: unknown) => void): Promise<v
   } finally {
     updateCheckInProgress = false;
   }
+}
+
+function formatUnlockTime(date: Date): string {
+  return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 }
 
 function showMainWindow(): void {
@@ -340,18 +355,35 @@ function createDailyFocusLockWindow(display: Display): void {
   });
 }
 
-async function requestQuit(): Promise<void> {
+async function requestQuit(disableWatchdog = true): Promise<void> {
   if (quitInProgress) return;
   quitInProgress = true;
 
-  if (scheduler.getState().enforcing) {
+  if (scheduler.getState().enforcing && disableWatchdog) {
+    const now = timeAuthority.now();
+    if (!antiEvasionStore.canDisable(now)) {
+      const state = await antiEvasionStore.requestUnlock(now, 'exit-with-active-blocking');
+      const unlockAvailableAt = new Date(state.unlockAvailableAt ?? now.toISOString());
+      await dialog.showMessageBox({
+        type: 'warning',
+        title: 'CodeMyLife',
+        message: 'Los bloqueos siguen activos.',
+        detail: `Para desactivar los bloqueos espera hasta las ${formatUnlockTime(unlockAvailableAt)} y vuelve a intentarlo.`,
+        buttons: ['Mantener bloqueos'],
+        defaultId: 0,
+        cancelId: 0
+      });
+      quitInProgress = false;
+      return;
+    }
+
     const { response } = await dialog.showMessageBox({
       type: 'warning',
       title: 'CodeMyLife',
       message: 'Tienes un bloqueo activo.',
       detail:
-        'Si cierras la aplicacion el bloqueo dejara de aplicarse. Un compromiso solo termina cuando acaba su horario.',
-      buttons: ['Seguir con el compromiso', 'Cerrar de todos modos'],
+        'El retardo de seguridad ya ha terminado. Si continuas, CodeMyLife desactivara los bloqueos y no se relanzara hasta que lo abras manualmente.',
+      buttons: ['Seguir con el compromiso', 'Desactivar bloqueos'],
       defaultId: 0,
       cancelId: 0
     });
@@ -363,6 +395,8 @@ async function requestQuit(): Promise<void> {
   }
 
   quitting = true;
+  await antiEvasionStore.resetUnlock();
+  if (disableWatchdog) await disableWatchdogUntilManualLaunch();
   mainWindow?.webContents.send('app:pause-timers');
   await walletStore.pauseActiveSessions();
   sleepLockWindow?.destroy();
@@ -431,6 +465,7 @@ function createMainWindow(): void {
   });
 
   mainWindow.loadFile(path.join(__dirname, '../../src/renderer/index.html'));
+  mainWindow.webContents.once('did-finish-load', setupAutoUpdater);
   setupDevReloader(mainWindow);
   mainWindow.on('close', (event) => {
     if (!quitting) {
@@ -571,23 +606,34 @@ if (!hasSingleInstanceLock) {
   app.quit();
 } else {
   app.on('second-instance', (_event, commandLine, workingDirectory) => {
+    if (isSilentLaunch(commandLine)) return;
     showMainWindow();
   });
 
   app.whenReady().then(async () => {
+    const silent = isSilentLaunch();
+    if (silent && await isWatchdogDisabled()) {
+      app.exit(0);
+      return;
+    }
+    if (!silent) await enableWatchdogAfterManualLaunch();
     await timeAuthority.sync();
     await migrateLegacyUserData();
+    await antiEvasionStore.load();
     await sessionStore.load();
     await ensurePersonalProfile();
     registerIpcHandlers();
-    createMainWindow();
-    mainWindow?.webContents.once('did-finish-load', setupAutoUpdater);
+    if (silent) setupAutoUpdater();
+    else createMainWindow();
     createTray();
     const reconcileDisplays = () => syncDailyFocusLockWindow(scheduler.getState().dailyFocusActive === true);
     screen.on('display-added', reconcileDisplays);
     screen.on('display-removed', reconcileDisplays);
     screen.on('display-metrics-changed', reconcileDisplays);
     await scheduler.start();
+    await ensureWatchdogTask(process.execPath).catch((error) => {
+      console.error('[CodeMyLife] No se pudo registrar el watchdog:', error);
+    });
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -612,7 +658,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', (event) => {
   if (!quitting) {
     event.preventDefault();
-    void requestQuit();
+    void requestQuit(false);
   }
 });
 

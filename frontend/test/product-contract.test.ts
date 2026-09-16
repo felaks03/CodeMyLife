@@ -96,6 +96,49 @@ test('la salida protegida no se ejecuta dos veces y tiene timeout', () => {
   assert.match(main, /setTimeout\(resolve, 5000\)/);
 });
 
+test('el watchdog relanza la app en modo silencioso cada cinco minutos', () => {
+  const main = read('src/main/main.ts');
+  const watchdog = read('src/main/watchdog-task.ts');
+  const packageJson = JSON.parse(read('package.json')) as { build?: { nsis?: { include?: string } } };
+  const nsis = read('installer/setup.nsh');
+  assert.match(watchdog, /WATCHDOG_TASK_NAME = 'CodeMyLife Watchdog'/);
+  assert.match(watchdog, /'\/SC'[\s\S]*'MINUTE'[\s\S]*'\/MO'[\s\S]*'5'/);
+  assert.match(watchdog, /`"\$\{executablePath\}" --silent`/);
+  assert.match(watchdog, /'\/RL'[\s\S]*'HIGHEST'/);
+  assert.equal(packageJson.build?.nsis?.include, 'installer/setup.nsh');
+  assert.match(nsis, /customUnInstall/);
+  assert.match(nsis, /schtasks\.exe \/Delete \/TN "CodeMyLife Watchdog" \/F/);
+  assert.match(main, /isSilentLaunch\(commandLine\)\) return/);
+  assert.match(main, /if \(silent\) setupAutoUpdater\(\)/);
+  assert.match(main, /ensureWatchdogTask\(process\.execPath\)/);
+});
+
+test('salir explicitamente desactiva el relanzamiento silencioso hasta el inicio manual', () => {
+  const main = read('src/main/main.ts');
+  const watchdog = read('src/main/watchdog-task.ts');
+  assert.match(main, /async function requestQuit\(disableWatchdog = true\)/);
+  assert.match(main, /if \(disableWatchdog\) await disableWatchdogUntilManualLaunch\(\)/);
+  assert.match(main, /if \(silent && await isWatchdogDisabled\(\)\) \{[\s\S]*app\.exit\(0\)/);
+  assert.match(main, /if \(!silent\) await enableWatchdogAfterManualLaunch\(\)/);
+  assert.match(main, /void requestQuit\(false\)/);
+  assert.match(watchdog, /WATCHDOG_DISABLED_FILE = 'watchdog-disabled\.json'/);
+});
+
+test('el modo antievasion retrasa la desactivacion de bloqueos activos', () => {
+  const main = read('src/main/main.ts');
+  const store = read('src/main/anti-evasion-store.ts');
+  assert.match(store, /ANTI_EVASION_UNLOCK_DELAY_MS = 30 \* 60 \* 1000/);
+  assert.match(store, /anti-evasion\.json/);
+  assert.match(store, /writeJsonAtomic/);
+  assert.match(store, /enabled: true/);
+  assert.match(store, /attempts: \[\.\.\.state\.attempts\.slice\(-49\), \{ requestedAt, reason \}\]/);
+  assert.match(main, /antiEvasionStore\.load\(\)/);
+  assert.match(main, /if \(!antiEvasionStore\.canDisable\(now\)\)/);
+  assert.match(main, /antiEvasionStore\.requestUnlock\(now, 'exit-with-active-blocking'\)/);
+  assert.match(main, /Para desactivar los bloqueos espera hasta/);
+  assert.match(main, /El retardo de seguridad ya ha terminado/);
+});
+
 test('el updater comprueba al iniciar y una vez al dia', () => {
   const main = read('src/main/main.ts');
   assert.match(main, /const UPDATE_CHECK_INTERVAL_MS = 24 \* 60 \* 60 \* 1000/);

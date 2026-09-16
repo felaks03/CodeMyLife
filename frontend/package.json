@@ -1,6 +1,6 @@
 {
   "name": "codemylife-frontend",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "CodeMyLife desktop app (Electron)",
   "main": "dist/main/main.js",
   "scripts": {
@@ -39,7 +39,8 @@
     "nsis": {
       "oneClick": false,
       "perMachine": true,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "include": "installer/setup.nsh"
     }
   },
   "devDependencies": {

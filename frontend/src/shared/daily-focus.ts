@@ -21,7 +21,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Run 3k',
     description: 'Correr 3 km.',
     durationMinutes: 20,
-    rewardCoins: 30,
+    rewardCoins: 15,
     enabled: true
   },
   {
@@ -29,7 +29,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Desayunar',
     description: 'Desayuno completo antes del mediodía.',
     durationMinutes: 15,
-    rewardCoins: 15,
+    rewardCoins: 10,
     enabled: true
   },
   {
@@ -37,7 +37,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Cold shower',
     description: 'Ducha fría.',
     durationMinutes: 10,
-    rewardCoins: 20,
+    rewardCoins: 10,
     enabled: true
   },
   {
@@ -45,7 +45,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Gym',
     description: 'Entrenamiento de fuerza.',
     durationMinutes: 60,
-    rewardCoins: 75,
+    rewardCoins: 45,
     enabled: true
   },
   {
@@ -53,7 +53,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Backtesting',
     description: 'Analizar estrategia y revisar resultados.',
     durationMinutes: 60,
-    rewardCoins: 100,
+    rewardCoins: 50,
     enabled: true
   }
 ];
@@ -112,6 +112,7 @@ export function normalizeDailyFocusProgress(
     if (!item || typeof item.taskId !== 'string') continue;
     const target = byId.get(item.taskId);
     if (!target) continue;
+    if (item.dayKey !== todayKey) continue;
     target.completed = Boolean(item.completed);
     target.startedAt = item.startedAt ?? null;
     target.elapsedMs = Number.isFinite(Number(item.elapsedMs)) ? Math.max(0, Number(item.elapsedMs)) : 0;

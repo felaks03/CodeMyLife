@@ -49,9 +49,16 @@ function render() {
     info.className = 'focus-task';
     const title = document.createElement('strong');
     title.textContent = task.name;
+    const meta = document.createElement('div');
+    meta.className = 'focus-task-meta';
     const timer = document.createElement('span');
+    timer.className = 'focus-timer';
     timer.textContent = formatTaskTime(task);
-    info.append(title, timer);
+    const reward = document.createElement('span');
+    reward.className = 'focus-reward';
+    reward.textContent = `+${task.rewardCoins} monedas`;
+    meta.append(timer, reward);
+    info.append(title, meta);
 
     const actions = document.createElement('div');
     actions.className = 'focus-actions';

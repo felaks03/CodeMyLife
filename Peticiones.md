@@ -56,6 +56,9 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Gym no debe exigirse durante el fin de semana.
 - [x] La cuenta atrás de cada tarea debe actualizarse cada segundo en el bloqueo real.
 - [x] Completar una tarea diaria añade sus monedas al wallet y revierte el progreso si falla la recompensa.
+- [x] Las tareas diarias se resetean al cambiar de día y no reutilizan completados de días anteriores.
+- [x] El progreso de una tarea del mismo día se conserva al recargar la app.
+- [x] La pantalla de tareas diarias muestra las monedas que da cada tarea.
 
 ## Estabilidad Y Seguridad
 
@@ -119,6 +122,8 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadido watchdog mediante Windows Task Scheduler: `CodeMyLife.exe --silent` cada 5 minutos, sin abrir UI si ya hay instancia activa.
 - Añadido hook NSIS de desinstalación para borrar `CodeMyLife Watchdog`.
 - Añadido modo antievasión seguro: `Salir y desactivar bloqueos` inicia un retardo de 30 minutos antes de permitir la desactivación.
+- Corregido el reset diario del foco: el progreso antiguo ya no cuenta como completado hoy y se añadieron tests multi-día.
+- Añadidas recompensas visibles en la lista de tareas del bloqueo diario.
 - Eliminados los restos de preview, bloqueos de prueba y timer temporal de tareas; el foco diario solo usa la pantalla real de 08:00 a 15:00.
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.

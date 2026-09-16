@@ -195,6 +195,14 @@ test('el salto del foco diario solo existe como accion de desarrollo', () => {
   assert.match(main, /function registerIpcHandlers[\s\S]*daily-focus:skip-today/);
 });
 
+test('la pantalla de foco diario muestra las monedas de cada tarea', () => {
+  const lockRenderer = read('src/renderer/daily-focus-lock.js');
+  const styles = read('src/renderer/daily-focus-lock.css');
+  assert.match(lockRenderer, /task\.rewardCoins/);
+  assert.match(lockRenderer, /focus-reward/);
+  assert.match(styles, /\.focus-reward/);
+});
+
 test('la UI muestra la version runtime en una esquina fija', () => {
   const main = read('src/main/main.ts');
   const preload = read('src/preload/preload.ts');

@@ -87,11 +87,74 @@ test('las tareas usan los premios de monedas acordados', () => {
   assert.deepEqual(
     DAILY_FOCUS_TASKS.map((task) => [task.id, task.rewardCoins]),
     [
-      ['run3k', 30],
-      ['breakfast', 15],
-      ['cold-shower', 20],
-      ['gym', 75],
-      ['backtesting', 100]
+      ['run3k', 15],
+      ['breakfast', 10],
+      ['cold-shower', 10],
+      ['gym', 45],
+      ['backtesting', 50]
     ]
   );
+});
+
+test('las tareas completadas ayer no aparecen completadas hoy', () => {
+  const yesterday = '2026-09-15';
+  const today = '2026-09-16';
+  const normalized = normalizeDailyFocusProgress(
+    DAILY_FOCUS_TASKS.map((task) => ({
+      taskId: task.id,
+      completed: true,
+      startedAt: '2026-09-15T09:00:00.000Z',
+      elapsedMs: task.durationMinutes * 60 * 1000,
+      dayKey: yesterday
+    })),
+    today,
+    new Date('2026-09-16T09:00:00')
+  );
+
+  assert.equal(normalized.every((task) => task.completed === false), true);
+  assert.equal(normalized.every((task) => task.startedAt === null), true);
+  assert.equal(normalized.every((task) => task.elapsedMs === 0), true);
+  assert.equal(normalized.every((task) => task.dayKey === today), true);
+});
+
+test('el progreso del mismo dia se conserva', () => {
+  const today = '2026-09-16';
+  const normalized = normalizeDailyFocusProgress(
+    [
+      { taskId: 'run3k', completed: true, startedAt: null, elapsedMs: 20 * 60 * 1000, dayKey: today },
+      { taskId: 'breakfast', completed: false, startedAt: '2026-09-16T09:00:00.000Z', elapsedMs: 30000, dayKey: today }
+    ],
+    today,
+    new Date('2026-09-16T09:10:00')
+  );
+
+  assert.equal(normalized.find((task) => task.taskId === 'run3k')?.completed, true);
+  assert.equal(normalized.find((task) => task.taskId === 'breakfast')?.startedAt, '2026-09-16T09:00:00.000Z');
+  assert.equal(normalized.find((task) => task.taskId === 'breakfast')?.elapsedMs, 30000);
+});
+
+test('el bloqueo diario vuelve a activarse tras reset de dia', () => {
+  const yesterday = '2026-09-15';
+  const today = '2026-09-16';
+  const now = new Date('2026-09-16T11:00:00');
+  const normalized = normalizeDailyFocusProgress(
+    DAILY_FOCUS_TASKS.map((task) => ({ taskId: task.id, completed: true, dayKey: yesterday })),
+    today,
+    now
+  );
+
+  assert.equal(isDailyFocusBlocked(now, normalized), true);
+});
+
+test('datos legacy sin dayKey se resetean', () => {
+  const today = '2026-09-16';
+  const normalized = normalizeDailyFocusProgress(
+    [{ taskId: 'run3k', completed: true, startedAt: '2026-09-15T09:00:00.000Z', elapsedMs: 20 * 60 * 1000 }],
+    today,
+    new Date('2026-09-16T09:00:00')
+  );
+
+  assert.equal(normalized.find((task) => task.taskId === 'run3k')?.completed, false);
+  assert.equal(normalized.find((task) => task.taskId === 'run3k')?.startedAt, null);
+  assert.equal(normalized.find((task) => task.taskId === 'run3k')?.elapsedMs, 0);
 });

@@ -21,7 +21,9 @@ h1 { margin: 0; font-size: clamp(30px, 5vw, 52px); }
 .focus-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(255,255,255,.035); }
 .focus-task { display: grid; gap: 5px; }
 .focus-task strong { font-size: 16px; }
-.focus-task span { color: var(--muted); font-size: 13px; }
+.focus-task-meta { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.focus-timer { color: var(--muted); font-size: 13px; }
+.focus-reward { border: 1px solid rgba(240,179,93,.28); border-radius: 999px; color: #f2c576; font-size: 12px; font-weight: 700; padding: 2px 8px; }
 .focus-actions { display: flex; align-items: center; gap: 12px; }
 .focus-status { color: var(--muted); font-size: 13px; }
 .focus-status.active { color: var(--warning); }

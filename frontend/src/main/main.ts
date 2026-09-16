@@ -122,9 +122,7 @@ function setupAutoUpdater(): void {
     reportUpdateError(error);
   });
 
-  void autoUpdater.checkForUpdates().catch((error) => {
-    reportUpdateError(error);
-  });
+  void checkForUpdates(reportUpdateError);
   setInterval(() => {
     void checkForUpdates(reportUpdateError);
   }, UPDATE_CHECK_INTERVAL_MS);

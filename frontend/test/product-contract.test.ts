@@ -129,12 +129,15 @@ test('salir explicitamente desactiva el relanzamiento silencioso hasta el inicio
 test('el modo antievasion retrasa la desactivacion de bloqueos activos', () => {
   const main = read('src/main/main.ts');
   const store = read('src/main/anti-evasion-store.ts');
-  assert.match(store, /ANTI_EVASION_UNLOCK_DELAY_MS = 30 \* 60 \* 1000/);
+  assert.match(store, /ANTI_EVASION_UNLOCK_DELAY_MS = 5 \* 60 \* 60 \* 1000/);
+  assert.match(store, /ANTI_EVASION_UNLOCK_GRACE_MS = 5 \* 60 \* 1000/);
   assert.match(store, /ANTI_EVASION_UNINSTALL_GUARD_FILE = 'anti-evasion-uninstall\.json'/);
   assert.match(store, /anti-evasion\.json/);
   assert.match(store, /process\.env\.ProgramData/);
   assert.match(store, /writeJsonAtomic/);
   assert.match(store, /enabled: true/);
+  assert.match(store, /now\.getTime\(\) <= unlockAvailableMs \+ ANTI_EVASION_UNLOCK_GRACE_MS/);
+  assert.match(store, /isUnlockWindowExpired/);
   assert.match(store, /attempts: \[\.\.\.state\.attempts\.slice\(-49\), \{ requestedAt, reason \}\]/);
   assert.match(main, /antiEvasionStore\.load\(\)/);
   assert.match(main, /if \(!antiEvasionStore\.canDisable\(now\)\)/);
@@ -149,6 +152,7 @@ test('el desinstalador normal respeta el temporizador antievasion sin bloquear a
   assert.match(nsis, /\$\{ifNot\} \$\{isUpdated\}/);
   assert.match(nsis, /anti-evasion-uninstall\.json/);
   assert.match(nsis, /DateTimeOffset/);
+  assert.match(nsis, /5 minutes after unlockAvailableAt/);
   assert.match(nsis, /Abort/);
   assert.match(nsis, /customUnInstall[\s\S]*EncodedCommand/);
 });
@@ -185,12 +189,22 @@ test('YouTube Shorts se bloquea por URL sin meter YouTube en hosts', () => {
   const main = read('src/main/main.ts');
   const preload = read('src/preload/preload.ts');
   const renderer = read('src/renderer/renderer.js');
+  const browserPolicy = read('src/main/browser-policy.ts');
+  const nsis = read('installer/setup.nsh');
   assert.match(shorts, /isYoutubeShortsUrl/);
   assert.match(shorts, /\/\^\\\/shorts/);
   assert.match(main, /blocking:youtube-shorts/);
+  assert.match(main, /ensureYoutubeShortsBrowserPolicy\(\)/);
+  assert.match(main, /blocking:youtube-shorts-policy-error/);
   assert.match(main, /event\.preventDefault\(\)/);
   assert.match(preload, /onYoutubeShortsBlocked/);
+  assert.match(preload, /onYoutubeShortsPolicyError/);
   assert.match(renderer, /YouTube Shorts esta bloqueado permanentemente/);
+  assert.match(renderer, /No se pudo activar el bloqueo de YouTube Shorts en Chrome\/Edge/);
+  assert.match(browserPolicy, /URLBlocklist/);
+  assert.match(browserPolicy, /\*:\/\/www\.youtube\.com\/shorts\*/);
+  assert.match(nsis, /Google\\Chrome\\URLBlocklist \/v 9001/);
+  assert.match(nsis, /Microsoft\\Edge\\URLBlocklist \/v 9003/);
 });
 
 test('el scheduler invalida excepciones temporales al refrescar compromisos', () => {

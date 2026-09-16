@@ -752,6 +752,9 @@ window.codeMyLife.onBlockingState(renderBlockingState);
 window.codeMyLife.onYoutubeShortsBlocked(() => {
   showNotice('YouTube Shorts esta bloqueado permanentemente.', 'success');
 });
+window.codeMyLife.onYoutubeShortsPolicyError(() => {
+  showNotice('No se pudo activar el bloqueo de YouTube Shorts en Chrome/Edge. Abre CodeMyLife como administrador.');
+});
 window.codeMyLife.onUpdateAvailable((version) => {
   showNotice(`Actualizacion ${version} disponible. Se descargara automaticamente.`, 'success');
 });

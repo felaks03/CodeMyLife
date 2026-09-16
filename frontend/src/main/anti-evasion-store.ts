@@ -3,7 +3,8 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { writeJsonAtomic } from './atomic-storage';
 
-export const ANTI_EVASION_UNLOCK_DELAY_MS = 30 * 60 * 1000;
+export const ANTI_EVASION_UNLOCK_DELAY_MS = 5 * 60 * 60 * 1000;
+export const ANTI_EVASION_UNLOCK_GRACE_MS = 5 * 60 * 1000;
 export const ANTI_EVASION_UNINSTALL_GUARD_FILE = 'anti-evasion-uninstall.json';
 
 export interface AntiEvasionAttempt {
@@ -30,16 +31,26 @@ function defaultState(): AntiEvasionState {
 export function canDisableBlocking(state: AntiEvasionState, now: Date): boolean {
   if (!state.enabled) return true;
   if (!state.unlockAvailableAt) return false;
-  return Date.parse(state.unlockAvailableAt) <= now.getTime();
+  const unlockAvailableMs = Date.parse(state.unlockAvailableAt);
+  if (!Number.isFinite(unlockAvailableMs)) return false;
+  return unlockAvailableMs <= now.getTime() && now.getTime() <= unlockAvailableMs + ANTI_EVASION_UNLOCK_GRACE_MS;
+}
+
+export function isUnlockWindowExpired(state: AntiEvasionState, now: Date): boolean {
+  if (!state.unlockAvailableAt) return false;
+  const unlockAvailableMs = Date.parse(state.unlockAvailableAt);
+  if (!Number.isFinite(unlockAvailableMs)) return true;
+  return now.getTime() > unlockAvailableMs + ANTI_EVASION_UNLOCK_GRACE_MS;
 }
 
 export function beginUnlockDelay(state: AntiEvasionState, now: Date, reason: string): AntiEvasionState {
   const requestedAt = now.toISOString();
   const unlockAvailableAt = new Date(now.getTime() + ANTI_EVASION_UNLOCK_DELAY_MS).toISOString();
+  const resetExpiredWindow = isUnlockWindowExpired(state, now);
   return {
     ...state,
-    unlockRequestedAt: state.unlockRequestedAt ?? requestedAt,
-    unlockAvailableAt: state.unlockAvailableAt ?? unlockAvailableAt,
+    unlockRequestedAt: resetExpiredWindow ? requestedAt : state.unlockRequestedAt ?? requestedAt,
+    unlockAvailableAt: resetExpiredWindow ? unlockAvailableAt : state.unlockAvailableAt ?? unlockAvailableAt,
     attempts: [...state.attempts.slice(-49), { requestedAt, reason }]
   };
 }

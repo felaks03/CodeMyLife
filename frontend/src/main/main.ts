@@ -13,6 +13,7 @@ import { visibleDailyFocusTasks } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
 import { isYoutubeShortsUrl } from '../shared/youtube-shorts';
+import { ensureYoutubeShortsBrowserPolicy } from './browser-policy';
 import {
   disableWatchdogUntilManualLaunch,
   enableWatchdogAfterManualLaunch,
@@ -657,6 +658,10 @@ if (!hasSingleInstanceLock) {
     screen.on('display-removed', reconcileDisplays);
     screen.on('display-metrics-changed', reconcileDisplays);
     await scheduler.start();
+    await ensureYoutubeShortsBrowserPolicy().catch((error) => {
+      console.error('[CodeMyLife] No se pudo registrar el bloqueo de YouTube Shorts en navegador:', error);
+      mainWindow?.webContents.send('blocking:youtube-shorts-policy-error');
+    });
     await ensureWatchdogTask(process.execPath).catch((error) => {
       console.error('[CodeMyLife] No se pudo registrar el watchdog:', error);
     });

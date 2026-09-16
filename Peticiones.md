@@ -8,6 +8,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Un bloqueo solo puede afectar a los dominios o procesos que define su propio script.
 - [x] Activar el bloqueo de videojuegos no debe bloquear YouTube, Instagram ni otros dominios no relacionados.
 - [x] YouTube Shorts (`/shorts`) se bloquea de forma permanente dentro de las ventanas controladas por CodeMyLife sin bloquear YouTube normal.
+- [x] YouTube Shorts (`/shorts`) se bloquea en Chrome y Edge mediante políticas nativas `URLBlocklist`, sin extensión.
 - [x] Activar el bloqueo semanal invalida excepciones temporales antiguas y aplica el bloqueo de Instagram inmediatamente.
 - [x] Bloquear semana no muestra el mensaje obsoleto de integración con Chrome para Instagram.
 - [x] El bloqueo de YouTube solo debe actuar dentro de su horario configurado.
@@ -80,6 +81,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Con bloqueos activos, el modo antievasión impide desactivarlos al instante y exige un retardo de seguridad.
 - [x] Los intentos de desactivar bloqueos se registran de forma persistente con escritura atómica.
 - [x] El desinstalador normal respeta el temporizador antievasión y no bloquea las actualizaciones automáticas.
+- [x] Tras el retardo antievasión, solo hay 5 minutos para confirmar la salida o desinstalación; después caduca y hay que esperar de nuevo.
 - [x] Revisar revalidación cuando un compromiso expira durante una compra o pausa.
 - [ ] Añadir pruebas E2E de rollback de wallet y compromisos con fallos reales de escritura.
 - [ ] Añadir pruebas E2E de reinicio y migración de inventario antiguo.
@@ -127,13 +129,15 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadida protección contra doble salida y timeout para la limpieza del scheduler durante el cierre.
 - Añadido watchdog mediante Windows Task Scheduler: `CodeMyLife.exe --silent` cada 5 minutos, sin abrir UI si ya hay instancia activa.
 - Añadido hook NSIS de desinstalación para borrar `CodeMyLife Watchdog`.
-- Añadido modo antievasión seguro: `Salir y desactivar bloqueos` inicia un retardo de 30 minutos antes de permitir la desactivación.
+- Añadido modo antievasión seguro: `Salir y desactivar bloqueos` inicia un retardo de 5 horas antes de permitir la desactivación.
 - Añadido guard de desinstalación: una desinstalación normal queda bloqueada hasta que venza el retardo antievasión, sin interferir con updates.
+- Añadida ventana de gracia de 5 minutos tras el retardo antievasión; si no se usa, la desactivación vuelve a quedar bloqueada.
 - Corregido el reset diario del foco: el progreso antiguo ya no cuenta como completado hoy y se añadieron tests multi-día.
 - Añadidas recompensas visibles en la lista de tareas del bloqueo diario.
 - Añadidas tareas diarias Leer y Meditar con sus duraciones y recompensas.
 - Añadida tarea diaria Stare at the Wall y migrados los nombres visibles de tareas a inglés.
 - Añadido bloqueo interno de YouTube Shorts por URL, sin añadir `youtube.com` al bloqueo permanente de hosts.
+- Añadidas políticas nativas de Chrome/Edge para bloquear `youtube.com/shorts*` sin bloquear YouTube normal.
 - Eliminados los restos de preview, bloqueos de prueba y timer temporal de tareas; el foco diario solo usa la pantalla real de 08:00 a 15:00.
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.

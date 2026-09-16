@@ -180,6 +180,19 @@ test('la UI permite buscar actualizaciones manualmente', () => {
   assert.match(main, /update:not-available/);
 });
 
+test('YouTube Shorts se bloquea por URL sin meter YouTube en hosts', () => {
+  const shorts = read('src/shared/youtube-shorts.ts');
+  const main = read('src/main/main.ts');
+  const preload = read('src/preload/preload.ts');
+  const renderer = read('src/renderer/renderer.js');
+  assert.match(shorts, /isYoutubeShortsUrl/);
+  assert.match(shorts, /\/\^\\\/shorts/);
+  assert.match(main, /blocking:youtube-shorts/);
+  assert.match(main, /event\.preventDefault\(\)/);
+  assert.match(preload, /onYoutubeShortsBlocked/);
+  assert.match(renderer, /YouTube Shorts esta bloqueado permanentemente/);
+});
+
 test('el scheduler invalida excepciones temporales al refrescar compromisos', () => {
   const scheduler = read('src/main/scheduler.ts');
   assert.match(scheduler, /temporarilyAllowedDomains\.clear\(\)/);

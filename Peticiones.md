@@ -7,6 +7,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Los bloqueos activos no deben cortar la conexión general a Internet.
 - [x] Un bloqueo solo puede afectar a los dominios o procesos que define su propio script.
 - [x] Activar el bloqueo de videojuegos no debe bloquear YouTube, Instagram ni otros dominios no relacionados.
+- [x] YouTube Shorts (`/shorts`) se bloquea de forma permanente dentro de las ventanas controladas por CodeMyLife sin bloquear YouTube normal.
 - [x] Activar el bloqueo semanal invalida excepciones temporales antiguas y aplica el bloqueo de Instagram inmediatamente.
 - [x] Bloquear semana no muestra el mensaje obsoleto de integración con Chrome para Instagram.
 - [x] El bloqueo de YouTube solo debe actuar dentro de su horario configurado.
@@ -132,6 +133,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadidas recompensas visibles en la lista de tareas del bloqueo diario.
 - Añadidas tareas diarias Leer y Meditar con sus duraciones y recompensas.
 - Añadida tarea diaria Stare at the Wall y migrados los nombres visibles de tareas a inglés.
+- Añadido bloqueo interno de YouTube Shorts por URL, sin añadir `youtube.com` al bloqueo permanente de hosts.
 - Eliminados los restos de preview, bloqueos de prueba y timer temporal de tareas; el foco diario solo usa la pantalla real de 08:00 a 15:00.
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.

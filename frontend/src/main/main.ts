@@ -12,6 +12,7 @@ import { dailyFocusStore } from './daily-focus-store';
 import { visibleDailyFocusTasks } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
+import { isYoutubeShortsUrl } from '../shared/youtube-shorts';
 import {
   disableWatchdogUntilManualLaunch,
   enableWatchdogAfterManualLaunch,
@@ -165,6 +166,25 @@ function isInstagramUrl(value: string): boolean {
   }
 }
 
+function notifyYoutubeShortsBlocked(url: string): void {
+  mainWindow?.webContents.send('blocking:youtube-shorts', url);
+}
+
+function blockYoutubeShortsNavigation(window: BrowserWindow): void {
+  window.webContents.on('will-navigate', (event, url) => {
+    if (!isYoutubeShortsUrl(url)) return;
+    event.preventDefault();
+    notifyYoutubeShortsBlocked(url);
+  });
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (isYoutubeShortsUrl(url)) {
+      notifyYoutubeShortsBlocked(url);
+      return { action: 'deny' };
+    }
+    return { action: 'deny' };
+  });
+}
+
 function notifyInstagramPaused(): void {
   scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, false).catch(() => undefined);
   mainWindow?.webContents.send('instagram:paused');
@@ -192,15 +212,22 @@ async function openInstagramBrowser(): Promise<void> {
     }
   });
 
+  blockYoutubeShortsNavigation(instagramWindow);
+
   instagramWindow.webContents.on('will-navigate', (event, url) => {
+    if (isYoutubeShortsUrl(url)) return;
     if (!isInstagramUrl(url)) event.preventDefault();
   });
   instagramWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
     mainWindow?.webContents.send('instagram:error', `${errorDescription} (${errorCode})`);
   });
-  instagramWindow.webContents.setWindowOpenHandler(({ url }) => ({
-    action: isInstagramUrl(url) ? 'allow' : 'deny'
-  }));
+  instagramWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isYoutubeShortsUrl(url)) {
+      notifyYoutubeShortsBlocked(url);
+      return { action: 'deny' };
+    }
+    return { action: isInstagramUrl(url) ? 'allow' : 'deny' };
+  });
   instagramWindow.once('ready-to-show', () => {
     instagramWindow?.show();
     instagramWindow?.focus();
@@ -463,6 +490,7 @@ function createMainWindow(): void {
   });
 
   mainWindow.loadFile(path.join(__dirname, '../../src/renderer/index.html'));
+  blockYoutubeShortsNavigation(mainWindow);
   mainWindow.webContents.once('did-finish-load', setupAutoUpdater);
   setupDevReloader(mainWindow);
   mainWindow.on('close', (event) => {

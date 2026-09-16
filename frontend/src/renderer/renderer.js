@@ -749,6 +749,9 @@ document.addEventListener('keydown', (event) => {
 });
 
 window.codeMyLife.onBlockingState(renderBlockingState);
+window.codeMyLife.onYoutubeShortsBlocked(() => {
+  showNotice('YouTube Shorts esta bloqueado permanentemente.', 'success');
+});
 window.codeMyLife.onUpdateAvailable((version) => {
   showNotice(`Actualizacion ${version} disponible. Se descargara automaticamente.`, 'success');
 });

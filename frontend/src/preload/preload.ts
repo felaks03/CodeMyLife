@@ -55,6 +55,9 @@ contextBridge.exposeInMainWorld('codeMyLife', {
   onBlockingState: (callback: (state: BlockingState) => void): void => {
     ipcRenderer.on('blocking:state', (_event, state: BlockingState) => callback(state));
   },
+  onYoutubeShortsBlocked: (callback: (url: string) => void): void => {
+    ipcRenderer.on('blocking:youtube-shorts', (_event, url: string) => callback(url));
+  },
   getWallet: (): Promise<WalletState> => ipcRenderer.invoke('wallet:get'),
   listTasks: (): Promise<TaskDefinition[]> => ipcRenderer.invoke('wallet:tasks'),
   listShop: (): Promise<ShopItem[]> => ipcRenderer.invoke('wallet:shop'),

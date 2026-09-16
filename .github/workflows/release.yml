@@ -35,7 +35,7 @@ jobs:
       - name: Verify updater assets
         shell: pwsh
         run: |
-          $installer = Get-ChildItem frontend/dist_electron -Filter 'CodeMyLife Setup *.exe' -File | Select-Object -First 1
+          $installer = Get-ChildItem frontend/dist_electron -Filter 'CodeMyLife-Setup-*.exe' -File | Select-Object -First 1
           if (-not $installer) { throw 'Missing NSIS installer exe.' }
           if (-not (Test-Path 'frontend/dist_electron/latest.yml')) { throw 'Missing latest.yml.' }
           if (-not (Test-Path "$($installer.FullName).blockmap")) { throw 'Missing installer blockmap.' }
@@ -43,6 +43,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            frontend/dist_electron/CodeMyLife Setup *.exe
-            frontend/dist_electron/CodeMyLife Setup *.exe.blockmap
+            frontend/dist_electron/CodeMyLife-Setup-*.exe
+            frontend/dist_electron/CodeMyLife-Setup-*.exe.blockmap
             frontend/dist_electron/latest.yml

@@ -107,6 +107,7 @@ test('el watchdog relanza la app en modo silencioso cada cinco minutos', () => {
   assert.match(watchdog, /`"\$\{executablePath\}" --silent`/);
   assert.match(watchdog, /'\/RL'[\s\S]*'HIGHEST'/);
   assert.equal(packageJson.build?.nsis?.include, 'installer/setup.nsh');
+  assert.match(read('package.json'), /"artifactName": "\$\{productName\}-Setup-\$\{version\}\.\$\{ext\}"/);
   assert.match(nsis, /customUnInstall/);
   assert.match(nsis, /schtasks\.exe \/Delete \/TN "CodeMyLife Watchdog" \/F/);
   assert.match(main, /isSilentLaunch\(commandLine\)\) return/);

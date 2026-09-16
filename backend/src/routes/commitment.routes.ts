@@ -11,7 +11,7 @@ const DOMAIN_PATTERN = /^(?!-)[a-z0-9-]{1,63}(\.[a-z0-9-]{1,63})+$/i;
 const START_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const END_TIME_PATTERN = /^(([01]\d|2[0-3]):[0-5]\d|24:00)$/;
 
-const createSchema = z.object({
+export const createCommitmentSchema = z.object({
   scriptId: z.string().refine((value) => Types.ObjectId.isValid(value), 'Invalid scriptId'),
   name: z.string().min(1).max(80),
   customDomains: z.array(z.string().regex(DOMAIN_PATTERN)).max(50).optional(),
@@ -41,7 +41,7 @@ commitmentRouter.get('/active', async (req: AuthenticatedRequest, res: Response)
 });
 
 commitmentRouter.post('/', async (req: AuthenticatedRequest, res: Response) => {
-  const parsed = createSchema.safeParse(req.body);
+  const parsed = createCommitmentSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Invalid commitment data' });
     return;

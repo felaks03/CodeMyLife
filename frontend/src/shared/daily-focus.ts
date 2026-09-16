@@ -19,23 +19,23 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
   {
     id: 'run3k',
     name: 'Run 3k',
-    description: 'Correr 3 km.',
+    description: 'Run 3 km.',
     durationMinutes: 20,
     rewardCoins: 15,
     enabled: true
   },
   {
     id: 'breakfast',
-    name: 'Desayunar',
-    description: 'Desayuno completo antes del mediodía.',
+    name: 'Breakfast',
+    description: 'Eat a complete breakfast before noon.',
     durationMinutes: 15,
     rewardCoins: 10,
     enabled: true
   },
   {
     id: 'cold-shower',
-    name: 'Cold shower',
-    description: 'Ducha fría.',
+    name: 'Cold Shower',
+    description: 'Take a cold shower.',
     durationMinutes: 10,
     rewardCoins: 10,
     enabled: true
@@ -43,7 +43,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
   {
     id: 'gym',
     name: 'Gym',
-    description: 'Entrenamiento de fuerza.',
+    description: 'Strength training.',
     durationMinutes: 60,
     rewardCoins: 45,
     enabled: true
@@ -51,23 +51,31 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
   {
     id: 'backtesting',
     name: 'Backtesting',
-    description: 'Analizar estrategia y revisar resultados.',
+    description: 'Analyze strategy and review results.',
     durationMinutes: 60,
     rewardCoins: 50,
     enabled: true
   },
   {
     id: 'reading',
-    name: 'Leer',
-    description: 'Leer durante 30 minutos.',
+    name: 'Reading',
+    description: 'Read for 30 minutes.',
     durationMinutes: 30,
     rewardCoins: 30,
     enabled: true
   },
   {
     id: 'meditation',
-    name: 'Meditar',
-    description: 'Meditar durante 15 minutos.',
+    name: 'Meditation',
+    description: 'Meditate for 15 minutes.',
+    durationMinutes: 15,
+    rewardCoins: 15,
+    enabled: true
+  },
+  {
+    id: 'stare-at-wall',
+    name: 'Stare at the Wall',
+    description: 'Stare at the wall for 15 minutes.',
     durationMinutes: 15,
     rewardCoins: 15,
     enabled: true

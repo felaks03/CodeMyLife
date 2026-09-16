@@ -130,7 +130,9 @@ test('el modo antievasion retrasa la desactivacion de bloqueos activos', () => {
   const main = read('src/main/main.ts');
   const store = read('src/main/anti-evasion-store.ts');
   assert.match(store, /ANTI_EVASION_UNLOCK_DELAY_MS = 30 \* 60 \* 1000/);
+  assert.match(store, /ANTI_EVASION_UNINSTALL_GUARD_FILE = 'anti-evasion-uninstall\.json'/);
   assert.match(store, /anti-evasion\.json/);
+  assert.match(store, /process\.env\.ProgramData/);
   assert.match(store, /writeJsonAtomic/);
   assert.match(store, /enabled: true/);
   assert.match(store, /attempts: \[\.\.\.state\.attempts\.slice\(-49\), \{ requestedAt, reason \}\]/);
@@ -139,6 +141,16 @@ test('el modo antievasion retrasa la desactivacion de bloqueos activos', () => {
   assert.match(main, /antiEvasionStore\.requestUnlock\(now, 'exit-with-active-blocking'\)/);
   assert.match(main, /Para desactivar los bloqueos espera hasta/);
   assert.match(main, /El retardo de seguridad ya ha terminado/);
+});
+
+test('el desinstalador normal respeta el temporizador antievasion sin bloquear actualizaciones', () => {
+  const nsis = read('installer/setup.nsh');
+  assert.match(nsis, /customUnInit/);
+  assert.match(nsis, /\$\{ifNot\} \$\{isUpdated\}/);
+  assert.match(nsis, /anti-evasion-uninstall\.json/);
+  assert.match(nsis, /DateTimeOffset/);
+  assert.match(nsis, /Abort/);
+  assert.match(nsis, /customUnInstall[\s\S]*EncodedCommand/);
 });
 
 test('el updater comprueba al iniciar y una vez al dia', () => {

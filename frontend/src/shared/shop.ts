@@ -4,35 +4,56 @@ export const TASKS: TaskDefinition[] = [
   {
     id: 'run3k',
     name: 'Run 3k',
-    description: 'Completa la carrera de 3 km.',
-    rewardCoins: 12,
+    description: 'Run 3 km.',
+    rewardCoins: 15,
     frequency: 'daily'
   },
   {
     id: 'breakfast',
-    name: 'Desayunar',
-    description: 'Haz un desayuno completo antes del mediodía.',
-    rewardCoins: 8,
+    name: 'Breakfast',
+    description: 'Eat a complete breakfast before noon.',
+    rewardCoins: 10,
     frequency: 'daily'
   },
   {
     id: 'cold-shower',
-    name: 'Cold shower',
-    description: 'Toma la ducha fría.',
-    rewardCoins: 7,
+    name: 'Cold Shower',
+    description: 'Take a cold shower.',
+    rewardCoins: 10,
     frequency: 'daily'
   },
   {
     id: 'gym',
     name: 'Gym',
-    description: 'Haz tu entrenamiento del día.',
-    rewardCoins: 20,
+    description: 'Strength training.',
+    rewardCoins: 45,
     frequency: 'daily'
   },
   {
     id: 'backtesting',
     name: 'Backtesting',
-    description: 'Revisa la estrategia y el backtesting.',
+    description: 'Analyze strategy and review results.',
+    rewardCoins: 50,
+    frequency: 'daily'
+  },
+  {
+    id: 'reading',
+    name: 'Reading',
+    description: 'Read for 30 minutes.',
+    rewardCoins: 30,
+    frequency: 'daily'
+  },
+  {
+    id: 'meditation',
+    name: 'Meditation',
+    description: 'Meditate for 15 minutes.',
+    rewardCoins: 15,
+    frequency: 'daily'
+  },
+  {
+    id: 'stare-at-wall',
+    name: 'Stare at the Wall',
+    description: 'Stare at the wall for 15 minutes.',
     rewardCoins: 15,
     frequency: 'daily'
   }
@@ -42,17 +63,17 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'games-time',
     name: 'Tiempo de videojuegos',
-    description: 'Desbloquea Steam y Minecraft Launcher durante 20 minutos.',
+    description: 'Desbloquea Steam y Minecraft Launcher durante 10 minutos.',
     costCoins: 20,
-    durationMinutes: 20,
+    durationMinutes: 10,
     targetScriptId: 'builtin-games'
   },
   {
     id: 'instagram-time',
     name: 'Tiempo de Instagram',
-    description: 'Añade 5 minutos extra de Instagram cuando se agote el tiempo gratuito diario.',
+    description: 'Añade 1 minuto extra de Instagram cuando se agote el tiempo gratuito diario.',
     costCoins: 5,
-    durationMinutes: 5,
+    durationMinutes: 1,
     targetScriptId: 'builtin-instagram'
   }
 ];

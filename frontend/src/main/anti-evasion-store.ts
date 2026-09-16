@@ -4,6 +4,7 @@ import * as path from 'path';
 import { writeJsonAtomic } from './atomic-storage';
 
 export const ANTI_EVASION_UNLOCK_DELAY_MS = 30 * 60 * 1000;
+export const ANTI_EVASION_UNINSTALL_GUARD_FILE = 'anti-evasion-uninstall.json';
 
 export interface AntiEvasionAttempt {
   requestedAt: string;
@@ -58,6 +59,7 @@ class AntiEvasionStore {
     } catch {
       this.state = defaultState();
     }
+    await this.writeUninstallGuard().catch(() => undefined);
   }
 
   get(): AntiEvasionState {
@@ -71,6 +73,7 @@ class AntiEvasionStore {
   async requestUnlock(now: Date, reason: string): Promise<AntiEvasionState> {
     this.state = beginUnlockDelay(this.state, now, reason);
     await this.save();
+    await this.writeUninstallGuard().catch(() => undefined);
     return this.state;
   }
 
@@ -90,6 +93,16 @@ class AntiEvasionStore {
 
   private file(): string {
     return path.join(app.getPath('userData'), 'anti-evasion.json');
+  }
+
+  private async writeUninstallGuard(): Promise<void> {
+    if (!app.isPackaged) return;
+    const directory = path.join(process.env.ProgramData ?? app.getPath('appData'), 'CodeMyLife');
+    await fs.mkdir(directory, { recursive: true });
+    await writeJsonAtomic(path.join(directory, ANTI_EVASION_UNINSTALL_GUARD_FILE), {
+      enabled: this.state.enabled,
+      unlockAvailableAt: this.state.unlockAvailableAt
+    });
   }
 }
 

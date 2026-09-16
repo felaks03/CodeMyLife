@@ -10,26 +10,39 @@ test('la tienda tiene una recompensa de tiempo de videojuegos', () => {
   assert.ok(games.durationMinutes > 0);
 });
 
-test('la tienda ofrece 5 minutos extra de Instagram por 5 monedas', () => {
+test('la tienda ofrece 1 minuto extra de Instagram por 5 monedas', () => {
   const instagram = SHOP_ITEMS.find((item) => item.id === 'instagram-time');
   assert.ok(instagram);
   assert.equal(instagram.targetScriptId, 'builtin-instagram');
   assert.equal(instagram.costCoins, 5);
-  assert.equal(instagram.durationMinutes, 5);
+  assert.equal(instagram.durationMinutes, 1);
 });
 
-test('videojuegos cuesta 20 monedas y ofrece 20 minutos', () => {
+test('videojuegos cuesta 20 monedas y ofrece 10 minutos', () => {
   const games = SHOP_ITEMS.find((item) => item.id === 'games-time');
   assert.ok(games);
   assert.equal(games.costCoins, 20);
-  assert.equal(games.durationMinutes, 20);
+  assert.equal(games.durationMinutes, 10);
 });
 
-test('la lista diaria incluye las cinco tareas del foco', () => {
-  assert.equal(TASKS.length, 5);
+test('la lista diaria incluye las tareas del foco', () => {
+  assert.equal(TASKS.length, 8);
   assert.deepEqual(
     TASKS.map((task) => task.id),
-    ['run3k', 'breakfast', 'cold-shower', 'gym', 'backtesting']
+    ['run3k', 'breakfast', 'cold-shower', 'gym', 'backtesting', 'reading', 'meditation', 'stare-at-wall']
+  );
+  assert.deepEqual(
+    TASKS.map((task) => [task.id, task.name, task.rewardCoins]),
+    [
+      ['run3k', 'Run 3k', 15],
+      ['breakfast', 'Breakfast', 10],
+      ['cold-shower', 'Cold Shower', 10],
+      ['gym', 'Gym', 45],
+      ['backtesting', 'Backtesting', 50],
+      ['reading', 'Reading', 30],
+      ['meditation', 'Meditation', 15],
+      ['stare-at-wall', 'Stare at the Wall', 15]
+    ]
   );
   TASKS.forEach((task) => {
     assert.equal(task.frequency, 'daily');

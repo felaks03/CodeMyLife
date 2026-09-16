@@ -31,8 +31,8 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Instagram y videojuegos deben compartir el mismo componente visual de timer `MM:SS`; videojuegos usa variante verde.
 - [x] Instagram y videojuegos muestran el timer en la misma posicion y formato `MM:SS`; videojuegos usa variante verde e Instagram azul.
 - [x] Instagram y videojuegos comparten exactamente la misma estructura: titulo, descripcion, timer y boton alineados.
-- [x] Tiempo de videojuegos cuesta 20 monedas y dura 20 minutos.
-- [x] Tiempo de Instagram cuesta 5 monedas y dura 5 minutos.
+- [x] Tiempo de videojuegos cuesta 20 monedas y dura 10 minutos.
+- [x] Tiempo de Instagram cuesta 5 monedas y dura 1 minuto.
 - [x] Las filas usan una cuadrícula común fija para que timer y botón queden en la misma posición real.
 - [x] Los mensajes de éxito aparecen en verde y los mensajes de error aparecen en rojo.
 - [x] Se eliminaron de la interfaz las vistas previas y los bloqueos de prueba.
@@ -61,6 +61,8 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] La pantalla de tareas diarias muestra las monedas que da cada tarea.
 - [x] Añadir tarea diaria Leer: 30 minutos, 30 monedas.
 - [x] Añadir tarea diaria Meditar: 15 minutos, 15 monedas.
+- [x] Añadir tarea diaria Stare at the Wall: 15 minutos, 15 monedas.
+- [x] Mostrar todos los nombres de tareas diarias en inglés.
 
 ## Estabilidad Y Seguridad
 
@@ -76,6 +78,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] La desinstalación elimina la tarea programada `CodeMyLife Watchdog`.
 - [x] Con bloqueos activos, el modo antievasión impide desactivarlos al instante y exige un retardo de seguridad.
 - [x] Los intentos de desactivar bloqueos se registran de forma persistente con escritura atómica.
+- [x] El desinstalador normal respeta el temporizador antievasión y no bloquea las actualizaciones automáticas.
 - [x] Revisar revalidación cuando un compromiso expira durante una compra o pausa.
 - [ ] Añadir pruebas E2E de rollback de wallet y compromisos con fallos reales de escritura.
 - [ ] Añadir pruebas E2E de reinicio y migración de inventario antiguo.
@@ -99,7 +102,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Comprar con 42 minutos activos: resultado 102 minutos.
 - [x] Comprar dos veces sin usar: un único saldo de 120 minutos.
 - [ ] Pausar, reiniciar y reanudar sin perder tiempo (requiere prueba manual de Electron).
-- [ ] Instagram gratis + compra de 5 minutos + reinicio (requiere prueba manual de Electron).
+- [ ] Instagram gratis + compra de 1 minuto + reinicio (requiere prueba manual de Electron).
 - [x] Ejecutar build y suite completa después de cada bloque.
 - [x] Suite de contratos de producto: UI, updater, multi-monitor, `newversion`, timers, notificaciones, persistencia, rollback estructural y ausencia de pruebas.
 
@@ -124,9 +127,11 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadido watchdog mediante Windows Task Scheduler: `CodeMyLife.exe --silent` cada 5 minutos, sin abrir UI si ya hay instancia activa.
 - Añadido hook NSIS de desinstalación para borrar `CodeMyLife Watchdog`.
 - Añadido modo antievasión seguro: `Salir y desactivar bloqueos` inicia un retardo de 30 minutos antes de permitir la desactivación.
+- Añadido guard de desinstalación: una desinstalación normal queda bloqueada hasta que venza el retardo antievasión, sin interferir con updates.
 - Corregido el reset diario del foco: el progreso antiguo ya no cuenta como completado hoy y se añadieron tests multi-día.
 - Añadidas recompensas visibles en la lista de tareas del bloqueo diario.
 - Añadidas tareas diarias Leer y Meditar con sus duraciones y recompensas.
+- Añadida tarea diaria Stare at the Wall y migrados los nombres visibles de tareas a inglés.
 - Eliminados los restos de preview, bloqueos de prueba y timer temporal de tareas; el foco diario solo usa la pantalla real de 08:00 a 15:00.
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.

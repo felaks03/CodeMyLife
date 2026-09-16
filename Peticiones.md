@@ -9,6 +9,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - [x] Activar el bloqueo de videojuegos no debe bloquear YouTube, Instagram ni otros dominios no relacionados.
 - [x] YouTube Shorts (`/shorts`) se bloquea de forma permanente dentro de las ventanas controladas por CodeMyLife sin bloquear YouTube normal.
 - [x] YouTube Shorts (`/shorts`) se bloquea en Chrome y Edge mediante políticas nativas `URLBlocklist`, sin extensión.
+- [x] Si YouTube usa navegación SPA y esquiva `URLBlocklist`, CodeMyLife cierra ventanas externas de navegador que detecte en Shorts.
 - [x] Activar el bloqueo semanal invalida excepciones temporales antiguas y aplica el bloqueo de Instagram inmediatamente.
 - [x] Bloquear semana no muestra el mensaje obsoleto de integración con Chrome para Instagram.
 - [x] El bloqueo de YouTube solo debe actuar dentro de su horario configurado.
@@ -138,6 +139,7 @@ Documento vivo. Cada nueva petición debe añadirse aquí, con su estado y una p
 - Añadida tarea diaria Stare at the Wall y migrados los nombres visibles de tareas a inglés.
 - Añadido bloqueo interno de YouTube Shorts por URL, sin añadir `youtube.com` al bloqueo permanente de hosts.
 - Añadidas políticas nativas de Chrome/Edge para bloquear `youtube.com/shorts*` sin bloquear YouTube normal.
+- Añadido guard de ventanas para cerrar Chrome/Edge/Brave/Firefox/Opera si el título indica YouTube Shorts.
 - Eliminados los restos de preview, bloqueos de prueba y timer temporal de tareas; el foco diario solo usa la pantalla real de 08:00 a 15:00.
 - Añadida revalidación de compromisos durante compra/pausa.
 - Añadidos tests de horario de YouTube, aislamiento de videojuegos y preservación de entradas manuales de hosts.

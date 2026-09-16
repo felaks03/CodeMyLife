@@ -47,6 +47,7 @@ test('si no hay tareas completadas dentro de la ventana, se activa el bloqueo', 
     DAILY_FOCUS_TASKS.map((task) => task.name),
     ['Run 3k', 'Breakfast', 'Cold Shower', 'Gym', 'Backtesting', 'Reading', 'Meditation', 'Stare at the Wall']
   );
+  assert.equal(DAILY_FOCUS_TASKS.some((task) => /Desayunar|Leer|Meditar|Mirar/i.test(task.name)), false);
 });
 
 test('las tareas usan las duraciones diarias acordadas', () => {

@@ -901,14 +901,6 @@ button.small {
   letter-spacing: .2px;
 }
 
-.skip-daily-focus {
-  background: transparent;
-  border-color: rgba(240, 179, 93, .5);
-  color: var(--warning);
-  font-size: 11px;
-  width: auto;
-}
-
 .active-locks {
   background: rgba(217, 72, 95, .12);
   border: 1px solid rgba(240, 100, 120, .5);

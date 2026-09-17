@@ -649,10 +649,6 @@ function registerIpcHandlers(): void {
       mainWindow?.webContents.send('update:error', message);
     });
   });
-  ipcMain.handle('daily-focus:skip-today', async () => {
-    await dailyFocusStore.skipForToday();
-    await scheduler.refresh();
-  });
   ipcMain.handle('time:now', () => timeAuthority.now().toISOString());
 
   ipcMain.handle('commitments:overview', async () => {

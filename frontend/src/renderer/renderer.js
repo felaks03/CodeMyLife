@@ -239,19 +239,7 @@ function showApp(user) {
   void refreshBlockingState();
   void loadScripts();
   void loadEconomy();
-  void window.codeMyLife.isDevelopment().then((development) => {
-    el('skip-daily-focus').classList.toggle('hidden', !development);
-  });
 }
-
-el('skip-daily-focus').addEventListener('click', async () => {
-  try {
-    await window.codeMyLife.skipDailyFocusToday();
-    showNotice('Bloqueo diario omitido solo por hoy.', 'success');
-  } catch (error) {
-    showNotice(String(error.message ?? error).replace(/^Error:\s*/, ''));
-  }
-});
 
 function renderBlockingState(state) {
   lastBlockingState = state;
@@ -408,6 +396,7 @@ function renderInventory() {
   youtubeAction.className = 'economy-action inventory-action';
   youtubeAction.type = 'button';
   youtubeAction.setAttribute('data-youtube-action', '');
+  youtubeAction.textContent = i18n.t('useYoutube');
   youtubeAction.setAttribute('aria-label', 'Usar YouTube');
   youtubeAction.addEventListener('click', async (event) => {
     event.stopPropagation();
@@ -457,6 +446,7 @@ function renderInventory() {
   }
   startVideoTimerTicker();
   renderInstagramTimer();
+  renderYoutubeTimer();
 }
 
 function formatVideoRemaining(seconds) {

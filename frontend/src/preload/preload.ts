@@ -41,7 +41,6 @@ contextBridge.exposeInMainWorld('codeMyLife', {
     ipcRenderer.invoke('commitments:cancel', id),
   allowComputerDuringDailyFocus: (): Promise<void> => ipcRenderer.invoke('daily-focus:allow-computer'),
   isDevelopment: (): Promise<boolean> => ipcRenderer.invoke('app:is-development'),
-  skipDailyFocusToday: (): Promise<void> => ipcRenderer.invoke('daily-focus:skip-today'),
   listScripts: (): Promise<Script[]> => ipcRenderer.invoke('scripts:list'),
   startInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:start-usage'),
   pauseInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:pause-usage'),

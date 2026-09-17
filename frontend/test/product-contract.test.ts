@@ -31,6 +31,7 @@ test('YouTube tiene uso diario manual de media hora', () => {
   assert.match(renderer, /youtube-usage-/);
   assert.match(renderer, /30 \* 60/);
   assert.match(renderer, /startYoutubeTimer/);
+  assert.match(renderer, /youtubeAction\.textContent = i18n\.t\('useYoutube'\)/);
   assert.match(preload, /youtube:start-usage/);
   assert.match(preload, /youtube:pause-usage/);
   assert.match(main, /scheduler\.setTemporarilyAllowed\(YOUTUBE_DOMAINS, true, 'builtin-youtube'\)/);
@@ -260,17 +261,17 @@ test('la release compila antes de publicar y el updater instala automaticamente'
   assert.match(renderer, /Actualizacion.*instalara automaticamente/);
 });
 
-test('el salto del foco diario solo existe como accion de desarrollo', () => {
+test('el salto del foco diario no esta expuesto en la interfaz', () => {
   const main = read('src/main/main.ts');
   const store = read('src/main/daily-focus-store.ts');
   const html = read('src/renderer/index.html');
   assert.match(main, /app:is-development/);
-  assert.match(main, /daily-focus:skip-today/);
   assert.match(store, /if \(app\.isPackaged\) throw/);
-  assert.match(html, /skip-daily-focus/);
-  assert.match(read('src/renderer/daily-focus-lock.html'), /skip-daily-focus/);
-  assert.match(read('src/renderer/daily-focus-lock.js'), /skipDailyFocusToday/);
-  assert.match(main, /function registerIpcHandlers[\s\S]*daily-focus:skip-today/);
+  assert.doesNotMatch(html, /skip-daily-focus|Saltar bloqueo diario/);
+  assert.doesNotMatch(read('src/renderer/daily-focus-lock.html'), /skip-daily-focus|Saltar bloqueo diario/);
+  assert.doesNotMatch(read('src/renderer/daily-focus-lock.js'), /skipDailyFocusToday|skip-daily-focus/);
+  assert.doesNotMatch(read('src/preload/preload.ts'), /skipDailyFocusToday|daily-focus:skip-today/);
+  assert.doesNotMatch(main, /function registerIpcHandlers[\s\S]*daily-focus:skip-today/);
 });
 
 test('la pantalla de foco diario muestra las monedas de cada tarea', () => {

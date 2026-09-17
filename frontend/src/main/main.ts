@@ -13,7 +13,6 @@ import { visibleDailyFocusTasks } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
 import { isYoutubeShortsUrl } from '../shared/youtube-shorts';
-import { isTradingAccessWindow } from '../shared/trading-access';
 import { ensureYoutubeShortsBrowserPolicy } from './browser-policy';
 import { youtubeShortsWindowGuard } from './youtube-shorts-window-guard';
 import {
@@ -425,7 +424,7 @@ function syncDailyFocusLockWindow(active: boolean): void {
 }
 
 function isDailyFocusComputerAllowed(): boolean {
-  return dailyFocusLockComputerAllowed || isTradingAccessWindow(timeAuthority.now());
+  return dailyFocusLockComputerAllowed;
 }
 
 function dailyFocusPanelBounds(display: Display): Rectangle {

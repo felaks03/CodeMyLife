@@ -50,6 +50,9 @@ test('el bloqueo diario se reconcilia por pantalla', () => {
   const main = read('src/main/main.ts');
   assert.match(main, /screen\.getAllDisplays\(\)/);
   assert.match(main, /dailyFocusLockWindows = new Map/);
+  assert.match(main, /dailyFocusLockWindows\.set\(display\.id, lockWindow\)/);
+  assert.match(main, /function isDailyFocusComputerAllowed\(\): boolean \{\s*return dailyFocusLockComputerAllowed;\s*\}/);
+  assert.doesNotMatch(main, /isDailyFocusComputerAllowed\(\): boolean \{[\s\S]*isTradingAccessWindow/);
   assert.match(main, /display-added/);
   assert.match(main, /display-removed/);
   assert.match(main, /display-metrics-changed/);

@@ -52,8 +52,9 @@ test('el bloqueo diario se reconcilia por pantalla', () => {
   assert.match(main, /screen\.getAllDisplays\(\)/);
   assert.match(main, /dailyFocusLockWindows = new Map/);
   assert.match(main, /dailyFocusLockWindows\.set\(display\.id, lockWindow\)/);
-  assert.match(main, /function isDailyFocusComputerAllowed\(\): boolean \{\s*return dailyFocusLockComputerAllowed;\s*\}/);
-  assert.doesNotMatch(main, /isDailyFocusComputerAllowed\(\): boolean \{[\s\S]*isTradingAccessWindow/);
+  assert.match(main, /lockWindow\.setKiosk\(true\)/);
+  assert.doesNotMatch(main, /daily-focus:allow-computer|setKiosk\(false\)/);
+  assert.match(main, /closeTradingWindows\(\)/);
   assert.match(main, /display-added/);
   assert.match(main, /display-removed/);
   assert.match(main, /display-metrics-changed/);
@@ -83,6 +84,9 @@ test('la pantalla de tareas ofrece TradingView y Tradovate sobre el bloqueo', ()
   assert.match(main, /setAlwaysOnTop\(true, 'screen-saver'\)/);
   assert.match(main, /setWindowOpenHandler/);
   assert.match(main, /isTradingUrl\(nextUrl\) \? 'allow' : 'deny'/);
+  assert.match(main, /will-redirect/);
+  assert.match(main, /hasTradingWindowOpen/);
+  assert.match(main, /refocusDailyFocusWindows/);
   assert.match(trading, /TRADING_ALLOWED_DOMAINS/);
 });
 

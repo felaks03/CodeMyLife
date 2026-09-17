@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor, screen, Display, Rectangle } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor, screen, Display } from 'electron';
 import * as path from 'path';
 import { promises as fs, watch } from 'fs';
 import { SessionStore } from './session-store';
@@ -63,7 +63,6 @@ let tradovateWindow: BrowserWindow | null = null;
 const sleepLockWindows = new Map<number, BrowserWindow>();
 let quitInProgress = false;
 const dailyFocusLockWindows = new Map<number, BrowserWindow>();
-let dailyFocusLockComputerAllowed = false;
 let quitting = false;
 
 Menu.setApplicationMenu(null);
@@ -77,23 +76,6 @@ const scheduler = new BlockingScheduler(loadCommitments, (state) => {
   updateTray(state);
   syncSleepLockWindow(state.lockScreenActive === true);
   syncDailyFocusLockWindow(state.dailyFocusActive === true);
-});
-
-ipcMain.handle('daily-focus:allow-computer', () => {
-  if (dailyFocusLockWindows.size === 0) return;
-  dailyFocusLockComputerAllowed = true;
-  for (const window of dailyFocusLockWindows.values()) {
-    if (window.isDestroyed()) continue;
-    window.setKiosk(false);
-    window.setFullScreen(false);
-    window.setAlwaysOnTop(false);
-    window.setSkipTaskbar(false);
-    window.setResizable(true);
-    window.setSize(760, 700);
-    window.center();
-    window.show();
-    window.focus();
-  }
 });
 
 function assetPath(file: string): string {
@@ -351,13 +333,18 @@ async function openTradingBrowser(
   setWindow(tradingWindow);
   tradingWindow.setAlwaysOnTop(true, 'screen-saver');
   tradingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  tradingWindow.webContents.on('will-navigate', (event, nextUrl) => {
+  const preventExternalTradingNavigation = (event: Electron.Event, nextUrl: string): void => {
     if (!isTradingUrl(nextUrl)) event.preventDefault();
-  });
+  };
+  tradingWindow.webContents.on('will-navigate', preventExternalTradingNavigation);
+  tradingWindow.webContents.on('will-redirect', preventExternalTradingNavigation);
   tradingWindow.webContents.setWindowOpenHandler(({ url: nextUrl }) => ({
     action: isTradingUrl(nextUrl) ? 'allow' : 'deny'
   }));
-  tradingWindow.on('closed', () => setWindow(null));
+  tradingWindow.on('closed', () => {
+    setWindow(null);
+    if (!hasTradingWindowOpen()) refocusDailyFocusWindows();
+  });
   await tradingWindow.loadURL(url);
   tradingWindow.show();
   tradingWindow.focus();
@@ -464,48 +451,20 @@ function syncDailyFocusLockWindow(active: boolean): void {
   }
   if (!active) {
     destroyDailyFocusLockWindows();
+    closeTradingWindows();
     return;
   }
-  const computerAllowed = isDailyFocusComputerAllowed();
   for (const display of displays) {
     const lockWindow = dailyFocusLockWindows.get(display.id);
-    if (lockWindow && !lockWindow.isDestroyed()) {
-      applyDailyFocusLockMode(lockWindow, display, computerAllowed);
-    } else {
-      createDailyFocusLockWindow(display, computerAllowed);
+    if (!lockWindow || lockWindow.isDestroyed()) {
+      createDailyFocusLockWindow(display);
+    } else if (!lockWindow.isFullScreen() || !lockWindow.isKiosk()) {
+      lockWindow.setBounds(display.bounds);
+      lockWindow.setAlwaysOnTop(true, 'screen-saver');
+      lockWindow.setFullScreen(true);
+      lockWindow.setKiosk(true);
     }
   }
-}
-
-function isDailyFocusComputerAllowed(): boolean {
-  return dailyFocusLockComputerAllowed;
-}
-
-function dailyFocusPanelBounds(display: Display): Rectangle {
-  return {
-    x: display.bounds.x + Math.max(0, Math.floor((display.bounds.width - 760) / 2)),
-    y: display.bounds.y + Math.max(0, Math.floor((display.bounds.height - 700) / 2)),
-    width: 760,
-    height: 700
-  };
-}
-
-function applyDailyFocusLockMode(lockWindow: BrowserWindow, display: Display, computerAllowed: boolean): void {
-  if (computerAllowed) {
-    lockWindow.setKiosk(false);
-    lockWindow.setFullScreen(false);
-    lockWindow.setAlwaysOnTop(false);
-    lockWindow.setSkipTaskbar(false);
-    lockWindow.setResizable(true);
-    lockWindow.setBounds(dailyFocusPanelBounds(display));
-    return;
-  }
-  lockWindow.setResizable(false);
-  lockWindow.setSkipTaskbar(true);
-  lockWindow.setAlwaysOnTop(true, 'screen-saver');
-  lockWindow.setBounds(display.bounds);
-  lockWindow.setFullScreen(true);
-  lockWindow.setKiosk(true);
 }
 
 function destroyDailyFocusLockWindows(): void {
@@ -513,25 +472,46 @@ function destroyDailyFocusLockWindows(): void {
     if (!window.isDestroyed()) window.destroy();
   }
   dailyFocusLockWindows.clear();
-  dailyFocusLockComputerAllowed = false;
 }
 
-function createDailyFocusLockWindow(display: Display, computerAllowed = false): void {
-  const panelBounds = dailyFocusPanelBounds(display);
+function closeTradingWindows(): void {
+  if (tradingViewWindow && !tradingViewWindow.isDestroyed()) tradingViewWindow.close();
+  if (tradovateWindow && !tradovateWindow.isDestroyed()) tradovateWindow.close();
+  tradingViewWindow = null;
+  tradovateWindow = null;
+}
+
+function hasTradingWindowOpen(): boolean {
+  return Boolean(
+    (tradingViewWindow && !tradingViewWindow.isDestroyed()) ||
+    (tradovateWindow && !tradovateWindow.isDestroyed())
+  );
+}
+
+function refocusDailyFocusWindows(): void {
+  for (const window of dailyFocusLockWindows.values()) {
+    if (!window.isDestroyed()) {
+      window.show();
+      window.focus();
+    }
+  }
+}
+
+function createDailyFocusLockWindow(display: Display): void {
   const lockWindow = new BrowserWindow({
-    x: computerAllowed ? panelBounds.x : display.bounds.x,
-    y: computerAllowed ? panelBounds.y : display.bounds.y,
-    width: computerAllowed ? panelBounds.width : display.bounds.width,
-    height: computerAllowed ? panelBounds.height : display.bounds.height,
+    x: display.bounds.x,
+    y: display.bounds.y,
+    width: display.bounds.width,
+    height: display.bounds.height,
     frame: false,
     show: false,
-    alwaysOnTop: !computerAllowed,
-    skipTaskbar: !computerAllowed,
+    alwaysOnTop: true,
+    skipTaskbar: true,
     closable: false,
     minimizable: false,
     maximizable: false,
-    resizable: computerAllowed,
-    kiosk: !computerAllowed,
+    resizable: false,
+    kiosk: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -540,7 +520,9 @@ function createDailyFocusLockWindow(display: Display, computerAllowed = false): 
     }
   });
   dailyFocusLockWindows.set(display.id, lockWindow);
-  applyDailyFocusLockMode(lockWindow, display, computerAllowed);
+  lockWindow.setAlwaysOnTop(true, 'screen-saver');
+  lockWindow.setFullScreen(true);
+  lockWindow.setKiosk(true);
   lockWindow.loadFile(path.join(__dirname, '../../src/renderer/daily-focus-lock.html'));
   lockWindow.once('ready-to-show', () => {
     if (!lockWindow.isDestroyed()) {
@@ -549,7 +531,7 @@ function createDailyFocusLockWindow(display: Display, computerAllowed = false): 
     }
   });
   lockWindow.on('blur', () => {
-    if (!isDailyFocusComputerAllowed() && !lockWindow.isDestroyed()) {
+    if (!hasTradingWindowOpen() && !lockWindow.isDestroyed()) {
       lockWindow.show();
       lockWindow.focus();
     }
@@ -610,6 +592,7 @@ async function requestQuit(disableWatchdog = true): Promise<void> {
   await walletStore.pauseActiveSessions();
   destroySleepLockWindows();
   destroyDailyFocusLockWindows();
+  closeTradingWindows();
   let timeout: NodeJS.Timeout | null = null;
   const stopTimeout = new Promise<void>((resolve) => {
     timeout = setTimeout(resolve, 5000);

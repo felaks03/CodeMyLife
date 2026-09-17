@@ -3,6 +3,7 @@ let progress = [];
 const list = document.getElementById('focus-list');
 const tradingViewButton = document.getElementById('open-tradingview');
 const tradovateButton = document.getElementById('open-tradovate');
+const notionButton = document.getElementById('open-notion');
 
 document.getElementById('focus-mode-label').textContent = 'CodeMyLife · Bloqueo diario';
 document.getElementById('focus-note').textContent = 'Solo puedes usar los controles de esta pantalla hasta completar tus tareas.';
@@ -19,6 +20,13 @@ tradovateButton.addEventListener('click', () => {
   tradovateButton.disabled = true;
   void window.codeMyLife.openTradovate().finally(() => {
     tradovateButton.disabled = false;
+  });
+});
+
+notionButton.addEventListener('click', () => {
+  notionButton.disabled = true;
+  void window.codeMyLife.openNotion().finally(() => {
+    notionButton.disabled = false;
   });
 });
 

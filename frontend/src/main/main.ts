@@ -60,6 +60,7 @@ let instagramWindow: BrowserWindow | null = null;
 let youtubeWindow: BrowserWindow | null = null;
 let tradingViewWindow: BrowserWindow | null = null;
 let tradovateWindow: BrowserWindow | null = null;
+let notionWindow: BrowserWindow | null = null;
 const sleepLockWindows = new Map<number, BrowserWindow>();
 let quitInProgress = false;
 const dailyFocusLockWindows = new Map<number, BrowserWindow>();
@@ -167,6 +168,15 @@ function isTradingUrl(value: string): boolean {
   try {
     const hostname = new URL(value).hostname.toLowerCase();
     return TRADING_ALLOWED_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
+  } catch {
+    return false;
+  }
+}
+
+function isNotionUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === 'notion.so' || hostname.endsWith('.notion.so') || hostname === 'notion.site' || hostname.endsWith('.notion.site');
   } catch {
     return false;
   }
@@ -343,11 +353,49 @@ async function openTradingBrowser(
   }));
   tradingWindow.on('closed', () => {
     setWindow(null);
-    if (!hasTradingWindowOpen()) refocusDailyFocusWindows();
+    if (!hasAllowedOverlayWindowOpen()) refocusDailyFocusWindows();
   });
   await tradingWindow.loadURL(url);
   tradingWindow.show();
   tradingWindow.focus();
+}
+
+async function openNotionBrowser(): Promise<void> {
+  if (notionWindow && !notionWindow.isDestroyed()) {
+    notionWindow.show();
+    notionWindow.focus();
+    return;
+  }
+
+  notionWindow = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    title: 'Notion - CodeMyLife',
+    show: true,
+    alwaysOnTop: true,
+    backgroundColor: '#101418',
+    webPreferences: {
+      partition: 'persist:codemylife-notion',
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  notionWindow.setAlwaysOnTop(true, 'screen-saver');
+  notionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  const preventExternalNotionNavigation = (event: Electron.Event, nextUrl: string): void => {
+    if (!isNotionUrl(nextUrl)) event.preventDefault();
+  };
+  notionWindow.webContents.on('will-navigate', preventExternalNotionNavigation);
+  notionWindow.webContents.on('will-redirect', preventExternalNotionNavigation);
+  notionWindow.webContents.setWindowOpenHandler(({ url }) => ({ action: isNotionUrl(url) ? 'allow' : 'deny' }));
+  notionWindow.on('closed', () => {
+    notionWindow = null;
+    if (!hasAllowedOverlayWindowOpen()) refocusDailyFocusWindows();
+  });
+  await notionWindow.loadURL('https://www.notion.so/');
+  notionWindow.show();
+  notionWindow.focus();
 }
 
 function updateTray(state: BlockingState): void {
@@ -451,7 +499,7 @@ function syncDailyFocusLockWindow(active: boolean): void {
   }
   if (!active) {
     destroyDailyFocusLockWindows();
-    closeTradingWindows();
+    closeAllowedOverlayWindows();
     return;
   }
   for (const display of displays) {
@@ -474,17 +522,20 @@ function destroyDailyFocusLockWindows(): void {
   dailyFocusLockWindows.clear();
 }
 
-function closeTradingWindows(): void {
+function closeAllowedOverlayWindows(): void {
   if (tradingViewWindow && !tradingViewWindow.isDestroyed()) tradingViewWindow.close();
   if (tradovateWindow && !tradovateWindow.isDestroyed()) tradovateWindow.close();
+  if (notionWindow && !notionWindow.isDestroyed()) notionWindow.close();
   tradingViewWindow = null;
   tradovateWindow = null;
+  notionWindow = null;
 }
 
-function hasTradingWindowOpen(): boolean {
+function hasAllowedOverlayWindowOpen(): boolean {
   return Boolean(
     (tradingViewWindow && !tradingViewWindow.isDestroyed()) ||
-    (tradovateWindow && !tradovateWindow.isDestroyed())
+    (tradovateWindow && !tradovateWindow.isDestroyed()) ||
+    (notionWindow && !notionWindow.isDestroyed())
   );
 }
 
@@ -531,7 +582,7 @@ function createDailyFocusLockWindow(display: Display): void {
     }
   });
   lockWindow.on('blur', () => {
-    if (!hasTradingWindowOpen() && !lockWindow.isDestroyed()) {
+    if (!hasAllowedOverlayWindowOpen() && !lockWindow.isDestroyed()) {
       lockWindow.show();
       lockWindow.focus();
     }
@@ -592,7 +643,7 @@ async function requestQuit(disableWatchdog = true): Promise<void> {
   await walletStore.pauseActiveSessions();
   destroySleepLockWindows();
   destroyDailyFocusLockWindows();
-  closeTradingWindows();
+  closeAllowedOverlayWindows();
   let timeout: NodeJS.Timeout | null = null;
   const stopTimeout = new Promise<void>((resolve) => {
     timeout = setTimeout(resolve, 5000);
@@ -810,6 +861,8 @@ function registerIpcHandlers(): void {
     'https://trader.tradovate.com/',
     'persist:codemylife-tradovate'
   ));
+
+  ipcMain.handle('notion:open', () => openNotionBrowser());
 
   ipcMain.handle('blocking:state', (): BlockingState => scheduler.getState());
 

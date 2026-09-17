@@ -54,7 +54,7 @@ test('el bloqueo diario se reconcilia por pantalla', () => {
   assert.match(main, /dailyFocusLockWindows\.set\(display\.id, lockWindow\)/);
   assert.match(main, /lockWindow\.setKiosk\(true\)/);
   assert.doesNotMatch(main, /daily-focus:allow-computer|setKiosk\(false\)/);
-  assert.match(main, /closeTradingWindows\(\)/);
+  assert.match(main, /closeAllowedOverlayWindows\(\)/);
   assert.match(main, /display-added/);
   assert.match(main, /display-removed/);
   assert.match(main, /display-metrics-changed/);
@@ -68,7 +68,7 @@ test('el bloqueo de dormir crea una ventana por monitor', () => {
   assert.match(main, /destroySleepLockWindows\(\)/);
 });
 
-test('la pantalla de tareas ofrece TradingView y Tradovate sobre el bloqueo', () => {
+test('la pantalla de tareas ofrece TradingView, Tradovate y Notion sobre el bloqueo', () => {
   const html = read('src/renderer/daily-focus-lock.html');
   const lockRenderer = read('src/renderer/daily-focus-lock.js');
   const preload = read('src/preload/preload.ts');
@@ -76,16 +76,24 @@ test('la pantalla de tareas ofrece TradingView y Tradovate sobre el bloqueo', ()
   const trading = read('src/shared/trading-access.ts');
   assert.match(html, /open-tradingview/);
   assert.match(html, /open-tradovate/);
+  assert.match(html, /open-notion/);
+  assert.match(html, /tradingview\.svg/);
+  assert.match(html, /tradovate\.svg/);
+  assert.match(html, /notion\.svg/);
+  assert.match(html, /class="app-launch-button"/);
   assert.match(lockRenderer, /openTradingView/);
   assert.match(lockRenderer, /openTradovate/);
+  assert.match(lockRenderer, /openNotion/);
   assert.match(preload, /tradingview:open/);
   assert.match(preload, /tradovate:open/);
+  assert.match(preload, /notion:open/);
   assert.match(main, /function isTradingUrl/);
+  assert.match(main, /function isNotionUrl/);
   assert.match(main, /setAlwaysOnTop\(true, 'screen-saver'\)/);
   assert.match(main, /setWindowOpenHandler/);
   assert.match(main, /isTradingUrl\(nextUrl\) \? 'allow' : 'deny'/);
   assert.match(main, /will-redirect/);
-  assert.match(main, /hasTradingWindowOpen/);
+  assert.match(main, /hasAllowedOverlayWindowOpen/);
   assert.match(main, /refocusDailyFocusWindows/);
   assert.match(trading, /TRADING_ALLOWED_DOMAINS/);
 });

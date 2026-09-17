@@ -18,7 +18,8 @@ h1 { margin: 0; font-size: clamp(30px, 5vw, 52px); }
 .focus-subtitle { margin: 10px 0 22px; color: var(--muted); font-size: 17px; }
 .focus-note { margin: 8px 0 26px; color: var(--muted); }
 .trading-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 22px; }
-.trading-actions button { flex: 1 1 180px; }
+.app-launch-button { align-items: center; display: inline-flex; height: 48px; justify-content: center; min-width: 48px; padding: 6px; width: 48px; }
+.app-launch-button img { display: block; height: 32px; width: 32px; }
 .focus-list { display: grid; gap: 10px; margin: 0; max-height: min(52vh, 520px); overflow-y: auto; padding: 0 4px 0 0; list-style: none; }
 .focus-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(255,255,255,.035); }
 .focus-task { display: grid; gap: 5px; }

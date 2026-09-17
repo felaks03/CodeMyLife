@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('codeMyLife', {
     ipcRenderer.invoke('commitments:cancel', id),
   openTradingView: (): Promise<void> => ipcRenderer.invoke('tradingview:open'),
   openTradovate: (): Promise<void> => ipcRenderer.invoke('tradovate:open'),
+  openNotion: (): Promise<void> => ipcRenderer.invoke('notion:open'),
   isDevelopment: (): Promise<boolean> => ipcRenderer.invoke('app:is-development'),
   listScripts: (): Promise<Script[]> => ipcRenderer.invoke('scripts:list'),
   startInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:start-usage'),

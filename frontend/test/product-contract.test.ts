@@ -67,6 +67,25 @@ test('el bloqueo de dormir crea una ventana por monitor', () => {
   assert.match(main, /destroySleepLockWindows\(\)/);
 });
 
+test('la pantalla de tareas ofrece TradingView y Tradovate sobre el bloqueo', () => {
+  const html = read('src/renderer/daily-focus-lock.html');
+  const lockRenderer = read('src/renderer/daily-focus-lock.js');
+  const preload = read('src/preload/preload.ts');
+  const main = read('src/main/main.ts');
+  const trading = read('src/shared/trading-access.ts');
+  assert.match(html, /open-tradingview/);
+  assert.match(html, /open-tradovate/);
+  assert.match(lockRenderer, /openTradingView/);
+  assert.match(lockRenderer, /openTradovate/);
+  assert.match(preload, /tradingview:open/);
+  assert.match(preload, /tradovate:open/);
+  assert.match(main, /function isTradingUrl/);
+  assert.match(main, /setAlwaysOnTop\(true, 'screen-saver'\)/);
+  assert.match(main, /setWindowOpenHandler/);
+  assert.match(main, /isTradingUrl\(nextUrl\) \? 'allow' : 'deny'/);
+  assert.match(trading, /TRADING_ALLOWED_DOMAINS/);
+});
+
 test('el updater solo se configura para builds empaquetadas', () => {
   const main = read('src/main/main.ts');
   const packageJson = JSON.parse(read('package.json')) as { dependencies?: Record<string, string>; build?: { publish?: { provider?: string; owner?: string; repo?: string } } };

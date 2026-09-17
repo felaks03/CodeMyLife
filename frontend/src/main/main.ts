@@ -5,6 +5,7 @@ import { SessionStore } from './session-store';
 import { BlockingScheduler } from './scheduler';
 import { guestStore } from './guest-store';
 import { INSTAGRAM_DOMAINS, YOUTUBE_DOMAINS } from '../shared/builtin-scripts';
+import { TRADING_ALLOWED_DOMAINS } from '../shared/trading-access';
 import { buildCalendar, commitmentStats } from '../shared/schedule';
 import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
 import { walletStore } from './wallet-store';
@@ -57,6 +58,8 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let instagramWindow: BrowserWindow | null = null;
 let youtubeWindow: BrowserWindow | null = null;
+let tradingViewWindow: BrowserWindow | null = null;
+let tradovateWindow: BrowserWindow | null = null;
 const sleepLockWindows = new Map<number, BrowserWindow>();
 let quitInProgress = false;
 const dailyFocusLockWindows = new Map<number, BrowserWindow>();
@@ -173,6 +176,15 @@ function isYoutubeUrl(value: string): boolean {
   try {
     const hostname = new URL(value).hostname.toLowerCase();
     return hostname === 'youtube.com' || hostname.endsWith('.youtube.com') || hostname === 'youtu.be' || hostname.endsWith('.youtu.be');
+  } catch {
+    return false;
+  }
+}
+
+function isTradingUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return TRADING_ALLOWED_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
   } catch {
     return false;
   }
@@ -307,6 +319,48 @@ async function openYoutubeBrowser(): Promise<void> {
     youtubeWindow = null;
     notifyYoutubePaused();
   });
+}
+
+async function openTradingBrowser(
+  currentWindow: BrowserWindow | null,
+  setWindow: (window: BrowserWindow | null) => void,
+  title: string,
+  url: string,
+  partition: string
+): Promise<void> {
+  if (currentWindow && !currentWindow.isDestroyed()) {
+    currentWindow.show();
+    currentWindow.focus();
+    return;
+  }
+
+  const tradingWindow = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    title,
+    show: true,
+    alwaysOnTop: true,
+    backgroundColor: '#101418',
+    webPreferences: {
+      partition,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  setWindow(tradingWindow);
+  tradingWindow.setAlwaysOnTop(true, 'screen-saver');
+  tradingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  tradingWindow.webContents.on('will-navigate', (event, nextUrl) => {
+    if (!isTradingUrl(nextUrl)) event.preventDefault();
+  });
+  tradingWindow.webContents.setWindowOpenHandler(({ url: nextUrl }) => ({
+    action: isTradingUrl(nextUrl) ? 'allow' : 'deny'
+  }));
+  tradingWindow.on('closed', () => setWindow(null));
+  await tradingWindow.loadURL(url);
+  tradingWindow.show();
+  tradingWindow.focus();
 }
 
 function updateTray(state: BlockingState): void {
@@ -757,6 +811,22 @@ function registerIpcHandlers(): void {
     if (youtubeWindow && !youtubeWindow.isDestroyed()) youtubeWindow.close();
     else await scheduler.setTemporarilyAllowed(YOUTUBE_DOMAINS, false, 'builtin-youtube');
   });
+
+  ipcMain.handle('tradingview:open', () => openTradingBrowser(
+    tradingViewWindow,
+    (window) => { tradingViewWindow = window; },
+    'TradingView - CodeMyLife',
+    'https://www.tradingview.com/',
+    'persist:codemylife-tradingview'
+  ));
+
+  ipcMain.handle('tradovate:open', () => openTradingBrowser(
+    tradovateWindow,
+    (window) => { tradovateWindow = window; },
+    'Tradovate - CodeMyLife',
+    'https://trader.tradovate.com/',
+    'persist:codemylife-tradovate'
+  ));
 
   ipcMain.handle('blocking:state', (): BlockingState => scheduler.getState());
 

@@ -1,10 +1,26 @@
 let tasks = [];
 let progress = [];
 const list = document.getElementById('focus-list');
+const tradingViewButton = document.getElementById('open-tradingview');
+const tradovateButton = document.getElementById('open-tradovate');
 
 document.getElementById('focus-mode-label').textContent = 'CodeMyLife · Bloqueo diario';
 document.getElementById('focus-note').textContent = 'Solo puedes usar los controles de esta pantalla hasta completar tus tareas.';
 document.title = 'CodeMyLife - Bloqueo diario';
+
+tradingViewButton.addEventListener('click', () => {
+  tradingViewButton.disabled = true;
+  void window.codeMyLife.openTradingView().finally(() => {
+    tradingViewButton.disabled = false;
+  });
+});
+
+tradovateButton.addEventListener('click', () => {
+  tradovateButton.disabled = true;
+  void window.codeMyLife.openTradovate().finally(() => {
+    tradovateButton.disabled = false;
+  });
+});
 
 function elapsedSeconds(task) {
   const item = progress.find((entry) => entry.taskId === task.id);
@@ -56,9 +72,6 @@ function render() {
       try {
         if (status === 'pending') {
           progress = await window.codeMyLife.startDailyFocusTask(task.id);
-          if (task.id === 'backtesting') {
-            void window.codeMyLife.allowComputerDuringDailyFocus();
-          }
         } else if (status === 'active') {
           progress = await window.codeMyLife.completeDailyFocusTask(task.id);
         }

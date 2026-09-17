@@ -17,6 +17,13 @@ import {
 } from '../shared/daily-focus';
 
 export type DailyFocusStoreState = DailyFocusProgress[];
+let pendingOperation = Promise.resolve();
+
+function serialized<T>(operation: () => Promise<T>): Promise<T> {
+  const next = pendingOperation.then(operation, operation);
+  pendingOperation = next.then(() => undefined, () => undefined);
+  return next;
+}
 
 function storeFile(): string {
   return path.join(app.getPath('userData'), 'daily-focus.json');
@@ -42,7 +49,8 @@ function currentDayKey(date = timeAuthority.now()): string {
 
 async function readState(): Promise<DailyFocusStoreState> {
   try {
-    const raw = JSON.parse(await fs.readFile(storeFile(), 'utf8')) as Partial<DailyFocusProgress>[] | null;
+    const content = await fs.readFile(storeFile(), 'utf8');
+    const raw = JSON.parse(content.replace(/^\uFEFF/, '')) as Partial<DailyFocusProgress>[] | null;
     if (!Array.isArray(raw)) return seedState(currentDayKey());
     return normalizeDailyFocusProgress(raw, currentDayKey(), timeAuthority.now());
   } catch {
@@ -74,51 +82,57 @@ export const dailyFocusStore = {
   },
 
   async replace(progress: DailyFocusStoreState): Promise<void> {
-    await writeState(progress);
+    await serialized(() => writeState(progress));
   },
 
   async startTask(taskId: string): Promise<DailyFocusStoreState> {
-    if (!isDailyFocusWindow(timeAuthority.now())) {
-      throw new Error('Las tareas solo se pueden iniciar durante el bloqueo diario, de 08:00 a 15:00.');
-    }
-    const progress = await readState();
-    const item = progress.find((entry) => entry.taskId === taskId);
-    if (!item) throw new Error('Tarea no encontrada.');
-    if (item.completed) throw new Error('Esta tarea ya está completada.');
-    if (!canStartDailyFocusTask(taskId, progress)) {
-      const activeTaskId = activeDailyFocusTaskId(progress);
-      throw new Error(activeTaskId ? 'Ya hay otra tarea en curso.' : 'No puedes iniciar esta tarea ahora.');
-    }
-    item.startedAt = timeAuthority.now().toISOString();
-    await writeState(progress);
-    return progress;
+    return serialized(async () => {
+      if (!isDailyFocusWindow(timeAuthority.now())) {
+        throw new Error('Las tareas solo se pueden iniciar durante el bloqueo diario, de 08:00 a 15:00.');
+      }
+      const progress = await readState();
+      const item = progress.find((entry) => entry.taskId === taskId);
+      if (!item) throw new Error('Tarea no encontrada.');
+      if (item.completed) throw new Error('Esta tarea ya está completada.');
+      if (!canStartDailyFocusTask(taskId, progress)) {
+        const activeTaskId = activeDailyFocusTaskId(progress);
+        throw new Error(activeTaskId ? 'Ya hay otra tarea en curso.' : 'No puedes iniciar esta tarea ahora.');
+      }
+      item.startedAt = timeAuthority.now().toISOString();
+      await writeState(progress);
+      return progress;
+    });
   },
 
   async completeTask(taskId: string): Promise<DailyFocusStoreState> {
-    if (!isDailyFocusWindow(timeAuthority.now())) {
-      throw new Error('Las tareas solo se pueden completar durante el bloqueo diario, de 08:00 a 15:00.');
-    }
-    const progress = await readState();
-    const task = DAILY_FOCUS_TASKS.find((candidate) => candidate.id === taskId);
-    const item = progress.find((entry) => entry.taskId === taskId);
-    if (!task || !item) throw new Error('Tarea no encontrada.');
-    if (item.completed) throw new Error('Esta tarea ya está completada.');
-    const elapsedMs = Math.max(0, Number(item.elapsedMs ?? 0));
-    const requiredMs = task.durationMinutes * 60 * 1000;
-    if (elapsedMs < requiredMs) {
-      throw new Error(`Falta tiempo para completar ${task.name}.`);
-    }
-    item.completed = true;
-    item.startedAt = null;
-    await writeState(progress);
-    return progress;
+    return serialized(async () => {
+      if (!isDailyFocusWindow(timeAuthority.now())) {
+        throw new Error('Las tareas solo se pueden completar durante el bloqueo diario, de 08:00 a 15:00.');
+      }
+      const progress = await readState();
+      const task = DAILY_FOCUS_TASKS.find((candidate) => candidate.id === taskId);
+      const item = progress.find((entry) => entry.taskId === taskId);
+      if (!task || !item) throw new Error('Tarea no encontrada.');
+      if (item.completed) throw new Error('Esta tarea ya está completada.');
+      const elapsedMs = Math.max(0, Number(item.elapsedMs ?? 0));
+      const requiredMs = task.durationMinutes * 60 * 1000;
+      if (elapsedMs < requiredMs) {
+        throw new Error(`Falta tiempo para completar ${task.name}.`);
+      }
+      item.completed = true;
+      item.startedAt = null;
+      await writeState(progress);
+      return progress;
+    });
   },
 
   async tick(): Promise<DailyFocusStoreState> {
-    const progress = await readState();
-    const now = timeAuthority.nowMs();
-    const next = tickDailyFocusProgress(progress, now);
-    await writeState(next);
-    return next;
+    return serialized(async () => {
+      const progress = await readState();
+      const now = timeAuthority.nowMs();
+      const next = tickDailyFocusProgress(progress, now);
+      await writeState(next);
+      return next;
+    });
   }
 };

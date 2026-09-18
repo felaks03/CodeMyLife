@@ -933,6 +933,10 @@ window.codeMyLife.onInstagramError((message) => {
 window.codeMyLife.onYoutubeError((message) => {
   showNotice(message);
 });
+window.codeMyLife.onWalletUpdated((nextWallet) => {
+  wallet = nextWallet;
+  renderEconomy();
+});
 
 window.addEventListener('beforeunload', () => {
   if (instagramTimer) saveInstagramSessionSeconds(instagramTimer.liveSeconds);

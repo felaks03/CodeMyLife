@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor, screen, Display } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray, dialog, powerMonitor, screen, Display, Rectangle } from 'electron';
 import * as path from 'path';
 import { promises as fs, watch } from 'fs';
 import { SessionStore } from './session-store';
@@ -64,6 +64,7 @@ let notionWindow: BrowserWindow | null = null;
 const sleepLockWindows = new Map<number, BrowserWindow>();
 let quitInProgress = false;
 const dailyFocusLockWindows = new Map<number, BrowserWindow>();
+let dailyFocusComputerAllowed = false;
 let quitting = false;
 
 Menu.setApplicationMenu(null);
@@ -209,6 +210,10 @@ function notifyInstagramPaused(): void {
 function notifyYoutubePaused(): void {
   scheduler.setTemporarilyAllowed(YOUTUBE_DOMAINS, false, 'builtin-youtube').catch(() => undefined);
   mainWindow?.webContents.send('youtube:paused');
+}
+
+function notifyWalletUpdated(wallet: Awaited<ReturnType<typeof walletStore.get>>): void {
+  mainWindow?.webContents.send('wallet:updated', wallet);
 }
 
 async function openInstagramBrowser(): Promise<void> {
@@ -502,17 +507,61 @@ function syncDailyFocusLockWindow(active: boolean): void {
     closeAllowedOverlayWindows();
     return;
   }
+  if (dailyFocusComputerAllowed) {
+    const primary = screen.getPrimaryDisplay();
+    for (const [displayId, window] of dailyFocusLockWindows) {
+      if (displayId !== primary.id) {
+        if (!window.isDestroyed()) window.destroy();
+        dailyFocusLockWindows.delete(displayId);
+      }
+    }
+    const lockWindow = dailyFocusLockWindows.get(primary.id);
+    if (!lockWindow || lockWindow.isDestroyed()) createDailyFocusLockWindow(primary, true);
+    else applyDailyFocusPanelMode(lockWindow, primary);
+    return;
+  }
   for (const display of displays) {
     const lockWindow = dailyFocusLockWindows.get(display.id);
     if (!lockWindow || lockWindow.isDestroyed()) {
       createDailyFocusLockWindow(display);
-    } else if (!lockWindow.isFullScreen() || !lockWindow.isKiosk()) {
-      lockWindow.setBounds(display.bounds);
-      lockWindow.setAlwaysOnTop(true, 'screen-saver');
-      lockWindow.setFullScreen(true);
-      lockWindow.setKiosk(true);
+    } else {
+      applyDailyFocusKioskMode(lockWindow, display);
     }
   }
+}
+
+function dailyFocusPanelBounds(display: Display): Rectangle {
+  return {
+    x: display.bounds.x + Math.max(0, Math.floor((display.bounds.width - 760) / 2)),
+    y: display.bounds.y + Math.max(0, Math.floor((display.bounds.height - 700) / 2)),
+    width: 760,
+    height: 700
+  };
+}
+
+function applyDailyFocusKioskMode(lockWindow: BrowserWindow, display: Display): void {
+  lockWindow.setResizable(false);
+  lockWindow.setSkipTaskbar(true);
+  lockWindow.setBounds(display.bounds);
+  lockWindow.setAlwaysOnTop(true, 'screen-saver');
+  lockWindow.setFullScreen(true);
+  lockWindow.setKiosk(true);
+}
+
+function applyDailyFocusPanelMode(lockWindow: BrowserWindow, display: Display): void {
+  lockWindow.setKiosk(false);
+  lockWindow.setFullScreen(false);
+  lockWindow.setAlwaysOnTop(false);
+  lockWindow.setSkipTaskbar(false);
+  lockWindow.setResizable(true);
+  lockWindow.setBounds(dailyFocusPanelBounds(display));
+  lockWindow.show();
+  lockWindow.focus();
+}
+
+function setDailyFocusComputerAllowed(allowed: boolean): void {
+  dailyFocusComputerAllowed = allowed;
+  syncDailyFocusLockWindow(scheduler.getState().dailyFocusActive === true);
 }
 
 function destroyDailyFocusLockWindows(): void {
@@ -520,6 +569,7 @@ function destroyDailyFocusLockWindows(): void {
     if (!window.isDestroyed()) window.destroy();
   }
   dailyFocusLockWindows.clear();
+  dailyFocusComputerAllowed = false;
 }
 
 function closeAllowedOverlayWindows(): void {
@@ -548,21 +598,22 @@ function refocusDailyFocusWindows(): void {
   }
 }
 
-function createDailyFocusLockWindow(display: Display): void {
+function createDailyFocusLockWindow(display: Display, computerAllowed = false): void {
+  const panelBounds = dailyFocusPanelBounds(display);
   const lockWindow = new BrowserWindow({
-    x: display.bounds.x,
-    y: display.bounds.y,
-    width: display.bounds.width,
-    height: display.bounds.height,
+    x: computerAllowed ? panelBounds.x : display.bounds.x,
+    y: computerAllowed ? panelBounds.y : display.bounds.y,
+    width: computerAllowed ? panelBounds.width : display.bounds.width,
+    height: computerAllowed ? panelBounds.height : display.bounds.height,
     frame: false,
     show: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
+    alwaysOnTop: !computerAllowed,
+    skipTaskbar: !computerAllowed,
     closable: false,
     minimizable: false,
     maximizable: false,
-    resizable: false,
-    kiosk: true,
+    resizable: computerAllowed,
+    kiosk: !computerAllowed,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -571,9 +622,8 @@ function createDailyFocusLockWindow(display: Display): void {
     }
   });
   dailyFocusLockWindows.set(display.id, lockWindow);
-  lockWindow.setAlwaysOnTop(true, 'screen-saver');
-  lockWindow.setFullScreen(true);
-  lockWindow.setKiosk(true);
+  if (computerAllowed) applyDailyFocusPanelMode(lockWindow, display);
+  else applyDailyFocusKioskMode(lockWindow, display);
   lockWindow.loadFile(path.join(__dirname, '../../src/renderer/daily-focus-lock.html'));
   lockWindow.once('ready-to-show', () => {
     if (!lockWindow.isDestroyed()) {
@@ -582,7 +632,7 @@ function createDailyFocusLockWindow(display: Display): void {
     }
   });
   lockWindow.on('blur', () => {
-    if (!hasAllowedOverlayWindowOpen() && !lockWindow.isDestroyed()) {
+    if (!dailyFocusComputerAllowed && !hasAllowedOverlayWindowOpen() && !lockWindow.isDestroyed()) {
       lockWindow.show();
       lockWindow.focus();
     }
@@ -771,19 +821,26 @@ function registerIpcHandlers(): void {
   ipcMain.handle('wallet:get', () => walletStore.get());
   ipcMain.handle('wallet:tasks', () => walletStore.tasks());
   ipcMain.handle('wallet:shop', () => walletStore.shop());
-  ipcMain.handle('wallet:complete-task', (_event, taskId: string) => walletStore.completeTask(taskId));
+  ipcMain.handle('wallet:complete-task', async (_event, taskId: string) => {
+    const wallet = await walletStore.completeTask(taskId);
+    notifyWalletUpdated(wallet);
+    return wallet;
+  });
   ipcMain.handle('wallet:purchase', async (_event, itemId: string) => {
     const wallet = await walletStore.purchase(itemId);
+    notifyWalletUpdated(wallet);
     await scheduler.refresh();
     return wallet;
   });
   ipcMain.handle('wallet:use-item', async (_event, purchaseId: string) => {
     const wallet = await walletStore.useItem(purchaseId);
+    notifyWalletUpdated(wallet);
     await scheduler.refresh();
     return wallet;
   });
   ipcMain.handle('wallet:pause-item', async (_event, purchaseId: string) => {
     const wallet = await walletStore.pauseItem(purchaseId);
+    notifyWalletUpdated(wallet);
     void scheduler.refresh().catch((error) => {
       mainWindow?.webContents.send('blocking:state', {
         ...scheduler.getState(),
@@ -798,12 +855,18 @@ function registerIpcHandlers(): void {
     progress: await dailyFocusStore.tick()
   }));
   ipcMain.handle('app:is-development', () => !app.isPackaged);
-  ipcMain.handle('daily-focus:start', (_event, taskId: string) => dailyFocusStore.startTask(taskId));
+  ipcMain.handle('daily-focus:start', async (_event, taskId: string) => {
+    const progress = await dailyFocusStore.startTask(taskId);
+    if (taskId === 'backtesting') setDailyFocusComputerAllowed(true);
+    return progress;
+  });
   ipcMain.handle('daily-focus:complete', async (_event, taskId: string) => {
     const previousProgress = await dailyFocusStore.get();
     const progress = await dailyFocusStore.completeTask(taskId);
     try {
-      await walletStore.completeTask(taskId);
+      const wallet = await walletStore.completeTask(taskId);
+      notifyWalletUpdated(wallet);
+      if (taskId === 'backtesting') setDailyFocusComputerAllowed(false);
       return progress;
     } catch (error) {
       await dailyFocusStore.replace(previousProgress);

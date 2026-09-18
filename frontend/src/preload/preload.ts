@@ -71,6 +71,9 @@ contextBridge.exposeInMainWorld('codeMyLife', {
     ipcRenderer.on('blocking:youtube-shorts-policy-error', () => callback());
   },
   getWallet: (): Promise<WalletState> => ipcRenderer.invoke('wallet:get'),
+  onWalletUpdated: (callback: (wallet: WalletState) => void): void => {
+    ipcRenderer.on('wallet:updated', (_event, wallet: WalletState) => callback(wallet));
+  },
   listTasks: (): Promise<TaskDefinition[]> => ipcRenderer.invoke('wallet:tasks'),
   listShop: (): Promise<ShopItem[]> => ipcRenderer.invoke('wallet:shop'),
   completeTask: (taskId: string): Promise<WalletState> => ipcRenderer.invoke('wallet:complete-task', taskId),

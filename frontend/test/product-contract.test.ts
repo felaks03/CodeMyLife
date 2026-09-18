@@ -53,11 +53,19 @@ test('el bloqueo diario se reconcilia por pantalla', () => {
   assert.match(main, /dailyFocusLockWindows = new Map/);
   assert.match(main, /dailyFocusLockWindows\.set\(display\.id, lockWindow\)/);
   assert.match(main, /lockWindow\.setKiosk\(true\)/);
-  assert.doesNotMatch(main, /daily-focus:allow-computer|setKiosk\(false\)/);
+  assert.doesNotMatch(main, /daily-focus:allow-computer/);
   assert.match(main, /closeAllowedOverlayWindows\(\)/);
   assert.match(main, /display-added/);
   assert.match(main, /display-removed/);
   assert.match(main, /display-metrics-changed/);
+});
+
+test('Backtesting permite usar el ordenador y al completarse vuelve a bloquear', () => {
+  const main = read('src/main/main.ts');
+  assert.match(main, /if \(taskId === 'backtesting'\) setDailyFocusComputerAllowed\(true\)/);
+  assert.match(main, /if \(taskId === 'backtesting'\) setDailyFocusComputerAllowed\(false\)/);
+  assert.match(main, /function applyDailyFocusPanelMode[\s\S]*setKiosk\(false\)/);
+  assert.match(main, /function applyDailyFocusKioskMode[\s\S]*setKiosk\(true\)/);
 });
 
 test('el bloqueo de dormir crea una ventana por monitor', () => {
@@ -311,6 +319,18 @@ test('la pantalla de foco diario muestra las monedas de cada tarea', () => {
   assert.match(lockRenderer, /task\.rewardCoins/);
   assert.match(lockRenderer, /focus-reward/);
   assert.match(styles, /\.focus-reward/);
+});
+
+test('completar tareas de foco refresca el saldo visible', () => {
+  const main = read('src/main/main.ts');
+  const preload = read('src/preload/preload.ts');
+  const renderer = read('src/renderer/renderer.js');
+  assert.match(main, /function notifyWalletUpdated/);
+  assert.match(main, /wallet:updated/);
+  assert.match(main, /const wallet = await walletStore\.completeTask\(taskId\)/);
+  assert.match(preload, /onWalletUpdated/);
+  assert.match(renderer, /onWalletUpdated/);
+  assert.match(renderer, /wallet = nextWallet;\s*renderEconomy\(\)/);
 });
 
 test('la UI muestra la version runtime en una esquina fija', () => {

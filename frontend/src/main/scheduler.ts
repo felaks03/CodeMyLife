@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { HostsBlocker } from './blocker';
 import { DesktopAppGuard } from './desktop-app-guard';
-import { INSTAGRAM_DOMAINS } from '../shared/builtin-scripts';
+import { INSTAGRAM_DOMAINS, YOUTUBE_DOMAINS } from '../shared/builtin-scripts';
 import { VIDEO_GAME_BLOCKED_PROCESSES } from '../shared/builtin-scripts';
 import { domainsToBlock, isCommitmentEnforcedNow, shouldShowLockScreen } from '../shared/schedule';
 import { BlockingState, Commitment } from '../shared/types';
@@ -123,12 +123,17 @@ export class BlockingScheduler {
     const gamesActive = !isGameFreeTime(now) && this.commitments.some(
       (commitment) => commitment.scriptId === 'builtin-games' && isCommitmentEnforcedNow(commitment, now)
     );
+    const youtubeFreeTime = isGameFreeTime(now);
     const protectedProcesses = isTradingAccessWindow(now) ? TRADING_ALLOWED_PROCESSES : [];
     await this.desktopAppGuard.setBlocked(VIDEO_GAME_BLOCKED_PROCESSES, gamesActive, protectedProcesses);
-    const domains = filterTradingDomains([...new Set([
+    const baseDomains = [...new Set([
       ...scheduledDomains,
       ...this.manuallyBlockedDomains
-    ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain)), now);
+    ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain));
+    const domains = filterTradingDomains(baseDomains.filter((domain) => {
+      if (!youtubeFreeTime) return true;
+      return !YOUTUBE_DOMAINS.some((root) => domain === root || domain.endsWith(`.${root}`));
+    }), now);
     const wasEnforcing = this.state.enforcing;
 
     try {

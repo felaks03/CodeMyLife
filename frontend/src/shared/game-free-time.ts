@@ -4,11 +4,11 @@ export interface GameFreeWindow {
   endTime: string;
 }
 
-// Viernes tarde (2h), sabado y domingo (3h cada uno) quedan libres de bloqueo por defecto.
+// Viernes desde las 17:00 hasta el final del dia, sabado y domingo todo el dia quedan libres por defecto.
 export const GAME_FREE_WINDOWS: GameFreeWindow[] = [
-  { day: 5, startTime: '17:00', endTime: '19:00' },
-  { day: 6, startTime: '16:00', endTime: '19:00' },
-  { day: 0, startTime: '16:00', endTime: '19:00' }
+  { day: 5, startTime: '17:00', endTime: '24:00' },
+  { day: 6, startTime: '00:00', endTime: '24:00' },
+  { day: 0, startTime: '00:00', endTime: '24:00' }
 ];
 
 function parseTime(value: string): number {

@@ -585,6 +585,8 @@ function dateAtTime(date, time) {
 }
 
 function nextSleepStart(now) {
+  if (now.getDay() === 5 || now.getDay() === 6) return null;
+
   const start = new Date(now);
   for (let offset = 0; offset < 8; offset++) {
     const day = new Date(start);
@@ -638,7 +640,7 @@ function updateTimerNode(nodeId, targetDate) {
   const node = document.getElementById(nodeId);
   if (!node) return;
   if (!targetDate) {
-    node.textContent = '--:--:--';
+    node.textContent = nodeId === 'next-sleep-timer' ? 'Libre' : '--:--:--';
     return;
   }
   const diff = Math.max(0, targetDate.getTime() - Date.now());
@@ -683,27 +685,26 @@ function renderActiveLocks(commitments) {
     return;
   }
 
-  activeLocks.forEach((commitment) => {
-    const item = document.createElement('div');
-    item.className = 'active-lock-item';
+  const item = document.createElement('div');
+  item.className = 'active-lock-item compact';
 
-    const details = document.createElement('div');
-    details.className = 'active-lock-details';
-    const name = document.createElement('strong');
-    name.textContent = commitment.scriptName;
-    details.append(name);
+  const details = document.createElement('div');
+  details.className = 'active-lock-details';
+  const name = document.createElement('strong');
+  name.textContent = activeLocks.map((lock) => lock.scriptName).join(' · ');
+  details.append(name);
 
-    const countdown = document.createElement('div');
-    countdown.className = 'active-lock-countdown';
-    const label = document.createElement('span');
-    label.textContent = i18n.t('timeRemaining');
-    const value = document.createElement('strong');
-    value.dataset.lockEnd = String(new Date(commitment.endsAt).getTime());
-    countdown.append(label, value);
+  const countdown = document.createElement('div');
+  countdown.className = 'active-lock-countdown';
+  const label = document.createElement('span');
+  label.textContent = i18n.t('timeRemaining');
+  const value = document.createElement('strong');
+  const nextLockEnd = Math.min(...activeLocks.map((lock) => new Date(lock.endsAt).getTime()));
+  value.dataset.lockEnd = String(nextLockEnd);
+  countdown.append(label, value);
 
-    item.append(details, countdown);
-    list.append(item);
-  });
+  item.append(details, countdown);
+  list.append(item);
 
   section.classList.remove('hidden');
   updateActiveLockCountdowns();

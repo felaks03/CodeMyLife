@@ -39,6 +39,8 @@ function dateAtTime(date: Date, time: string): Date {
 }
 
 export function nextSleepStart(now: Date): Date | null {
+  if (now.getDay() === 5 || now.getDay() === 6) return null;
+
   const start = new Date(now);
   const lookaheadDays = 8;
 

@@ -976,6 +976,13 @@ button.small {
   padding-top: 10px;
 }
 
+.active-lock-item.compact {
+  background: rgba(255, 255, 255, .02);
+  border: 1px solid rgba(240, 100, 120, .2);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
 .active-lock-details {
   display: flex;
   flex-direction: column;
@@ -985,7 +992,8 @@ button.small {
 
 .active-lock-details strong {
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .active-lock-countdown {

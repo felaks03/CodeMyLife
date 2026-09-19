@@ -64,7 +64,7 @@ test('el bloqueo de dormir no aplica los viernes ni los sabados', () => {
 });
 
 test('calcula el siguiente inicio de bloqueo de sueño y de tareas', () => {
-  const now = new Date(2026, 8, 18, 18, 0, 0);
+  const now = new Date(2026, 8, 17, 18, 0, 0);
   const sleepStart = nextSleepStart(now);
   assert.ok(sleepStart);
   assert.equal(sleepStart!.getDay(), 0);
@@ -86,6 +86,12 @@ test('calcula el siguiente inicio de bloqueo de sueño y de tareas', () => {
 
   const nextTaskStart = nextExecutableStart(tasks, now);
   assert.ok(nextTaskStart);
-  assert.equal(nextTaskStart!.getDay(), 6);
+  assert.equal(nextTaskStart!.getDay(), 5);
   assert.equal(nextTaskStart!.getHours(), 9);
+});
+
+test('no muestra el bloqueo de dormir en viernes ni sabado', () => {
+  assert.equal(nextSleepStart(new Date(2026, 8, 18, 12, 0, 0)), null);
+  assert.equal(nextSleepStart(new Date(2026, 8, 19, 12, 0, 0)), null);
+  assert.ok(nextSleepStart(new Date(2026, 8, 20, 12, 0, 0)));
 });

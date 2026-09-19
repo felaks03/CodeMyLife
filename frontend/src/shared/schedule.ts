@@ -39,7 +39,7 @@ function dateAtTime(date: Date, time: string): Date {
 }
 
 export function nextSleepStart(now: Date): Date | null {
-  if (now.getDay() === 5 || now.getDay() === 6) return null;
+  if (now.getDay() === 0 || now.getDay() === 5 || now.getDay() === 6) return null;
 
   const start = new Date(now);
   const lookaheadDays = 8;
@@ -48,7 +48,7 @@ export function nextSleepStart(now: Date): Date | null {
     const day = new Date(start);
     day.setDate(start.getDate() + offset);
     const dayNumber = day.getDay();
-    if (dayNumber === 5 || dayNumber === 6) continue;
+    if (dayNumber === 0 || dayNumber === 5 || dayNumber === 6) continue;
 
     const candidate = dateAtTime(day, '00:00');
     if (candidate > now) return candidate;

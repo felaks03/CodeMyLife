@@ -585,13 +585,13 @@ function dateAtTime(date, time) {
 }
 
 function nextSleepStart(now) {
-  if (now.getDay() === 5 || now.getDay() === 6) return null;
+  if (now.getDay() === 0 || now.getDay() === 5 || now.getDay() === 6) return null;
 
   const start = new Date(now);
   for (let offset = 0; offset < 8; offset++) {
     const day = new Date(start);
     day.setDate(start.getDate() + offset);
-    if (day.getDay() === 5 || day.getDay() === 6) continue;
+    if (day.getDay() === 0 || day.getDay() === 5 || day.getDay() === 6) continue;
     const candidate = dateAtTime(day, '00:00');
     if (candidate > now) return candidate;
   }

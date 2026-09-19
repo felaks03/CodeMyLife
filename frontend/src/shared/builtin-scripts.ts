@@ -187,14 +187,14 @@ export const BUILTIN_SCRIPTS: Script[] = [
     _id: 'builtin-sleep',
     authorName: 'CodeMyLife',
     name: 'Bloqueo de dormir',
-    description: 'Bloquea la pantalla de domingo a jueves de 00:00 a 08:00 para ayudarte a dormir.',
+    description: 'Bloquea la pantalla de lunes a jueves de 00:00 a 08:00 para ayudarte a dormir.',
     category: 'Descanso',
     blockedDomains: [],
     allowCustomDomains: false,
     usageCount: 0,
     showLockScreen: true,
     schedule: {
-      days: [0, 1, 2, 3, 4],
+      days: [1, 2, 3, 4],
       startTime: '00:00',
       endTime: '08:00'
     }

@@ -31,6 +31,63 @@ export function shouldShowLockScreen(commitments: Commitment[], now: Date): bool
   );
 }
 
+function dateAtTime(date: Date, time: string): Date {
+  const [hours, minutes] = time.split(':').map(Number);
+  const next = new Date(date);
+  next.setHours(hours, minutes, 0, 0);
+  return next;
+}
+
+export function nextSleepStart(now: Date): Date | null {
+  const start = new Date(now);
+  const lookaheadDays = 8;
+
+  for (let offset = 0; offset < lookaheadDays; offset++) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + offset);
+    const dayNumber = day.getDay();
+    if (dayNumber === 5 || dayNumber === 6) continue;
+
+    const candidate = dateAtTime(day, '00:00');
+    if (candidate > now) return candidate;
+  }
+
+  return null;
+}
+
+export function nextExecutableStart(commitments: Commitment[], now: Date): Date | null {
+  const candidates: Date[] = [];
+
+  for (const commitment of commitments) {
+    if (commitment.status !== 'active') continue;
+    if (new Date(commitment.startsAt) > now) {
+      // Sigue siendo válido para analizar el primer inicio posible.
+    }
+    if (commitment.alwaysBlocked) continue;
+
+    const startsAt = new Date(commitment.startsAt);
+    const endsAt = new Date(commitment.endsAt);
+    if (now > endsAt) continue;
+
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+
+    for (let offset = 0; offset <= 7; offset++) {
+      const cursor = new Date(dayStart);
+      cursor.setDate(dayStart.getDate() + offset);
+      if (!commitment.days.includes(cursor.getDay())) continue;
+
+      const candidate = dateAtTime(cursor, commitment.startTime);
+      if (candidate <= now) continue;
+      if (candidate > endsAt) continue;
+      if (candidate < startsAt) continue;
+      candidates.push(candidate);
+    }
+  }
+
+  return candidates.length > 0 ? new Date(Math.min(...candidates.map((candidate) => candidate.getTime()))) : null;
+}
+
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }

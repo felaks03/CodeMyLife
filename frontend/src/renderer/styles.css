@@ -901,6 +901,45 @@ button.small {
   letter-spacing: .2px;
 }
 
+.next-locks-card {
+  margin-bottom: 22px;
+  max-width: none;
+}
+
+.next-locks-header {
+  margin-bottom: 12px;
+}
+
+.next-locks-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.next-lock-chip {
+  align-items: center;
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.next-lock-label {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+
+.next-lock-chip strong {
+  color: var(--text);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
 .active-locks {
   background: rgba(217, 72, 95, .12);
   border: 1px solid rgba(240, 100, 120, .5);

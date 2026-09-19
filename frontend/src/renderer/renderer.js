@@ -572,6 +572,60 @@ function isRunning(commitment) {
   );
 }
 
+function parseTime(value) {
+  const [hours, minutes] = String(value).split(':').map(Number);
+  return (Number(hours) || 0) * 60 + (Number(minutes) || 0);
+}
+
+function dateAtTime(date, time) {
+  const next = new Date(date);
+  const [hours, minutes] = String(time).split(':').map(Number);
+  next.setHours(Number(hours) || 0, Number(minutes) || 0, 0, 0);
+  return next;
+}
+
+function nextSleepStart(now) {
+  const start = new Date(now);
+  for (let offset = 0; offset < 8; offset++) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + offset);
+    if (day.getDay() === 5 || day.getDay() === 6) continue;
+    const candidate = dateAtTime(day, '00:00');
+    if (candidate > now) return candidate;
+  }
+  return null;
+}
+
+function nextExecutableStart(commitments, now) {
+  const candidates = [];
+  for (const commitment of commitments || []) {
+    if (commitment.status !== 'active') continue;
+    if (commitment.alwaysBlocked) continue;
+    const startsAt = new Date(commitment.startsAt);
+    const endsAt = new Date(commitment.endsAt);
+    if (now > endsAt) continue;
+    if (startsAt > now && startsAt > endsAt) continue;
+
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+
+    for (let offset = 0; offset <= 7; offset++) {
+      const cursor = new Date(dayStart);
+      cursor.setDate(dayStart.getDate() + offset);
+      if (!commitment.days.includes(cursor.getDay())) continue;
+      const candidate = dateAtTime(cursor, commitment.startTime);
+      const endOfWindow = dateAtTime(cursor, commitment.endTime);
+      if (candidate <= now) continue;
+      if (candidate < startsAt) continue;
+      if (candidate >= endOfWindow) continue;
+      if (candidate > endsAt) continue;
+      candidates.push(candidate);
+    }
+  }
+  if (candidates.length === 0) return null;
+  return new Date(Math.min(...candidates.map((candidate) => candidate.getTime())));
+}
+
 function formatCountdown(milliseconds) {
   const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -580,11 +634,40 @@ function formatCountdown(milliseconds) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+function updateTimerNode(nodeId, targetDate) {
+  const node = document.getElementById(nodeId);
+  if (!node) return;
+  if (!targetDate) {
+    node.textContent = '--:--:--';
+    return;
+  }
+  const diff = Math.max(0, targetDate.getTime() - Date.now());
+  node.textContent = formatCountdown(diff);
+}
+
+function renderNextLockTimers(commitments) {
+  const now = new Date();
+  const sleepStart = nextSleepStart(now);
+  const taskStart = nextExecutableStart(commitments ?? [], now);
+  updateTimerNode('next-sleep-timer', sleepStart);
+  updateTimerNode('next-task-timer', taskStart);
+}
+
 function updateActiveLockCountdowns() {
   const now = Date.now();
   document.querySelectorAll('[data-lock-end]').forEach((node) => {
     node.textContent = formatCountdown(Number(node.dataset.lockEnd) - now);
   });
+}
+
+let nextLockTimersInterval = null;
+
+function startNextLockTimers() {
+  if (nextLockTimersInterval) clearInterval(nextLockTimersInterval);
+  renderNextLockTimers(lastOverview?.commitments ?? []);
+  nextLockTimersInterval = setInterval(() => {
+    renderNextLockTimers(lastOverview?.commitments ?? []);
+  }, 1000);
 }
 
 function renderActiveLocks(commitments) {
@@ -631,6 +714,8 @@ function renderActiveLocks(commitments) {
 function renderOverview(overview) {
   lastOverview = overview;
   renderActiveLocks(overview.commitments);
+  renderNextLockTimers(overview.commitments);
+  startNextLockTimers();
 }
 
 async function refreshOverview() {

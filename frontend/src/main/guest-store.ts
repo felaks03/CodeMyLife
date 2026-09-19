@@ -70,7 +70,7 @@ function syncBuiltinCommitment(commitment: Commitment): boolean {
     }
   }
 
-  const alwaysBlocked = commitment.alwaysBlocked || script.blockingMode === 'always';
+  const alwaysBlocked = script.schedule ? false : commitment.alwaysBlocked || script.blockingMode === 'always';
   if (commitment.alwaysBlocked !== alwaysBlocked) {
     commitment.alwaysBlocked = alwaysBlocked;
     changed = true;

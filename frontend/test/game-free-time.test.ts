@@ -95,3 +95,23 @@ test('no muestra el bloqueo de dormir en viernes ni sabado', () => {
   assert.equal(nextSleepStart(new Date(2026, 8, 19, 12, 0, 0)), null);
   assert.ok(nextSleepStart(new Date(2026, 8, 20, 12, 0, 0)));
 });
+
+test('un compromiso antiguo de dormir no puede forzar bloqueo permanente', () => {
+  const sleepCommitment = {
+    _id: 'old-sleep-commitment',
+    scriptId: 'builtin-sleep',
+    scriptName: 'Bloqueo de dormir',
+    name: 'Bloqueo de dormir',
+    blockedDomains: [],
+    days: [0, 1, 2, 3, 4],
+    startTime: '00:00',
+    endTime: '08:00',
+    startsAt: '2026-09-01T00:00:00Z',
+    endsAt: '2026-12-31T23:59:59Z',
+    alwaysBlocked: true,
+    status: 'active' as const,
+    showLockScreen: true
+  };
+
+  assert.equal(isCommitmentEnforcedNow(sleepCommitment, new Date('2026-09-19T01:00:00')), false);
+});

@@ -574,7 +574,7 @@ function syncDailyFocusLockWindow(active: boolean): void {
     const lockWindow = dailyFocusLockWindows.get(display.id);
     if (!lockWindow || lockWindow.isDestroyed()) {
       createDailyFocusLockWindow(display);
-    } else {
+    } else if (!hasAllowedOverlayWindowOpen()) {
       applyDailyFocusKioskMode(lockWindow, display);
     }
   }

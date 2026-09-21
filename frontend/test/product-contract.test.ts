@@ -119,6 +119,7 @@ test('la pantalla de tareas ofrece TradingView, Tradovate y Notion sobre el bloq
   assert.match(main, /will-redirect/);
   assert.match(main, /hasAllowedOverlayWindowOpen/);
   assert.match(main, /refocusDailyFocusWindows/);
+  assert.match(main, /else if \(!hasAllowedOverlayWindowOpen\(\)\) \{[\s\S]*applyDailyFocusKioskMode/);
   assert.match(trading, /TRADING_ALLOWED_DOMAINS/);
   assert.match(read('assets/spotify.svg'), /#1ed760/);
 });

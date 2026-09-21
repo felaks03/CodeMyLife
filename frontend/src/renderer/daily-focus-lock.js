@@ -4,6 +4,7 @@ const list = document.getElementById('focus-list');
 const tradingViewButton = document.getElementById('open-tradingview');
 const tradovateButton = document.getElementById('open-tradovate');
 const notionButton = document.getElementById('open-notion');
+const spotifyButton = document.getElementById('open-spotify');
 
 document.getElementById('focus-mode-label').textContent = 'CodeMyLife · Bloqueo diario';
 document.getElementById('focus-note').textContent = 'Solo puedes usar los controles de esta pantalla hasta completar tus tareas.';
@@ -27,6 +28,13 @@ notionButton.addEventListener('click', () => {
   notionButton.disabled = true;
   void window.codeMyLife.openNotion().finally(() => {
     notionButton.disabled = false;
+  });
+});
+
+spotifyButton.addEventListener('click', () => {
+  spotifyButton.disabled = true;
+  void window.codeMyLife.openSpotify().finally(() => {
+    spotifyButton.disabled = false;
   });
 });
 

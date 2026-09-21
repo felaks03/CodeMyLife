@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld('codeMyLife', {
   openTradingView: (): Promise<void> => ipcRenderer.invoke('tradingview:open'),
   openTradovate: (): Promise<void> => ipcRenderer.invoke('tradovate:open'),
   openNotion: (): Promise<void> => ipcRenderer.invoke('notion:open'),
+  openSpotify: (): Promise<void> => ipcRenderer.invoke('spotify:open'),
   isDevelopment: (): Promise<boolean> => ipcRenderer.invoke('app:is-development'),
   listScripts: (): Promise<Script[]> => ipcRenderer.invoke('scripts:list'),
   startInstagramUsage: (): Promise<void> => ipcRenderer.invoke('instagram:start-usage'),

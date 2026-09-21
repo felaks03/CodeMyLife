@@ -99,14 +99,20 @@ test('la pantalla de tareas ofrece TradingView, Tradovate y Notion sobre el bloq
   assert.match(html, /tradovate\.svg/);
   assert.match(html, /notion\.svg/);
   assert.match(html, /class="app-launch-button"/);
+  assert.match(html, /open-spotify/);
+  assert.match(html, /assets\/spotify\.svg/);
+  assert.match(html, /img-src 'self'/);
   assert.match(lockRenderer, /openTradingView/);
   assert.match(lockRenderer, /openTradovate/);
   assert.match(lockRenderer, /openNotion/);
+  assert.match(lockRenderer, /openSpotify/);
   assert.match(preload, /tradingview:open/);
   assert.match(preload, /tradovate:open/);
   assert.match(preload, /notion:open/);
+  assert.match(preload, /spotify:open/);
   assert.match(main, /function isTradingUrl/);
   assert.match(main, /function isNotionUrl/);
+  assert.match(main, /function isSpotifyUrl/);
   assert.match(main, /setAlwaysOnTop\(true, 'screen-saver'\)/);
   assert.match(main, /setWindowOpenHandler/);
   assert.match(main, /isTradingUrl\(nextUrl\) \? 'allow' : 'deny'/);
@@ -114,6 +120,7 @@ test('la pantalla de tareas ofrece TradingView, Tradovate y Notion sobre el bloq
   assert.match(main, /hasAllowedOverlayWindowOpen/);
   assert.match(main, /refocusDailyFocusWindows/);
   assert.match(trading, /TRADING_ALLOWED_DOMAINS/);
+  assert.match(read('assets/spotify.svg'), /#1ed760/);
 });
 
 test('el updater solo se configura para builds empaquetadas', () => {

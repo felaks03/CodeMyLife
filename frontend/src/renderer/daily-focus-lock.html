@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self';" />
   <title>CodeMyLife - Bloqueo diario</title>
   <link rel="stylesheet" href="daily-focus-lock.css" />
 </head>
@@ -12,10 +12,11 @@
     <h1 id="focus-title">Bloqueo diario activo</h1>
     <p class="focus-subtitle">Completa la lista antes de las 15:00</p>
     <p id="focus-note" class="focus-note">Solo puedes usar los controles de esta pantalla hasta completar tus tareas.</p>
-    <div class="trading-actions" aria-label="Aplicaciones de trading">
+    <div class="trading-actions" aria-label="Aplicaciones permitidas">
       <button id="open-tradingview" class="app-launch-button" type="button" aria-label="Abrir TradingView" title="Abrir TradingView"><img src="../../assets/tradingview.svg" alt="" /></button>
       <button id="open-tradovate" class="app-launch-button" type="button" aria-label="Abrir Tradovate" title="Abrir Tradovate"><img src="../../assets/tradovate.svg" alt="" /></button>
       <button id="open-notion" class="app-launch-button" type="button" aria-label="Abrir Notion" title="Abrir Notion"><img src="../../assets/notion.svg" alt="" /></button>
+      <button id="open-spotify" class="app-launch-button" type="button" aria-label="Abrir Spotify" title="Abrir Spotify"><img src="../../assets/spotify.svg" alt="" /></button>
     </div>
     <ul class="focus-list" id="focus-list"></ul>
   </main>

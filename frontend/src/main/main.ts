@@ -61,6 +61,7 @@ let youtubeWindow: BrowserWindow | null = null;
 let tradingViewWindow: BrowserWindow | null = null;
 let tradovateWindow: BrowserWindow | null = null;
 let notionWindow: BrowserWindow | null = null;
+let spotifyWindow: BrowserWindow | null = null;
 const sleepLockWindows = new Map<number, BrowserWindow>();
 let quitInProgress = false;
 const dailyFocusLockWindows = new Map<number, BrowserWindow>();
@@ -178,6 +179,15 @@ function isNotionUrl(value: string): boolean {
   try {
     const hostname = new URL(value).hostname.toLowerCase();
     return hostname === 'notion.so' || hostname.endsWith('.notion.so') || hostname === 'notion.site' || hostname.endsWith('.notion.site');
+  } catch {
+    return false;
+  }
+}
+
+function isSpotifyUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === 'spotify.com' || hostname.endsWith('.spotify.com');
   } catch {
     return false;
   }
@@ -403,6 +413,46 @@ async function openNotionBrowser(): Promise<void> {
   notionWindow.focus();
 }
 
+async function openSpotifyBrowser(): Promise<void> {
+  if (spotifyWindow && !spotifyWindow.isDestroyed()) {
+    spotifyWindow.show();
+    spotifyWindow.focus();
+    return;
+  }
+
+  spotifyWindow = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    title: 'Spotify - CodeMyLife',
+    show: true,
+    alwaysOnTop: true,
+    backgroundColor: '#101418',
+    webPreferences: {
+      partition: 'persist:codemylife-spotify',
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  spotifyWindow.setAlwaysOnTop(true, 'screen-saver');
+  spotifyWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  const preventExternalSpotifyNavigation = (event: Electron.Event, nextUrl: string): void => {
+    if (!isSpotifyUrl(nextUrl)) event.preventDefault();
+  };
+  spotifyWindow.webContents.on('will-navigate', preventExternalSpotifyNavigation);
+  spotifyWindow.webContents.on('will-redirect', preventExternalSpotifyNavigation);
+  spotifyWindow.webContents.setWindowOpenHandler(({ url: nextUrl }) => ({
+    action: isSpotifyUrl(nextUrl) ? 'allow' : 'deny'
+  }));
+  spotifyWindow.on('closed', () => {
+    spotifyWindow = null;
+    if (!hasAllowedOverlayWindowOpen()) refocusDailyFocusWindows();
+  });
+  await spotifyWindow.loadURL('https://open.spotify.com/');
+  spotifyWindow.show();
+  spotifyWindow.focus();
+}
+
 function updateTray(state: BlockingState): void {
   if (!tray) return;
 
@@ -576,16 +626,19 @@ function closeAllowedOverlayWindows(): void {
   if (tradingViewWindow && !tradingViewWindow.isDestroyed()) tradingViewWindow.close();
   if (tradovateWindow && !tradovateWindow.isDestroyed()) tradovateWindow.close();
   if (notionWindow && !notionWindow.isDestroyed()) notionWindow.close();
+  if (spotifyWindow && !spotifyWindow.isDestroyed()) spotifyWindow.close();
   tradingViewWindow = null;
   tradovateWindow = null;
   notionWindow = null;
+  spotifyWindow = null;
 }
 
 function hasAllowedOverlayWindowOpen(): boolean {
   return Boolean(
     (tradingViewWindow && !tradingViewWindow.isDestroyed()) ||
     (tradovateWindow && !tradovateWindow.isDestroyed()) ||
-    (notionWindow && !notionWindow.isDestroyed())
+    (notionWindow && !notionWindow.isDestroyed()) ||
+    (spotifyWindow && !spotifyWindow.isDestroyed())
   );
 }
 
@@ -926,6 +979,7 @@ function registerIpcHandlers(): void {
   ));
 
   ipcMain.handle('notion:open', () => openNotionBrowser());
+  ipcMain.handle('spotify:open', () => openSpotifyBrowser());
 
   ipcMain.handle('blocking:state', (): BlockingState => scheduler.getState());
 

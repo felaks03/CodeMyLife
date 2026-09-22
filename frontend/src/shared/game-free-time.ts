@@ -11,6 +11,8 @@ export const GAME_FREE_WINDOWS: GameFreeWindow[] = [
   { day: 0, startTime: '00:00', endTime: '24:00' }
 ];
 
+export const YOUTUBE_FREE_START_MINUTE = 17 * 60;
+
 function parseTime(value: string): number {
   const [hours, minutes] = value.split(':').map(Number);
   return hours * 60 + minutes;
@@ -26,4 +28,8 @@ export function isGameFreeTime(date: Date): boolean {
   return GAME_FREE_WINDOWS.some((window) =>
     window.day === day && minutes >= parseTime(window.startTime) && minutes < parseTime(window.endTime)
   );
+}
+
+export function isYoutubeFreeTime(date: Date): boolean {
+  return minutesOfDay(date) >= YOUTUBE_FREE_START_MINUTE;
 }

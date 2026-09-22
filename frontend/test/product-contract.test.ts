@@ -38,12 +38,13 @@ test('YouTube tiene uso diario manual de media hora', () => {
   assert.match(main, /openYoutubeBrowser/);
 });
 
-test('los videojuegos y YouTube quedan libres por defecto viernes tarde y el fin de semana', () => {
+test('los videojuegos mantienen su ventana y YouTube tiene horario propio', () => {
   const scheduler = read('src/main/scheduler.ts');
   const scripts = read('src/shared/builtin-scripts.ts');
-  assert.match(scheduler, /import { isGameFreeTime } from '\.\.\/shared\/game-free-time';/);
+  assert.match(scheduler, /isGameFreeTime/);
   assert.match(scheduler, /const gamesActive = !isGameFreeTime\(now\) && this\.commitments\.some\(/);
-  assert.match(scheduler, /const youtubeFreeTime = isGameFreeTime\(now\)/);
+  assert.match(scheduler, /isYoutubeFreeTime/);
+  assert.match(scheduler, /const youtubeFreeTime = isYoutubeFreeTime\(now\)/);
   assert.match(scheduler, /YOUTUBE_DOMAINS\.some/);
   assert.match(scripts, /viernes desde las 17:00 hasta el final del dia y todo el fin de semana/);
 });

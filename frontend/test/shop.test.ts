@@ -26,10 +26,10 @@ test('videojuegos cuesta 20 monedas y ofrece 10 minutos', () => {
 });
 
 test('la lista diaria incluye las tareas del foco', () => {
-  assert.equal(TASKS.length, 8);
+  assert.equal(TASKS.length, 4);
   assert.deepEqual(
     TASKS.map((task) => task.id),
-    ['run3k', 'breakfast', 'cold-shower', 'gym', 'backtesting', 'reading', 'meditation', 'stare-at-wall']
+    ['run3k', 'breakfast', 'cold-shower', 'gym']
   );
   assert.deepEqual(
     TASKS.map((task) => [task.id, task.name, task.rewardCoins]),
@@ -38,10 +38,6 @@ test('la lista diaria incluye las tareas del foco', () => {
       ['breakfast', 'Breakfast', 10],
       ['cold-shower', 'Cold Shower', 10],
       ['gym', 'Gym', 45],
-      ['backtesting', 'Backtesting', 50],
-      ['reading', 'Reading', 30],
-      ['meditation', 'Meditation', 15],
-      ['stare-at-wall', 'Stare at the Wall', 15]
     ]
   );
   TASKS.forEach((task) => {

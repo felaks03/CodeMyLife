@@ -12,7 +12,7 @@ import { writeJsonAtomic } from './atomic-storage';
 import { dailyFocusStore } from './daily-focus-store';
 import { isDailyFocusBlocked } from '../shared/daily-focus';
 import { filterTradingDomains, isTradingAccessWindow, TRADING_ALLOWED_PROCESSES } from '../shared/trading-access';
-import { isGameFreeTime } from '../shared/game-free-time';
+import { isGameFreeTime, isYoutubeFreeTime } from '../shared/game-free-time';
 
 const CHECK_INTERVAL_MS = 30_000;
 
@@ -123,7 +123,7 @@ export class BlockingScheduler {
     const gamesActive = !isGameFreeTime(now) && this.commitments.some(
       (commitment) => commitment.scriptId === 'builtin-games' && isCommitmentEnforcedNow(commitment, now)
     );
-    const youtubeFreeTime = isGameFreeTime(now);
+    const youtubeFreeTime = isYoutubeFreeTime(now);
     const protectedProcesses = isTradingAccessWindow(now) ? TRADING_ALLOWED_PROCESSES : [];
     await this.desktopAppGuard.setBlocked(VIDEO_GAME_BLOCKED_PROCESSES, gamesActive, protectedProcesses);
     const baseDomains = [...new Set([

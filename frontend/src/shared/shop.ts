@@ -29,34 +29,6 @@ export const TASKS: TaskDefinition[] = [
     rewardCoins: 45,
     frequency: 'daily'
   },
-  {
-    id: 'backtesting',
-    name: 'Backtesting',
-    description: 'Analyze strategy and review results.',
-    rewardCoins: 50,
-    frequency: 'daily'
-  },
-  {
-    id: 'reading',
-    name: 'Reading',
-    description: 'Read for 30 minutes.',
-    rewardCoins: 30,
-    frequency: 'daily'
-  },
-  {
-    id: 'meditation',
-    name: 'Meditation',
-    description: 'Meditate for 15 minutes.',
-    rewardCoins: 15,
-    frequency: 'daily'
-  },
-  {
-    id: 'stare-at-wall',
-    name: 'Stare at the Wall',
-    description: 'Stare at the wall for 15 minutes.',
-    rewardCoins: 15,
-    frequency: 'daily'
-  }
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [

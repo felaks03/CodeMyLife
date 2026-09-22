@@ -48,38 +48,6 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     rewardCoins: 45,
     enabled: true
   },
-  {
-    id: 'backtesting',
-    name: 'Backtesting',
-    description: 'Analyze strategy and review results.',
-    durationMinutes: 60,
-    rewardCoins: 50,
-    enabled: true
-  },
-  {
-    id: 'reading',
-    name: 'Reading',
-    description: 'Read for 30 minutes.',
-    durationMinutes: 30,
-    rewardCoins: 30,
-    enabled: true
-  },
-  {
-    id: 'meditation',
-    name: 'Meditation',
-    description: 'Meditate for 15 minutes.',
-    durationMinutes: 15,
-    rewardCoins: 15,
-    enabled: true
-  },
-  {
-    id: 'stare-at-wall',
-    name: 'Stare at the Wall',
-    description: 'Stare at the wall for 15 minutes.',
-    durationMinutes: 15,
-    rewardCoins: 15,
-    enabled: true
-  }
 ];
 
 export function serializeDateKey(date: Date): string {

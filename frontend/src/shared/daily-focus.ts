@@ -45,9 +45,17 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     name: 'Gym',
     description: 'Strength training.',
     durationMinutes: 60,
-    rewardCoins: 45,
+    rewardCoins: 60,
     enabled: true
   },
+  {
+    id: 'reading',
+    name: 'Reading',
+    description: 'Read for 20 minutes.',
+    durationMinutes: 20,
+    rewardCoins: 20,
+    enabled: true
+  }
 ];
 
 export function serializeDateKey(date: Date): string {

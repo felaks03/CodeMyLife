@@ -18,18 +18,18 @@ test('la tienda ofrece 1 minuto extra de Instagram por 5 monedas', () => {
   assert.equal(instagram.durationMinutes, 1);
 });
 
-test('videojuegos cuesta 20 monedas y ofrece 10 minutos', () => {
+test('videojuegos cuesta 5 monedas y ofrece 10 minutos', () => {
   const games = SHOP_ITEMS.find((item) => item.id === 'games-time');
   assert.ok(games);
-  assert.equal(games.costCoins, 20);
+  assert.equal(games.costCoins, 5);
   assert.equal(games.durationMinutes, 10);
 });
 
 test('la lista diaria incluye las tareas del foco', () => {
-  assert.equal(TASKS.length, 4);
+  assert.equal(TASKS.length, 5);
   assert.deepEqual(
     TASKS.map((task) => task.id),
-    ['run3k', 'breakfast', 'cold-shower', 'gym']
+    ['run3k', 'breakfast', 'cold-shower', 'gym', 'reading']
   );
   assert.deepEqual(
     TASKS.map((task) => [task.id, task.name, task.rewardCoins]),
@@ -37,7 +37,8 @@ test('la lista diaria incluye las tareas del foco', () => {
       ['run3k', 'Run 3k', 15],
       ['breakfast', 'Breakfast', 10],
       ['cold-shower', 'Cold Shower', 10],
-      ['gym', 'Gym', 45],
+      ['gym', 'Gym', 60],
+      ['reading', 'Reading', 20]
     ]
   );
   TASKS.forEach((task) => {
@@ -71,7 +72,7 @@ test('la recompensa solo apunta al bloqueo de videojuegos', () => {
 });
 
 test('una compra nueva esta disponible hasta que se usa', () => {
-  const purchase = { id: 'purchase-1', itemId: 'games-time', coins: 20, purchasedAt: '2026-09-14T10:00:00.000Z' };
+  const purchase = { id: 'purchase-1', itemId: 'games-time', coins: 10, purchasedAt: '2026-09-14T10:00:00.000Z' };
   assert.equal(isPurchaseAvailable(purchase), true);
   assert.equal(isPurchaseAvailable({ ...purchase, usedAt: '2026-09-14T10:01:00.000Z' }), false);
   assert.equal(isPurchaseAvailable({ ...purchase, remainingSeconds: 0 }), false);

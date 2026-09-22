@@ -34,14 +34,15 @@ test('si no hay tareas completadas dentro de la ventana, se activa el bloqueo', 
     { taskId: 'breakfast', completed: true },
     { taskId: 'cold-shower', completed: false },
     { taskId: 'gym', completed: false },
+    { taskId: 'reading', completed: false }
   ]);
 
   assert.equal(isDailyFocusBlocked(now, state), true);
-  assert.equal(DAILY_FOCUS_TASKS.length, 4);
-  assert.deepEqual(dailyFocusTaskIds(), ['run3k', 'breakfast', 'cold-shower', 'gym']);
+  assert.equal(DAILY_FOCUS_TASKS.length, 5);
+  assert.deepEqual(dailyFocusTaskIds(), ['run3k', 'breakfast', 'cold-shower', 'gym', 'reading']);
   assert.deepEqual(
     DAILY_FOCUS_TASKS.map((task) => task.name),
-    ['Run 3k', 'Breakfast', 'Cold Shower', 'Gym']
+    ['Run 3k', 'Breakfast', 'Cold Shower', 'Gym', 'Reading']
   );
   assert.equal(DAILY_FOCUS_TASKS.some((task) => /Desayunar|Leer|Meditar|Mirar/i.test(task.name)), false);
 });
@@ -54,6 +55,7 @@ test('las tareas usan las duraciones diarias acordadas', () => {
       ['breakfast', 15],
       ['cold-shower', 10],
       ['gym', 60],
+      ['reading', 20]
     ]
   );
 });
@@ -69,7 +71,7 @@ test('solo puede haber una tarea activa y el temporizador acumula el tiempo', ()
     { taskId: 'breakfast', completed: false, startedAt: '2026-09-13T09:00:00.000Z', elapsedMs: 30000 },
     { taskId: 'cold-shower', completed: false, startedAt: null, elapsedMs: 0 },
     { taskId: 'gym', completed: false, startedAt: null, elapsedMs: 0 },
-    { taskId: 'backtesting', completed: false, startedAt: null, elapsedMs: 0 }
+    { taskId: 'reading', completed: false, startedAt: null, elapsedMs: 0 }
   ]);
 
   assert.equal(activeDailyFocusTaskId(byDay), 'breakfast');
@@ -93,7 +95,8 @@ test('las tareas usan los premios de monedas acordados', () => {
       ['run3k', 15],
       ['breakfast', 10],
       ['cold-shower', 10],
-      ['gym', 45],
+      ['gym', 60],
+      ['reading', 20]
     ]
   );
 });

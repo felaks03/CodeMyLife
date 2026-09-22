@@ -9,7 +9,7 @@ import { isDailyFocusWindow } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
 import { writeJsonAtomic } from './atomic-storage';
 
-const INITIAL_COINS = 0;
+const INITIAL_COINS = 100;
 
 function walletFile(): string {
   return path.join(app.getPath('userData'), 'wallet.json');

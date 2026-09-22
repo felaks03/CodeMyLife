@@ -26,9 +26,16 @@ export const TASKS: TaskDefinition[] = [
     id: 'gym',
     name: 'Gym',
     description: 'Strength training.',
-    rewardCoins: 45,
+    rewardCoins: 60,
     frequency: 'daily'
   },
+  {
+    id: 'reading',
+    name: 'Reading',
+    description: 'Read for 20 minutes.',
+    rewardCoins: 20,
+    frequency: 'daily'
+  }
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [
@@ -36,7 +43,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     id: 'games-time',
     name: 'Tiempo de videojuegos',
     description: 'Desbloquea Steam y Minecraft Launcher durante 10 minutos.',
-    costCoins: 20,
+    costCoins: 5,
     durationMinutes: 10,
     targetScriptId: 'builtin-games'
   },

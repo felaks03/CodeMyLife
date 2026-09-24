@@ -19,10 +19,10 @@ test('la ventana libre queda vacia', () => {
   assert.deepEqual(GAME_FREE_WINDOWS, []);
 });
 
-test('el bloqueo de dormir no aplica los viernes ni los sabados', () => {
+test('el bloqueo de dormir aplica todos los dias', () => {
   const sleepScript = BUILTIN_SCRIPTS.find((script) => script._id === 'builtin-sleep');
   assert.ok(sleepScript);
-  assert.deepEqual(sleepScript!.schedule?.days, [1, 2, 3, 4]);
+  assert.deepEqual(sleepScript!.schedule?.days, [0, 1, 2, 3, 4, 5, 6]);
 
   const commitment = {
     _id: 'sleep-commitment',
@@ -39,16 +39,16 @@ test('el bloqueo de dormir no aplica los viernes ni los sabados', () => {
     showLockScreen: true
   };
 
-  assert.equal(isCommitmentEnforcedNow(commitment, new Date('2026-09-18T01:00:00')), false);
-  assert.equal(isCommitmentEnforcedNow(commitment, new Date('2026-09-19T01:00:00')), false);
-  assert.equal(isCommitmentEnforcedNow(commitment, new Date('2026-09-20T01:00:00')), false);
+  assert.equal(isCommitmentEnforcedNow(commitment, new Date('2026-09-18T01:00:00')), true);
+  assert.equal(isCommitmentEnforcedNow(commitment, new Date('2026-09-19T01:00:00')), true);
+  assert.equal(isCommitmentEnforcedNow(commitment, new Date('2026-09-20T01:00:00')), true);
 });
 
 test('calcula el siguiente inicio de bloqueo de sueño y de tareas', () => {
   const now = new Date(2026, 8, 17, 18, 0, 0);
   const sleepStart = nextSleepStart(now);
   assert.ok(sleepStart);
-  assert.equal(sleepStart!.getDay(), 1);
+  assert.equal(sleepStart!.getDay(), 5);
   assert.equal(sleepStart!.getHours(), 0);
 
   const tasks = [{
@@ -71,10 +71,10 @@ test('calcula el siguiente inicio de bloqueo de sueño y de tareas', () => {
   assert.equal(nextTaskStart!.getHours(), 9);
 });
 
-test('no muestra el bloqueo de dormir en viernes ni sabado', () => {
-  assert.equal(nextSleepStart(new Date(2026, 8, 18, 12, 0, 0)), null);
-  assert.equal(nextSleepStart(new Date(2026, 8, 19, 12, 0, 0)), null);
-  assert.equal(nextSleepStart(new Date(2026, 8, 20, 12, 0, 0)), null);
+test('el bloqueo de dormir se reprograma cada noche', () => {
+  assert.ok(nextSleepStart(new Date(2026, 8, 18, 12, 0, 0)));
+  assert.ok(nextSleepStart(new Date(2026, 8, 19, 12, 0, 0)));
+  assert.ok(nextSleepStart(new Date(2026, 8, 20, 12, 0, 0)));
   assert.ok(nextSleepStart(new Date(2026, 8, 21, 12, 0, 0)));
 });
 

@@ -78,6 +78,20 @@ test('Chess y Backtesting permiten usar el ordenador y al completarse vuelve a b
   assert.match(main, /function applyDailyFocusKioskMode[\s\S]*setKiosk\(true\)/);
 });
 
+test('las pantallas de bloqueo permiten comprobar actualizaciones', () => {
+  const main = read('src/main/main.ts');
+  const sleep = read('src/renderer/lock-screen.html');
+  const focus = read('src/renderer/daily-focus-lock.html');
+  const sleepJs = read('src/renderer/lock-screen.js');
+  const focusJs = read('src/renderer/daily-focus-lock.js');
+  assert.match(main, /broadcastUpdateEvent/);
+  assert.match(main, /ipcMain\.handle\('app:check-for-updates'/);
+  assert.match(sleep, /id="check-updates"/);
+  assert.match(focus, /id="check-updates"/);
+  assert.match(sleepJs, /checkForUpdates\(\)/);
+  assert.match(focusJs, /checkForUpdates\(\)/);
+});
+
 test('el bloqueo de dormir crea una ventana por monitor', () => {
   const main = read('src/main/main.ts');
   assert.match(main, /sleepLockWindows = new Map/);
@@ -265,7 +279,7 @@ test('la UI permite buscar actualizaciones manualmente', () => {
   assert.match(renderer, /checkForUpdates\(\)/);
   assert.match(preload, /app:check-for-updates/);
   assert.match(main, /ipcMain\.handle\('app:check-for-updates'/);
-  assert.match(main, /mainWindow\?\.webContents\.send\('update:checking'/);
+  assert.match(main, /broadcastUpdateEvent\('update:checking'\)/);
   assert.match(main, /let updateCheckInProgress = false/);
   assert.match(main, /if \(updateCheckInProgress\) return/);
   assert.match(main, /update:not-available/);
@@ -306,16 +320,16 @@ test('el scheduler invalida excepciones temporales al refrescar compromisos', ()
   assert.match(scheduler, /temporarilyAllowedDomains\.clear\(\)/);
 });
 
-test('la release compila antes de publicar y el updater instala automaticamente', () => {
+test('la release compila antes de publicar y el updater instala automaticamente sin confirmacion', () => {
   const workflow = read('../.github/workflows/release.yml');
   const main = read('src/main/main.ts');
   const renderer = read('src/renderer/renderer.js');
   assert.match(workflow, /name: Build[\s\S]*run: npm run build[\s\S]*name: Publish Windows release/);
   assert.match(workflow, /name: Verify updater assets[\s\S]*Missing latest\.yml/);
   assert.match(main, /update:downloaded/);
-  assert.match(main, /autoUpdater\.quitAndInstall\(false, true\)/);
+  assert.match(main, /autoUpdater\.quitAndInstall\(true, true\)/);
   assert.match(main, /did-finish-load.*setupAutoUpdater/);
-  assert.match(renderer, /Actualizacion.*instalara automaticamente/);
+  assert.match(renderer, /Actualizacion.*instalará automáticamente sin pedir confirmación/);
 });
 
 test('el salto del foco diario no esta expuesto en la interfaz', () => {

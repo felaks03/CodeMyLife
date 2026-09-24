@@ -992,7 +992,7 @@ window.codeMyLife.onUpdateNotAvailable(() => {
   showNotice('Ya tienes la ultima version.', 'success');
 });
 window.codeMyLife.onUpdateDownloaded((version) => {
-  showNotice(`Actualizacion ${version} descargada. Se instalara automaticamente.`, 'success');
+  showNotice(`Actualizacion ${version} descargada. Se instalará automáticamente sin pedir confirmación.`, 'success');
 });
 window.codeMyLife.onUpdateError((message) => {
   const button = el('check-for-updates');

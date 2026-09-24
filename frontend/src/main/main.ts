@@ -85,6 +85,23 @@ function assetPath(file: string): string {
   return path.join(__dirname, '../../assets', file);
 }
 
+function broadcastUpdateEvent(eventName: string, payload?: unknown): void {
+  const windows: BrowserWindow[] = [];
+
+  if (mainWindow && !mainWindow.isDestroyed()) windows.push(mainWindow);
+  for (const window of sleepLockWindows.values()) {
+    if (!window.isDestroyed()) windows.push(window);
+  }
+  for (const window of dailyFocusLockWindows.values()) {
+    if (!window.isDestroyed()) windows.push(window);
+  }
+
+  for (const window of windows) {
+    if (payload === undefined) window.webContents.send(eventName);
+    else window.webContents.send(eventName, payload);
+  }
+}
+
 function setupAutoUpdater(): void {
   if (!app.isPackaged) return;
   if (updaterStarted) return;
@@ -94,21 +111,24 @@ function setupAutoUpdater(): void {
     const message = error instanceof Error ? error.message : String(error);
     console.error('[CodeMyLife] Update error:', message);
     if (/404|releases\.atom|double check that your authentication token/i.test(message)) {
-      mainWindow?.webContents.send('update:not-available');
+      broadcastUpdateEvent('update:not-available');
       return;
     }
-    mainWindow?.webContents.send('update:error', message);
+    broadcastUpdateEvent('update:error', message);
   };
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.on('checking-for-update', () => mainWindow?.webContents.send('update:checking'));
-  autoUpdater.on('update-available', (info) => mainWindow?.webContents.send('update:available', info.version));
-  autoUpdater.on('update-not-available', () => mainWindow?.webContents.send('update:not-available'));
-  autoUpdater.on('download-progress', (progress) => mainWindow?.webContents.send('update:download-progress', progress.percent));
+  autoUpdater.forceDevUpdateConfig = false;
+  autoUpdater.on('checking-for-update', () => broadcastUpdateEvent('update:checking'));
+  autoUpdater.on('update-available', (info) => broadcastUpdateEvent('update:available', info.version));
+  autoUpdater.on('update-not-available', () => broadcastUpdateEvent('update:not-available'));
+  autoUpdater.on('download-progress', (progress) => broadcastUpdateEvent('update:download-progress', progress.percent));
   autoUpdater.on('update-downloaded', (info) => {
-    mainWindow?.webContents.send('update:downloaded', info.version);
-    setTimeout(() => autoUpdater.quitAndInstall(false, true), 2000);
+    broadcastUpdateEvent('update:downloaded', info.version);
+    setTimeout(() => {
+      autoUpdater.quitAndInstall(true, true);
+    }, 1500);
   });
   autoUpdater.on('error', (error) => {
     reportUpdateError(error);
@@ -837,14 +857,14 @@ function registerIpcHandlers(): void {
   ipcMain.handle('session:get', () => sessionStore.session?.user ?? null);
   ipcMain.handle('app:version', () => app.getVersion());
   ipcMain.handle('app:check-for-updates', async () => {
-    mainWindow?.webContents.send('update:checking');
+    broadcastUpdateEvent('update:checking');
     if (!app.isPackaged) {
-      mainWindow?.webContents.send('update:not-available');
+      broadcastUpdateEvent('update:not-available');
       return;
     }
     await checkForUpdates((error) => {
       const message = error instanceof Error ? error.message : String(error);
-      mainWindow?.webContents.send('update:error', message);
+      broadcastUpdateEvent('update:error', message);
     });
   });
   ipcMain.handle('time:now', () => timeAuthority.now().toISOString());

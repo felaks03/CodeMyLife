@@ -543,11 +543,16 @@ function createSleepLockWindow(display: Display): void {
   });
 }
 
+function isPortraitDisplay(display: Display): boolean {
+  return display.bounds.width < display.bounds.height;
+}
+
 function syncDailyFocusLockWindow(active: boolean): void {
   const displays = screen.getAllDisplays();
+  const portraitDisplayIds = new Set(displays.filter((display) => isPortraitDisplay(display)).map((display) => display.id));
   const displayIds = new Set(displays.map((display) => display.id));
   for (const [displayId, window] of dailyFocusLockWindows) {
-    if (!displayIds.has(displayId) || window.isDestroyed()) {
+    if (!displayIds.has(displayId) || portraitDisplayIds.has(displayId) || window.isDestroyed()) {
       if (!window.isDestroyed()) window.destroy();
       dailyFocusLockWindows.delete(displayId);
     }
@@ -557,20 +562,22 @@ function syncDailyFocusLockWindow(active: boolean): void {
     closeAllowedOverlayWindows();
     return;
   }
+  const unlockedDisplays = displays.filter((display) => !isPortraitDisplay(display));
   if (dailyFocusComputerAllowed) {
     const primary = screen.getPrimaryDisplay();
+    const effectivePrimary = isPortraitDisplay(primary) ? unlockedDisplays[0] ?? primary : primary;
     for (const [displayId, window] of dailyFocusLockWindows) {
-      if (displayId !== primary.id) {
+      if (displayId !== effectivePrimary.id) {
         if (!window.isDestroyed()) window.destroy();
         dailyFocusLockWindows.delete(displayId);
       }
     }
-    const lockWindow = dailyFocusLockWindows.get(primary.id);
-    if (!lockWindow || lockWindow.isDestroyed()) createDailyFocusLockWindow(primary, true);
-    else applyDailyFocusPanelMode(lockWindow, primary);
+    const lockWindow = dailyFocusLockWindows.get(effectivePrimary.id);
+    if (!lockWindow || lockWindow.isDestroyed()) createDailyFocusLockWindow(effectivePrimary, true);
+    else applyDailyFocusPanelMode(lockWindow, effectivePrimary);
     return;
   }
-  for (const display of displays) {
+  for (const display of unlockedDisplays) {
     const lockWindow = dailyFocusLockWindows.get(display.id);
     if (!lockWindow || lockWindow.isDestroyed()) {
       createDailyFocusLockWindow(display);
@@ -910,7 +917,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('app:is-development', () => !app.isPackaged);
   ipcMain.handle('daily-focus:start', async (_event, taskId: string) => {
     const progress = await dailyFocusStore.startTask(taskId);
-    if (taskId === 'backtesting') setDailyFocusComputerAllowed(true);
+    if (taskId === 'chess' || taskId === 'backtesting') setDailyFocusComputerAllowed(true);
     return progress;
   });
   ipcMain.handle('daily-focus:complete', async (_event, taskId: string) => {
@@ -919,7 +926,7 @@ function registerIpcHandlers(): void {
     try {
       const wallet = await walletStore.completeTask(taskId);
       notifyWalletUpdated(wallet);
-      if (taskId === 'backtesting') setDailyFocusComputerAllowed(false);
+      if (taskId === 'chess' || taskId === 'backtesting') setDailyFocusComputerAllowed(false);
       return progress;
     } catch (error) {
       await dailyFocusStore.replace(previousProgress);

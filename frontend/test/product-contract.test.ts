@@ -38,15 +38,14 @@ test('YouTube tiene uso diario manual de media hora', () => {
   assert.match(main, /openYoutubeBrowser/);
 });
 
-test('los videojuegos mantienen su ventana y YouTube tiene horario propio', () => {
+test('los videojuegos no tienen ventana libre y siguen con compra por monedas', () => {
   const scheduler = read('src/main/scheduler.ts');
   const scripts = read('src/shared/builtin-scripts.ts');
   assert.match(scheduler, /isGameFreeTime/);
   assert.match(scheduler, /const gamesActive = !isGameFreeTime\(now\) && this\.commitments\.some\(/);
-  assert.match(scheduler, /isYoutubeFreeTime/);
-  assert.match(scheduler, /const youtubeFreeTime = isYoutubeFreeTime\(now\)/);
+  assert.match(scheduler, /const youtubeFreeTime = isGameFreeTime\(now\)/);
   assert.match(scheduler, /YOUTUBE_DOMAINS\.some/);
-  assert.match(scripts, /viernes desde las 17:00 hasta el final del dia y todo el fin de semana/);
+  assert.match(scripts, /solo lo desbloqueas con monedas/);
 });
 
 test('las notificaciones tienen estados success y error fijos', () => {
@@ -71,11 +70,11 @@ test('el bloqueo diario se reconcilia por pantalla', () => {
   assert.match(main, /display-metrics-changed/);
 });
 
-test('Backtesting permite usar el ordenador y al completarse vuelve a bloquear', () => {
+test('Chess y Backtesting permiten usar el ordenador y al completarse vuelve a bloquear', () => {
   const main = read('src/main/main.ts');
-  assert.match(main, /if \(taskId === 'backtesting'\) setDailyFocusComputerAllowed\(true\)/);
-  assert.match(main, /if \(taskId === 'backtesting'\) setDailyFocusComputerAllowed\(false\)/);
-  assert.match(main, /function applyDailyFocusPanelMode[\s\S]*setKiosk\(false\)/);
+  assert.match(main, /if \(taskId === 'chess' \|\| taskId === 'backtesting'\) setDailyFocusComputerAllowed\(true\)/);
+  assert.match(main, /if \(taskId === 'chess' \|\| taskId === 'backtesting'\) setDailyFocusComputerAllowed\(false\)/);  assert.match(main, /function isPortraitDisplay\(display: Display\): boolean \{\s*return display\.bounds\.width < display\.bounds\.height;/s);
+  assert.match(main, /filter\(\(display\) => !isPortraitDisplay\(display\)\)/);  assert.match(main, /function applyDailyFocusPanelMode[\s\S]*setKiosk\(false\)/);
   assert.match(main, /function applyDailyFocusKioskMode[\s\S]*setKiosk\(true\)/);
 });
 

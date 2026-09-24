@@ -35,6 +35,41 @@ export const TASKS: TaskDefinition[] = [
     description: 'Read for 20 minutes.',
     rewardCoins: 20,
     frequency: 'daily'
+  },
+  {
+    id: 'meditate',
+    name: 'Meditate',
+    description: 'Meditate for 15 minutes.',
+    rewardCoins: 15,
+    frequency: 'daily'
+  },
+  {
+    id: 'make-my-bed',
+    name: 'Make My Bed',
+    description: 'Make your bed in 2 minutes.',
+    rewardCoins: 5,
+    frequency: 'daily'
+  },
+  {
+    id: 'chess',
+    name: 'Chess',
+    description: 'Use the whole computer for 1 hour while playing chess.',
+    rewardCoins: 30,
+    frequency: 'daily'
+  },
+  {
+    id: 'backtesting',
+    name: 'Backtesting',
+    description: 'Use the whole computer for 1 hour while testing a strategy.',
+    rewardCoins: 50,
+    frequency: 'daily'
+  },
+  {
+    id: 'stare-at-wall',
+    name: 'Stare at the Wall',
+    description: 'Stare at the wall for 15 minutes.',
+    rewardCoins: 15,
+    frequency: 'daily'
   }
 ];
 

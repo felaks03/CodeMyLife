@@ -214,7 +214,7 @@ export const BUILTIN_SCRIPTS: Script[] = [
     _id: 'builtin-games',
     authorName: 'CodeMyLife',
     name: 'Bloqueo de videojuegos',
-    description: 'Bloquea Steam y Minecraft Launcher de forma permanente, salvo viernes desde las 17:00 hasta el final del dia y todo el fin de semana.',
+    description: 'Bloquea Steam y Minecraft Launcher de forma permanente y solo lo desbloqueas con monedas.',
     category: 'Videojuegos',
     blockedDomains: [],
     allowCustomDomains: false,

@@ -55,6 +55,46 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     durationMinutes: 20,
     rewardCoins: 20,
     enabled: true
+  },
+  {
+    id: 'meditate',
+    name: 'Meditate',
+    description: 'Meditate for 15 minutes.',
+    durationMinutes: 15,
+    rewardCoins: 15,
+    enabled: true
+  },
+  {
+    id: 'make-my-bed',
+    name: 'Make My Bed',
+    description: 'Make your bed in 2 minutes.',
+    durationMinutes: 2,
+    rewardCoins: 5,
+    enabled: true
+  },
+  {
+    id: 'chess',
+    name: 'Chess',
+    description: 'Use the whole computer for 1 hour while playing chess.',
+    durationMinutes: 60,
+    rewardCoins: 30,
+    enabled: true
+  },
+  {
+    id: 'backtesting',
+    name: 'Backtesting',
+    description: 'Use the whole computer for 1 hour while testing a strategy.',
+    durationMinutes: 60,
+    rewardCoins: 50,
+    enabled: true
+  },
+  {
+    id: 'stare-at-wall',
+    name: 'Stare at the Wall',
+    description: 'Stare at the wall for 15 minutes.',
+    durationMinutes: 15,
+    rewardCoins: 15,
+    enabled: true
   }
 ];
 

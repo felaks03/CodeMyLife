@@ -119,8 +119,8 @@ test('el bloqueo diario tiene ventana de mañana y de tarde', () => {
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T08:00:00')), true);
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T14:59:00')), true);
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T15:00:00')), false);
-  assert.equal(isDailyFocusWindow(new Date('2026-09-25T17:29:00')), false);
-  assert.equal(isDailyFocusWindow(new Date('2026-09-25T17:30:00')), true);
+  assert.equal(isDailyFocusWindow(new Date('2026-09-25T17:59:00')), false);
+  assert.equal(isDailyFocusWindow(new Date('2026-09-25T18:00:00')), true);
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T21:59:00')), true);
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T22:00:00')), false);
 });

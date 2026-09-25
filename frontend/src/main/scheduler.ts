@@ -12,7 +12,7 @@ import { writeJsonAtomic } from './atomic-storage';
 import { dailyFocusStore } from './daily-focus-store';
 import { isDailyFocusBlocked } from '../shared/daily-focus';
 import { filterTradingDomains, isTradingAccessWindow, TRADING_ALLOWED_PROCESSES } from '../shared/trading-access';
-import { isGameFreeTime } from '../shared/game-free-time';
+import { isGameBlockingDay, isGameFreeTime } from '../shared/game-free-time';
 
 const CHECK_INTERVAL_MS = 30_000;
 
@@ -120,7 +120,7 @@ export class BlockingScheduler {
     this.maybeNotifySleepWarning(now, lockScreenActive);
     const dailyFocusActive = !await dailyFocusStore.isSkippedForToday() &&
       isDailyFocusBlocked(now, await dailyFocusStore.tick());
-    const gamesActive = !isGameFreeTime(now) && this.commitments.some(
+    const gamesActive = isGameBlockingDay(now) && !isGameFreeTime(now) && this.commitments.some(
       (commitment) => commitment.scriptId === 'builtin-games' && isCommitmentEnforcedNow(commitment, now)
     );
     const youtubeFreeTime = isGameFreeTime(now);

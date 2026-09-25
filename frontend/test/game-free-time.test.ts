@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BUILTIN_SCRIPTS } from '../src/shared/builtin-scripts';
 import { isCommitmentEnforcedNow, nextExecutableStart, nextSleepStart } from '../src/shared/schedule';
-import { GAME_FREE_WINDOWS, isGameFreeTime } from '../src/shared/game-free-time';
+import { GAME_FREE_WINDOWS, isGameBlockingDay, isGameFreeTime } from '../src/shared/game-free-time';
 
 function at(dateIso: string): Date {
   return new Date(dateIso);
@@ -17,6 +17,12 @@ test('los videojuegos no tienen ventana libre por defecto', () => {
 
 test('la ventana libre queda vacia', () => {
   assert.deepEqual(GAME_FREE_WINDOWS, []);
+});
+
+test('el bloqueo de videojuegos solo se aplica de lunes a viernes', () => {
+  assert.equal(isGameBlockingDay(at('2026-09-25T12:00:00')), true);
+  assert.equal(isGameBlockingDay(at('2026-09-26T12:00:00')), false);
+  assert.equal(isGameBlockingDay(at('2026-09-27T12:00:00')), false);
 });
 
 test('el bloqueo de dormir aplica todos los dias', () => {

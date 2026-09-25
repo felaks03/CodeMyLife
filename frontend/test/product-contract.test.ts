@@ -41,8 +41,8 @@ test('YouTube tiene uso diario manual de media hora', () => {
 test('los videojuegos no tienen ventana libre y siguen con compra por monedas', () => {
   const scheduler = read('src/main/scheduler.ts');
   const scripts = read('src/shared/builtin-scripts.ts');
-  assert.match(scheduler, /isGameFreeTime/);
-  assert.match(scheduler, /const gamesActive = !isGameFreeTime\(now\) && this\.commitments\.some\(/);
+  assert.match(scheduler, /isGameBlockingDay/);
+  assert.match(scheduler, /const gamesActive = isGameBlockingDay\(now\) && !isGameFreeTime\(now\) && this\.commitments\.some\(/);
   assert.match(scheduler, /const youtubeFreeTime = isGameFreeTime\(now\)/);
   assert.match(scheduler, /YOUTUBE_DOMAINS\.some/);
   assert.match(scripts, /solo lo desbloqueas con monedas/);

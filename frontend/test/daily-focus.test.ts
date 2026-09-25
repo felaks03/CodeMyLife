@@ -134,6 +134,17 @@ test('la mañana excluye Gym y la tarde solo contiene Gym', () => {
   assert.deepEqual(tasksForFocusWindow(new Date('2026-09-26T18:00:00')), []);
 });
 
+test('el fin de semana conserva solo el bloqueo matinal', () => {
+  const saturdayMorning = new Date('2026-09-26T09:00:00');
+  const saturdayEvening = new Date('2026-09-26T18:00:00');
+  const unfinished = DAILY_FOCUS_TASKS.map((task) => ({ taskId: task.id, completed: false }));
+
+  assert.equal(isDailyFocusBlocked(saturdayMorning, unfinished), true);
+  assert.equal(tasksForFocusWindow(saturdayMorning).some((task) => task.id === 'gym'), false);
+  assert.equal(isDailyFocusBlocked(saturdayEvening, unfinished), false);
+  assert.deepEqual(tasksForFocusWindow(saturdayEvening), []);
+});
+
 test('cada ventana termina al completar sus tareas', () => {
   const morningProgress = DAILY_FOCUS_TASKS.map((task) => ({
     taskId: task.id,

@@ -18,3 +18,7 @@ function minutesOfDay(date: Date): number {
 export function isGameFreeTime(date: Date): boolean {
   return false;
 }
+
+export function isGameBlockingDay(date: Date): boolean {
+  return date.getDay() !== 0 && date.getDay() !== 6;
+}

@@ -124,7 +124,7 @@ export function visibleDailyFocusTasks(date: Date): DailyFocusTask[] {
 
 export function isDailyFocusWindow(date: Date): boolean {
   const minutes = date.getHours() * 60 + date.getMinutes();
-  return (minutes >= 8 * 60 && minutes < 15 * 60) || (minutes >= 18 * 60 && minutes < 22 * 60);
+  return (minutes >= 8 * 60 && minutes < 15 * 60) || (minutes >= 18 * 60 && minutes < 20 * 60);
 }
 
 export function isMorningFocusWindow(date: Date): boolean {
@@ -134,7 +134,7 @@ export function isMorningFocusWindow(date: Date): boolean {
 
 export function isAfternoonFocusWindow(date: Date): boolean {
   const minutes = date.getHours() * 60 + date.getMinutes();
-  return minutes >= 18 * 60 && minutes < 22 * 60;
+  return minutes >= 18 * 60 && minutes < 20 * 60;
 }
 
 export function tasksForFocusWindow(date: Date): DailyFocusTask[] {

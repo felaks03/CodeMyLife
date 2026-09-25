@@ -90,7 +90,7 @@ export const dailyFocusStore = {
     return serialized(async () => {
       const now = timeAuthority.now();
       if (!isDailyFocusWindow(now)) {
-        throw new Error('Las tareas solo se pueden iniciar de 08:00 a 15:00 o de 18:00 a 22:00.');
+        throw new Error('Las tareas solo se pueden iniciar de 08:00 a 15:00 o de 18:00 a 20:00.');
       }
       const progress = await readState();
       const item = progress.find((entry) => entry.taskId === taskId);
@@ -113,7 +113,7 @@ export const dailyFocusStore = {
     return serialized(async () => {
       const now = timeAuthority.now();
       if (!isDailyFocusWindow(now)) {
-        throw new Error('Las tareas solo se pueden completar de 08:00 a 15:00 o de 18:00 a 22:00.');
+        throw new Error('Las tareas solo se pueden completar de 08:00 a 15:00 o de 18:00 a 20:00.');
       }
       const progress = await readState();
       const task = DAILY_FOCUS_TASKS.find((candidate) => candidate.id === taskId);

@@ -13,6 +13,7 @@ import {
   serializeDateKey,
   tickDailyFocusProgress,
   isDailyFocusWindow,
+  tasksForFocusWindow,
   visibleDailyFocusTasks
 } from '../shared/daily-focus';
 
@@ -87,12 +88,16 @@ export const dailyFocusStore = {
 
   async startTask(taskId: string): Promise<DailyFocusStoreState> {
     return serialized(async () => {
-      if (!isDailyFocusWindow(timeAuthority.now())) {
-        throw new Error('Las tareas solo se pueden iniciar durante el bloqueo diario, de 08:00 a 15:00.');
+      const now = timeAuthority.now();
+      if (!isDailyFocusWindow(now)) {
+        throw new Error('Las tareas solo se pueden iniciar de 08:00 a 15:00 o de 17:30 a 22:00.');
       }
       const progress = await readState();
       const item = progress.find((entry) => entry.taskId === taskId);
       if (!item) throw new Error('Tarea no encontrada.');
+      if (!tasksForFocusWindow(now).some((task) => task.id === taskId)) {
+        throw new Error('Esta tarea no pertenece al bloqueo activo.');
+      }
       if (item.completed) throw new Error('Esta tarea ya está completada.');
       if (!canStartDailyFocusTask(taskId, progress)) {
         const activeTaskId = activeDailyFocusTaskId(progress);
@@ -106,13 +111,17 @@ export const dailyFocusStore = {
 
   async completeTask(taskId: string): Promise<DailyFocusStoreState> {
     return serialized(async () => {
-      if (!isDailyFocusWindow(timeAuthority.now())) {
-        throw new Error('Las tareas solo se pueden completar durante el bloqueo diario, de 08:00 a 15:00.');
+      const now = timeAuthority.now();
+      if (!isDailyFocusWindow(now)) {
+        throw new Error('Las tareas solo se pueden completar de 08:00 a 15:00 o de 17:30 a 22:00.');
       }
       const progress = await readState();
       const task = DAILY_FOCUS_TASKS.find((candidate) => candidate.id === taskId);
       const item = progress.find((entry) => entry.taskId === taskId);
       if (!task || !item) throw new Error('Tarea no encontrada.');
+      if (!tasksForFocusWindow(now).some((candidate) => candidate.id === taskId)) {
+        throw new Error('Esta tarea no pertenece al bloqueo activo.');
+      }
       if (item.completed) throw new Error('Esta tarea ya está completada.');
       const elapsedMs = Math.max(0, Number(item.elapsedMs ?? 0));
       const requiredMs = task.durationMinutes * 60 * 1000;

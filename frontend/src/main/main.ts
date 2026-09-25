@@ -10,7 +10,7 @@ import { buildCalendar, commitmentStats } from '../shared/schedule';
 import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
 import { walletStore } from './wallet-store';
 import { dailyFocusStore } from './daily-focus-store';
-import { visibleDailyFocusTasks } from '../shared/daily-focus';
+import { tasksForFocusWindow } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
 import { isYoutubeShortsUrl } from '../shared/youtube-shorts';
@@ -66,6 +66,8 @@ const sleepLockWindows = new Map<number, BrowserWindow>();
 let quitInProgress = false;
 const dailyFocusLockWindows = new Map<number, BrowserWindow>();
 let dailyFocusComputerAllowed = false;
+let dailyFocusPauseTimer: NodeJS.Timeout | null = null;
+let dailyFocusPauseUntil = 0;
 let quitting = false;
 
 Menu.setApplicationMenu(null);
@@ -641,7 +643,26 @@ function setDailyFocusComputerAllowed(allowed: boolean): void {
   syncDailyFocusLockWindow(scheduler.getState().dailyFocusActive === true);
 }
 
+function pauseDailyFocusForOneMinute(): number {
+  const now = Date.now();
+  if (!scheduler.getState().dailyFocusActive || dailyFocusComputerAllowed) return 0;
+  if (dailyFocusPauseUntil > now) return dailyFocusPauseUntil;
+
+  dailyFocusPauseUntil = now + 60_000;
+  setDailyFocusComputerAllowed(true);
+  if (dailyFocusPauseTimer) clearTimeout(dailyFocusPauseTimer);
+  dailyFocusPauseTimer = setTimeout(() => {
+    dailyFocusPauseTimer = null;
+    dailyFocusPauseUntil = 0;
+    setDailyFocusComputerAllowed(false);
+  }, 60_000);
+  return dailyFocusPauseUntil;
+}
+
 function destroyDailyFocusLockWindows(): void {
+  if (dailyFocusPauseTimer) clearTimeout(dailyFocusPauseTimer);
+  dailyFocusPauseTimer = null;
+  dailyFocusPauseUntil = 0;
   for (const window of dailyFocusLockWindows.values()) {
     if (!window.isDestroyed()) window.destroy();
   }
@@ -931,9 +952,10 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('daily-focus:get', async () => ({
-    tasks: visibleDailyFocusTasks(timeAuthority.now()),
+    tasks: tasksForFocusWindow(timeAuthority.now()),
     progress: await dailyFocusStore.tick()
   }));
+  ipcMain.handle('daily-focus:pause', () => pauseDailyFocusForOneMinute());
   ipcMain.handle('app:is-development', () => !app.isPackaged);
   ipcMain.handle('daily-focus:start', async (_event, taskId: string) => {
     const progress = await dailyFocusStore.startTask(taskId);

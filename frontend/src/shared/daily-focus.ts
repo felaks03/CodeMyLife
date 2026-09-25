@@ -33,6 +33,14 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     enabled: true
   },
   {
+    id: 'brush-my-teeth',
+    name: 'Brush My Teeth',
+    description: 'Brush your teeth for 3 minutes.',
+    durationMinutes: 3,
+    rewardCoins: 5,
+    enabled: true
+  },
+  {
     id: 'cold-shower',
     name: 'Cold Shower',
     description: 'Take a cold shower.',
@@ -82,7 +90,7 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
   },
   {
     id: 'backtesting',
-    name: 'Backtesting',
+    name: 'Backtesting 5 Trades',
     description: 'Use the whole computer for 1 hour while testing a strategy.',
     durationMinutes: 60,
     rewardCoins: 50,
@@ -116,7 +124,25 @@ export function visibleDailyFocusTasks(date: Date): DailyFocusTask[] {
 
 export function isDailyFocusWindow(date: Date): boolean {
   const minutes = date.getHours() * 60 + date.getMinutes();
+  return (minutes >= 8 * 60 && minutes < 15 * 60) || (minutes >= 17 * 60 + 30 && minutes < 22 * 60);
+}
+
+export function isMorningFocusWindow(date: Date): boolean {
+  const minutes = date.getHours() * 60 + date.getMinutes();
   return minutes >= 8 * 60 && minutes < 15 * 60;
+}
+
+export function isAfternoonFocusWindow(date: Date): boolean {
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  return minutes >= 17 * 60 + 30 && minutes < 22 * 60;
+}
+
+export function tasksForFocusWindow(date: Date): DailyFocusTask[] {
+  if (isAfternoonFocusWindow(date)) return isGymEnabledForDate(date)
+    ? DAILY_FOCUS_TASKS.filter((task) => task.id === 'gym')
+    : [];
+  if (isMorningFocusWindow(date)) return visibleDailyFocusTasks(date).filter((task) => task.id !== 'gym');
+  return [];
 }
 
 export type DailyFocusState = { taskId: string; completed: boolean; startedAt?: string | null; elapsedMs?: number; dayKey?: string }[];
@@ -191,13 +217,16 @@ export function tickDailyFocusProgress(progress: DailyFocusState, nowMs: number)
 }
 
 export function isDailyFocusBlocked(date: Date, progress: DailyFocusState): boolean {
-  if (!isDailyFocusWindow(date)) return false;
-  return !progress.every((task) => task.completed === true);
+  const windowTasks = tasksForFocusWindow(date);
+  if (windowTasks.length === 0) return false;
+  return windowTasks.some((task) => !progress.some((item) => item.taskId === task.id && item.completed === true));
 }
 
 export function minutesUntilFocusCutoff(date: Date): number {
   const cutoff = new Date(date);
-  cutoff.setHours(15, 0, 0, 0);
+  if (isAfternoonFocusWindow(date)) cutoff.setHours(22, 0, 0, 0);
+  else if (isMorningFocusWindow(date)) cutoff.setHours(15, 0, 0, 0);
+  else return 0;
   const diff = cutoff.getTime() - date.getTime();
   return Math.max(0, Math.ceil(diff / 60000));
 }

@@ -92,6 +92,19 @@ test('las pantallas de bloqueo permiten comprobar actualizaciones', () => {
   assert.match(focusJs, /checkForUpdates\(\)/);
 });
 
+test('la pantalla de tareas ofrece una pausa temporal de 60 segundos', () => {
+  const html = read('src/renderer/daily-focus-lock.html');
+  const lockRenderer = read('src/renderer/daily-focus-lock.js');
+  const preload = read('src/preload/preload.ts');
+  const main = read('src/main/main.ts');
+  assert.match(html, /pause-daily-focus/);
+  assert.match(lockRenderer, /pauseDailyFocus/);
+  assert.match(lockRenderer, /Pausa activa/);
+  assert.match(preload, /daily-focus:pause/);
+  assert.match(main, /dailyFocusPauseUntil = now \+ 60_000/);
+  assert.match(main, /setTimeout\(\(\) => \{[\s\S]*dailyFocusPauseUntil = 0/);
+});
+
 test('el bloqueo de dormir crea una ventana por monitor', () => {
   const main = read('src/main/main.ts');
   assert.match(main, /sleepLockWindows = new Map/);
@@ -100,42 +113,10 @@ test('el bloqueo de dormir crea una ventana por monitor', () => {
   assert.match(main, /destroySleepLockWindows\(\)/);
 });
 
-test('la pantalla de tareas ofrece TradingView, Tradovate y Notion sobre el bloqueo', () => {
+test('la pantalla de tareas no muestra aplicaciones externas', () => {
   const html = read('src/renderer/daily-focus-lock.html');
   const lockRenderer = read('src/renderer/daily-focus-lock.js');
-  const preload = read('src/preload/preload.ts');
-  const main = read('src/main/main.ts');
-  const trading = read('src/shared/trading-access.ts');
-  assert.match(html, /open-tradingview/);
-  assert.match(html, /open-tradovate/);
-  assert.match(html, /open-notion/);
-  assert.match(html, /tradingview\.svg/);
-  assert.match(html, /tradovate\.svg/);
-  assert.match(html, /notion\.svg/);
-  assert.match(html, /class="app-launch-button"/);
-  assert.match(html, /open-spotify/);
-  assert.match(html, /assets\/spotify\.svg/);
-  assert.match(html, /img-src 'self'/);
-  assert.match(lockRenderer, /openTradingView/);
-  assert.match(lockRenderer, /openTradovate/);
-  assert.match(lockRenderer, /openNotion/);
-  assert.match(lockRenderer, /openSpotify/);
-  assert.match(preload, /tradingview:open/);
-  assert.match(preload, /tradovate:open/);
-  assert.match(preload, /notion:open/);
-  assert.match(preload, /spotify:open/);
-  assert.match(main, /function isTradingUrl/);
-  assert.match(main, /function isNotionUrl/);
-  assert.match(main, /function isSpotifyUrl/);
-  assert.match(main, /setAlwaysOnTop\(true, 'screen-saver'\)/);
-  assert.match(main, /setWindowOpenHandler/);
-  assert.match(main, /isTradingUrl\(nextUrl\) \? 'allow' : 'deny'/);
-  assert.match(main, /will-redirect/);
-  assert.match(main, /hasAllowedOverlayWindowOpen/);
-  assert.match(main, /refocusDailyFocusWindows/);
-  assert.match(main, /else if \(!hasAllowedOverlayWindowOpen\(\)\) \{[\s\S]*applyDailyFocusKioskMode/);
-  assert.match(trading, /TRADING_ALLOWED_DOMAINS/);
-  assert.match(read('assets/spotify.svg'), /#1ed760/);
+  assert.doesNotMatch(html + lockRenderer, /open-tradingview|open-tradovate|open-notion|open-spotify|tradingview\.svg|tradovate\.svg|notion\.svg|spotify\.svg/);
 });
 
 test('el updater solo se configura para builds empaquetadas', () => {

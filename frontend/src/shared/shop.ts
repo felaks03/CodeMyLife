@@ -16,6 +16,13 @@ export const TASKS: TaskDefinition[] = [
     frequency: 'daily'
   },
   {
+    id: 'brush-my-teeth',
+    name: 'Brush My Teeth',
+    description: 'Brush your teeth for 3 minutes.',
+    rewardCoins: 5,
+    frequency: 'daily'
+  },
+  {
     id: 'cold-shower',
     name: 'Cold Shower',
     description: 'Take a cold shower.',
@@ -59,7 +66,7 @@ export const TASKS: TaskDefinition[] = [
   },
   {
     id: 'backtesting',
-    name: 'Backtesting',
+    name: 'Backtesting 5 Trades',
     description: 'Use the whole computer for 1 hour while testing a strategy.',
     rewardCoins: 50,
     frequency: 'daily'

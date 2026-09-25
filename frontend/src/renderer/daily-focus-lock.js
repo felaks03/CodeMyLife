@@ -1,12 +1,11 @@
 let tasks = [];
 let progress = [];
 const list = document.getElementById('focus-list');
-const tradingViewButton = document.getElementById('open-tradingview');
-const tradovateButton = document.getElementById('open-tradovate');
-const notionButton = document.getElementById('open-notion');
-const spotifyButton = document.getElementById('open-spotify');
 const updateStatus = document.getElementById('update-status');
 const updateButton = document.getElementById('check-updates');
+const pauseButton = document.getElementById('pause-daily-focus');
+const pauseStatus = document.getElementById('pause-focus-status');
+let pauseUntil = 0;
 
 async function checkUpdates() {
   updateButton.disabled = true;
@@ -42,37 +41,30 @@ window.codeMyLife.onUpdateError((message) => {
   if (updateStatus) updateStatus.textContent = message || 'Error al comprobar la actualización';
 });
 
+function renderPauseStatus() {
+  const seconds = Math.max(0, Math.ceil((pauseUntil - Date.now()) / 1000));
+  if (seconds > 0) {
+    pauseButton.disabled = true;
+    pauseButton.textContent = `Pausa activa · ${seconds}s`;
+    pauseStatus.textContent = 'El ordenador está disponible temporalmente.';
+    return;
+  }
+  pauseButton.disabled = false;
+  pauseButton.textContent = 'Pausa temporal · 60 segundos';
+  pauseStatus.textContent = '';
+}
+
+pauseButton.addEventListener('click', async () => {
+  pauseButton.disabled = true;
+  const nextPauseUntil = await window.codeMyLife.pauseDailyFocus();
+  if (nextPauseUntil > Date.now()) pauseUntil = nextPauseUntil;
+  renderPauseStatus();
+});
+setInterval(renderPauseStatus, 1000);
+
 document.getElementById('focus-mode-label').textContent = 'CodeMyLife · Bloqueo diario';
 document.getElementById('focus-note').textContent = 'Solo puedes usar los controles de esta pantalla hasta completar tus tareas.';
 document.title = 'CodeMyLife - Bloqueo diario';
-
-tradingViewButton.addEventListener('click', () => {
-  tradingViewButton.disabled = true;
-  void window.codeMyLife.openTradingView().finally(() => {
-    tradingViewButton.disabled = false;
-  });
-});
-
-tradovateButton.addEventListener('click', () => {
-  tradovateButton.disabled = true;
-  void window.codeMyLife.openTradovate().finally(() => {
-    tradovateButton.disabled = false;
-  });
-});
-
-notionButton.addEventListener('click', () => {
-  notionButton.disabled = true;
-  void window.codeMyLife.openNotion().finally(() => {
-    notionButton.disabled = false;
-  });
-});
-
-spotifyButton.addEventListener('click', () => {
-  spotifyButton.disabled = true;
-  void window.codeMyLife.openSpotify().finally(() => {
-    spotifyButton.disabled = false;
-  });
-});
 
 function elapsedSeconds(task) {
   const item = progress.find((entry) => entry.taskId === task.id);

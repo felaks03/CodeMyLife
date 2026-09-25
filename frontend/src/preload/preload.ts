@@ -85,6 +85,7 @@ contextBridge.exposeInMainWorld('codeMyLife', {
     ipcRenderer.on('app:pause-timers', () => callback());
   }
   ,getDailyFocus: (): Promise<DailyFocusData> => ipcRenderer.invoke('daily-focus:get')
+  ,pauseDailyFocus: (): Promise<number> => ipcRenderer.invoke('daily-focus:pause')
   ,startDailyFocusTask: (taskId: string): Promise<DailyFocusState> => ipcRenderer.invoke('daily-focus:start', taskId)
   ,completeDailyFocusTask: (taskId: string): Promise<DailyFocusState> => ipcRenderer.invoke('daily-focus:complete', taskId)
   ,tickDailyFocus: (): Promise<DailyFocusState> => ipcRenderer.invoke('daily-focus:tick')

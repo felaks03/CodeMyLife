@@ -112,6 +112,7 @@ test('las tareas usan los premios de monedas acordados', () => {
         ['stare-at-wall', 15]
     ]
   );
+  });
 
 test('el bloqueo diario tiene ventana de mañana y de tarde', () => {
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T07:59:00')), false);
@@ -149,7 +150,6 @@ test('cada ventana termina al completar sus tareas', () => {
 
   assert.equal(isDailyFocusBlocked(new Date('2026-09-25T09:00:00'), morningProgress), false);
   assert.equal(isDailyFocusBlocked(new Date('2026-09-25T18:00:00'), eveningProgress), false);
-});
 });
 
 test('las tareas completadas ayer no aparecen completadas hoy', () => {

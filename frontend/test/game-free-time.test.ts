@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BUILTIN_SCRIPTS } from '../src/shared/builtin-scripts';
 import { isCommitmentEnforcedNow, nextExecutableStart, nextSleepStart } from '../src/shared/schedule';
-import { GAME_FREE_WINDOWS, isGameBlockingDay, isGameFreeTime } from '../src/shared/game-free-time';
+import { GAME_FREE_WINDOWS, isGameBlockingDay, isGameFreeTime, isYoutubeFreeTime } from '../src/shared/game-free-time';
 
 function at(dateIso: string): Date {
   return new Date(dateIso);
@@ -23,6 +23,15 @@ test('el bloqueo de videojuegos solo se aplica de lunes a viernes', () => {
   assert.equal(isGameBlockingDay(at('2026-09-25T12:00:00')), true);
   assert.equal(isGameBlockingDay(at('2026-09-26T12:00:00')), false);
   assert.equal(isGameBlockingDay(at('2026-09-27T12:00:00')), false);
+});
+
+test('YouTube queda libre desde el viernes a las 17 hasta el domingo a las 17', () => {
+  assert.equal(isYoutubeFreeTime(at('2026-09-25T16:59:00')), false);
+  assert.equal(isYoutubeFreeTime(at('2026-09-25T17:00:00')), true);
+  assert.equal(isYoutubeFreeTime(at('2026-09-26T12:00:00')), true);
+  assert.equal(isYoutubeFreeTime(at('2026-09-27T16:59:00')), true);
+  assert.equal(isYoutubeFreeTime(at('2026-09-27T17:00:00')), false);
+  assert.equal(isYoutubeFreeTime(at('2026-09-28T09:00:00')), false);
 });
 
 test('el bloqueo de dormir aplica todos los dias', () => {

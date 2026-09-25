@@ -43,7 +43,7 @@ test('los videojuegos no tienen ventana libre y siguen con compra por monedas', 
   const scripts = read('src/shared/builtin-scripts.ts');
   assert.match(scheduler, /isGameBlockingDay/);
   assert.match(scheduler, /const gamesActive = isGameBlockingDay\(now\) && !isGameFreeTime\(now\) && this\.commitments\.some\(/);
-  assert.match(scheduler, /const youtubeFreeTime = isGameFreeTime\(now\)/);
+  assert.match(scheduler, /const youtubeFreeTime = isYoutubeFreeTime\(now\)/);
   assert.match(scheduler, /YOUTUBE_DOMAINS\.some/);
   assert.match(scripts, /solo lo desbloqueas con monedas/);
 });

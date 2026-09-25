@@ -22,3 +22,12 @@ export function isGameFreeTime(date: Date): boolean {
 export function isGameBlockingDay(date: Date): boolean {
   return date.getDay() !== 0 && date.getDay() !== 6;
 }
+
+export function isYoutubeFreeTime(date: Date): boolean {
+  const day = date.getDay();
+  const minutes = minutesOfDay(date);
+  if (day === 5) return minutes >= 17 * 60;
+  if (day === 6) return true;
+  if (day === 0) return minutes < 17 * 60;
+  return false;
+}

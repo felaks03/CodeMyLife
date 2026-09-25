@@ -56,8 +56,13 @@ function renderPauseStatus() {
 
 pauseButton.addEventListener('click', async () => {
   pauseButton.disabled = true;
-  const nextPauseUntil = await window.codeMyLife.pauseDailyFocus();
-  if (nextPauseUntil > Date.now()) pauseUntil = nextPauseUntil;
+  try {
+    const nextPauseUntil = await window.codeMyLife.pauseDailyFocus();
+    if (nextPauseUntil > Date.now()) pauseUntil = nextPauseUntil;
+  } catch {
+    pauseUntil = 0;
+    pauseStatus.textContent = 'No se pudo activar la pausa.';
+  }
   renderPauseStatus();
 });
 setInterval(renderPauseStatus, 1000);

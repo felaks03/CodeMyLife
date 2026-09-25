@@ -18,10 +18,10 @@ test('la tienda ofrece 1 minuto extra de Instagram por 5 monedas', () => {
   assert.equal(instagram.durationMinutes, 1);
 });
 
-test('videojuegos cuesta 5 monedas y ofrece 10 minutos', () => {
+test('videojuegos cuesta 10 monedas y ofrece 10 minutos', () => {
   const games = SHOP_ITEMS.find((item) => item.id === 'games-time');
   assert.ok(games);
-  assert.equal(games.costCoins, 5);
+  assert.equal(games.costCoins, 10);
   assert.equal(games.durationMinutes, 10);
 });
 

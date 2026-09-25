@@ -85,7 +85,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     id: 'games-time',
     name: 'Tiempo de videojuegos',
     description: 'Desbloquea Steam y Minecraft Launcher durante 10 minutos.',
-    costCoins: 5,
+    costCoins: 10,
     durationMinutes: 10,
     targetScriptId: 'builtin-games'
   },

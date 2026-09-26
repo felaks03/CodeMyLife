@@ -4,13 +4,13 @@ import { promises as fs, watch } from 'fs';
 import { SessionStore } from './session-store';
 import { BlockingScheduler } from './scheduler';
 import { guestStore } from './guest-store';
+import { DAILY_FOCUS_TASKS, tasksForFocusWindow } from '../shared/daily-focus';
 import { INSTAGRAM_DOMAINS, YOUTUBE_DOMAINS } from '../shared/builtin-scripts';
 import { TRADING_ALLOWED_DOMAINS } from '../shared/trading-access';
 import { buildCalendar, commitmentStats } from '../shared/schedule';
 import { BlockingState, Commitment, NewCommitment, NewScript } from '../shared/types';
 import { walletStore } from './wallet-store';
 import { dailyFocusStore } from './daily-focus-store';
-import { tasksForFocusWindow } from '../shared/daily-focus';
 import { timeAuthority } from './time-authority';
 import { autoUpdater } from 'electron-updater';
 import { isYoutubeShortsUrl } from '../shared/youtube-shorts';
@@ -643,6 +643,16 @@ function setDailyFocusComputerAllowed(allowed: boolean): void {
   syncDailyFocusLockWindow(scheduler.getState().dailyFocusActive === true);
 }
 
+function relockWhenComputerTaskExpires(progress: Awaited<ReturnType<typeof dailyFocusStore.tick>>): void {
+  const activeTask = progress.find((item) => item.startedAt && !item.completed);
+  if (!activeTask || (activeTask.taskId !== 'chess' && activeTask.taskId !== 'backtesting')) return;
+
+  const task = DAILY_FOCUS_TASKS.find((candidate) => candidate.id === activeTask.taskId);
+  if (task && Number(activeTask.elapsedMs ?? 0) >= task.durationMinutes * 60 * 1000) {
+    setDailyFocusComputerAllowed(false);
+  }
+}
+
 function pauseDailyFocusForOneMinute(): number {
   const now = Date.now();
   if (!scheduler.getState().dailyFocusActive || dailyFocusComputerAllowed) return 0;
@@ -975,7 +985,11 @@ function registerIpcHandlers(): void {
       throw error;
     }
   });
-  ipcMain.handle('daily-focus:tick', () => dailyFocusStore.tick());
+  ipcMain.handle('daily-focus:tick', async () => {
+    const progress = await dailyFocusStore.tick();
+    relockWhenComputerTaskExpires(progress);
+    return progress;
+  });
 
   ipcMain.handle('instagram:start-usage', async () => {
     await scheduler.setTemporarilyAllowed(INSTAGRAM_DOMAINS, true);

@@ -78,6 +78,12 @@ test('Chess y Backtesting permiten usar el ordenador y al completarse vuelve a b
   assert.match(main, /function applyDailyFocusKioskMode[\s\S]*setKiosk\(true\)/);
 });
 
+test('Chess y Backtesting vuelven a bloquearse automáticamente al agotarse el tiempo', () => {
+  const main = read('src/main/main.ts');
+  assert.match(main, /function relockWhenComputerTaskExpires[\s\S]*activeTask\.elapsedMs[\s\S]*task\.durationMinutes \* 60 \* 1000[\s\S]*setDailyFocusComputerAllowed\(false\)/);
+  assert.match(main, /ipcMain\.handle\('daily-focus:tick', async \(\) => \{[\s\S]*relockWhenComputerTaskExpires\(progress\)/);
+});
+
 test('las pantallas de bloqueo permiten comprobar actualizaciones', () => {
   const main = read('src/main/main.ts');
   const sleep = read('src/renderer/lock-screen.html');

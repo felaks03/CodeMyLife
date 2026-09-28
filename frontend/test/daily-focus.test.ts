@@ -38,12 +38,12 @@ test('si no hay tareas completadas dentro de la ventana, se activa el bloqueo', 
     { taskId: 'reading', completed: false }
   ]);
 
-    assert.equal(isDailyFocusBlocked(now, state), true);
-    assert.equal(DAILY_FOCUS_TASKS.length, 11);
-    assert.deepEqual(dailyFocusTaskIds(), ['run3k', 'breakfast', 'brush-my-teeth', 'cold-shower', 'gym', 'reading', 'meditate', 'make-my-bed', 'chess', 'backtesting', 'stare-at-wall']);
+  assert.equal(isDailyFocusBlocked(now, state), true);
+  assert.equal(DAILY_FOCUS_TASKS.length, 13);
+  assert.deepEqual(dailyFocusTaskIds(), ['run3k', 'breakfast', 'supplementation-morning', 'brush-my-teeth', 'cold-shower', 'gym', 'supplementation-afternoon', 'reading', 'meditate', 'make-my-bed', 'chess', 'backtesting', 'stare-at-wall']);
   assert.deepEqual(
     DAILY_FOCUS_TASKS.map((task) => task.name),
-    ['Run 3k', 'Breakfast', 'Brush My Teeth', 'Cold Shower', 'Gym', 'Reading', 'Meditate', 'Make My Bed', 'Chess', 'Backtesting 5 Trades', 'Stare at the Wall']
+    ['Run 3k', 'Breakfast', 'Supplementation', 'Brush My Teeth', 'Cold Shower', 'Gym', 'Supplementation', 'Reading', 'Meditate', 'Make My Bed', 'Chess', 'Backtesting 5 Trades', 'Stare at the Wall']
   );
   assert.equal(DAILY_FOCUS_TASKS.some((task) => /Desayunar|Leer|Meditar|Mirar/i.test(task.name)), false);
 });
@@ -54,9 +54,11 @@ test('las tareas usan las duraciones diarias acordadas', () => {
     [
       ['run3k', 20],
       ['breakfast', 15],
+      ['supplementation-morning', 1],
         ['brush-my-teeth', 3],
         ['cold-shower', 10],
         ['gym', 60],
+      ['supplementation-afternoon', 1],
         ['reading', 20],
         ['meditate', 15],
         ['make-my-bed', 2],
@@ -101,9 +103,11 @@ test('las tareas usan los premios de monedas acordados', () => {
     [
       ['run3k', 15],
       ['breakfast', 10],
+      ['supplementation-morning', 5],
         ['brush-my-teeth', 5],
         ['cold-shower', 10],
         ['gym', 60],
+      ['supplementation-afternoon', 5],
         ['reading', 20],
         ['meditate', 15],
         ['make-my-bed', 5],
@@ -112,7 +116,7 @@ test('las tareas usan los premios de monedas acordados', () => {
         ['stare-at-wall', 15]
     ]
   );
-  });
+});
 
 test('el bloqueo diario tiene ventana de mañana y de tarde', () => {
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T07:59:00')), false);
@@ -125,12 +129,13 @@ test('el bloqueo diario tiene ventana de mañana y de tarde', () => {
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T20:00:00')), false);
 });
 
-test('la mañana excluye Gym y la tarde solo contiene Gym', () => {
+test('la mañana muestra su suplementacion y la tarde muestra Gym y su suplementacion', () => {
   const morning = tasksForFocusWindow(new Date('2026-09-25T09:00:00'));
   const evening = tasksForFocusWindow(new Date('2026-09-25T18:00:00'));
   assert.equal(morning.some((task) => task.id === 'gym'), false);
   assert.equal(morning.some((task) => task.id === 'brush-my-teeth'), true);
-  assert.deepEqual(evening.map((task) => task.id), ['gym']);
+  assert.deepEqual(morning.filter((task) => task.id.startsWith('supplementation-')).map((task) => task.id), ['supplementation-morning']);
+  assert.deepEqual(evening.map((task) => task.id), ['gym', 'supplementation-afternoon']);
   assert.deepEqual(tasksForFocusWindow(new Date('2026-09-26T18:00:00')), []);
 });
 
@@ -154,7 +159,7 @@ test('cada ventana termina al completar sus tareas', () => {
   }));
   const eveningProgress = DAILY_FOCUS_TASKS.map((task) => ({
     taskId: task.id,
-    completed: task.id === 'gym',
+    completed: task.id === 'gym' || task.id === 'supplementation-afternoon',
     elapsedMs: task.durationMinutes * 60 * 1000,
     startedAt: null
   }));

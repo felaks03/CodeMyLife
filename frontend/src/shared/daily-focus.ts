@@ -33,6 +33,14 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     enabled: true
   },
   {
+    id: 'supplementation-morning',
+    name: 'Supplementation',
+    description: 'Take your supplements in the morning.',
+    durationMinutes: 1,
+    rewardCoins: 5,
+    enabled: true
+  },
+  {
     id: 'brush-my-teeth',
     name: 'Brush My Teeth',
     description: 'Brush your teeth for 3 minutes.',
@@ -54,6 +62,14 @@ export const DAILY_FOCUS_TASKS: DailyFocusTask[] = [
     description: 'Strength training.',
     durationMinutes: 60,
     rewardCoins: 60,
+    enabled: true
+  },
+  {
+    id: 'supplementation-afternoon',
+    name: 'Supplementation',
+    description: 'Take your supplements in the afternoon.',
+    durationMinutes: 1,
+    rewardCoins: 5,
     enabled: true
   },
   {
@@ -139,9 +155,11 @@ export function isAfternoonFocusWindow(date: Date): boolean {
 
 export function tasksForFocusWindow(date: Date): DailyFocusTask[] {
   if (isAfternoonFocusWindow(date)) return isGymEnabledForDate(date)
-    ? DAILY_FOCUS_TASKS.filter((task) => task.id === 'gym')
+    ? DAILY_FOCUS_TASKS.filter((task) => task.id === 'gym' || task.id === 'supplementation-afternoon')
     : [];
-  if (isMorningFocusWindow(date)) return visibleDailyFocusTasks(date).filter((task) => task.id !== 'gym');
+  if (isMorningFocusWindow(date)) {
+    return visibleDailyFocusTasks(date).filter((task) => task.id !== 'gym' && task.id !== 'supplementation-afternoon');
+  }
   return [];
 }
 

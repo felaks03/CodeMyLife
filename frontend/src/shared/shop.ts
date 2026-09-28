@@ -16,6 +16,13 @@ export const TASKS: TaskDefinition[] = [
     frequency: 'daily'
   },
   {
+    id: 'supplementation-morning',
+    name: 'Supplementation',
+    description: 'Take your supplements in the morning.',
+    rewardCoins: 5,
+    frequency: 'daily'
+  },
+  {
     id: 'brush-my-teeth',
     name: 'Brush My Teeth',
     description: 'Brush your teeth for 3 minutes.',
@@ -34,6 +41,13 @@ export const TASKS: TaskDefinition[] = [
     name: 'Gym',
     description: 'Strength training.',
     rewardCoins: 60,
+    frequency: 'daily'
+  },
+  {
+    id: 'supplementation-afternoon',
+    name: 'Supplementation',
+    description: 'Take your supplements in the afternoon.',
+    rewardCoins: 5,
     frequency: 'daily'
   },
   {

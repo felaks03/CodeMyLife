@@ -149,15 +149,15 @@ export const BUILTIN_SCRIPTS: Script[] = [
     _id: 'builtin-youtube',
     authorName: 'CodeMyLife',
     name: 'Bloqueo de YouTube',
-    description: 'Bloquea YouTube todos los días de 15:00 a 17:00. También puedes activar manualmente sus 30 minutos diarios.',
+    description: 'Bloquea YouTube completo todos los dias salvo cuando activas manualmente sus 30 minutos diarios.',
     category: 'Video',
     blockedDomains: YOUTUBE_DOMAINS,
     allowCustomDomains: true,
     usageCount: 0,
     schedule: {
       days: [0, 1, 2, 3, 4, 5, 6],
-      startTime: '15:00',
-      endTime: '17:00'
+      startTime: '00:00',
+      endTime: '24:00'
     }
   },
   {

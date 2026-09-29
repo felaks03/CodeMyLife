@@ -43,8 +43,8 @@ test('los videojuegos no tienen ventana libre y siguen con compra por monedas', 
   const scripts = read('src/shared/builtin-scripts.ts');
   assert.match(scheduler, /isGameBlockingDay/);
   assert.match(scheduler, /const gamesActive = isGameBlockingDay\(now\) && !isGameFreeTime\(now\) && this\.commitments\.some\(/);
-  assert.match(scheduler, /const youtubeBlockActive = this\.commitments\.some\([\s\S]*builtin-youtube[\s\S]*isCommitmentEnforcedNow/);
-  assert.match(scheduler, /return !isYoutubeDomain \|\| youtubeBlockActive/);
+  assert.match(scheduler, /const youtubeFreeTime = isYoutubeFreeTime\(now\)/);
+  assert.match(scheduler, /YOUTUBE_DOMAINS\.some/);
   assert.match(scripts, /solo lo desbloqueas con monedas/);
 });
 
@@ -282,7 +282,7 @@ test('YouTube se bloquea por hosts todos los dias y mantiene capa de Shorts', ()
   const browserPolicy = read('src/main/browser-policy.ts');
   const nsis = read('installer/setup.nsh');
   assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*days: \[0, 1, 2, 3, 4, 5, 6\]/);
-  assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*startTime: '15:00'[\s\S]*endTime: '17:00'/);
+  assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*startTime: '00:00'[\s\S]*endTime: '24:00'/);
   assert.match(builtinScripts, /YOUTUBE_DOMAINS = \['youtube\.com', 'youtu\.be'\]/);
   assert.match(builtinScripts, /_id: 'builtin-youtube'[\s\S]*blockedDomains: YOUTUBE_DOMAINS/);
   assert.match(backendCommitments, /END_TIME_PATTERN[\s\S]*24:00/);

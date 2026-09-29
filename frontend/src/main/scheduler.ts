@@ -12,7 +12,7 @@ import { writeJsonAtomic } from './atomic-storage';
 import { dailyFocusStore } from './daily-focus-store';
 import { isDailyFocusBlocked } from '../shared/daily-focus';
 import { filterTradingDomains, isTradingAccessWindow, TRADING_ALLOWED_PROCESSES } from '../shared/trading-access';
-import { isGameBlockingDay, isGameFreeTime } from '../shared/game-free-time';
+import { isGameBlockingDay, isGameFreeTime, isYoutubeFreeTime } from '../shared/game-free-time';
 
 const CHECK_INTERVAL_MS = 30_000;
 
@@ -123,9 +123,7 @@ export class BlockingScheduler {
     const gamesActive = isGameBlockingDay(now) && !isGameFreeTime(now) && this.commitments.some(
       (commitment) => commitment.scriptId === 'builtin-games' && isCommitmentEnforcedNow(commitment, now)
     );
-    const youtubeBlockActive = this.commitments.some((commitment) =>
-      commitment.scriptId === 'builtin-youtube' && isCommitmentEnforcedNow(commitment, now)
-    );
+    const youtubeFreeTime = isYoutubeFreeTime(now);
     const protectedProcesses = isTradingAccessWindow(now) ? TRADING_ALLOWED_PROCESSES : [];
     await this.desktopAppGuard.setBlocked(VIDEO_GAME_BLOCKED_PROCESSES, gamesActive, protectedProcesses);
     const baseDomains = [...new Set([
@@ -133,8 +131,8 @@ export class BlockingScheduler {
       ...this.manuallyBlockedDomains
     ])].filter((domain) => !this.temporarilyAllowedDomains.has(domain));
     const domains = filterTradingDomains(baseDomains.filter((domain) => {
-      const isYoutubeDomain = YOUTUBE_DOMAINS.some((root) => domain === root || domain.endsWith(`.${root}`));
-      return !isYoutubeDomain || youtubeBlockActive;
+      if (!youtubeFreeTime) return true;
+      return !YOUTUBE_DOMAINS.some((root) => domain === root || domain.endsWith(`.${root}`));
     }), now);
     const wasEnforcing = this.state.enforcing;
 

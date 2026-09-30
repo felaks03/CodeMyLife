@@ -13,6 +13,7 @@ import {
   serializeDateKey,
   tickDailyFocusProgress,
   isDailyFocusWindow,
+  pauseTasksOutsideFocusWindow,
   tasksForFocusWindow,
   visibleDailyFocusTasks
 } from '../shared/daily-focus';
@@ -92,7 +93,7 @@ export const dailyFocusStore = {
       if (!isDailyFocusWindow(now)) {
         throw new Error('Las tareas solo se pueden iniciar de 08:00 a 15:00 o de 18:00 a 20:00.');
       }
-      const progress = await readState();
+      const progress = pauseTasksOutsideFocusWindow(await readState(), now);
       const item = progress.find((entry) => entry.taskId === taskId);
       if (!item) throw new Error('Tarea no encontrada.');
       if (!tasksForFocusWindow(now).some((task) => task.id === taskId)) {
@@ -138,8 +139,9 @@ export const dailyFocusStore = {
   async tick(): Promise<DailyFocusStoreState> {
     return serialized(async () => {
       const progress = await readState();
-      const now = timeAuthority.nowMs();
-      const next = tickDailyFocusProgress(progress, now);
+      const nowDate = timeAuthority.now();
+      const now = nowDate.getTime();
+      const next = pauseTasksOutsideFocusWindow(tickDailyFocusProgress(progress, now), nowDate);
       await writeState(next);
       return next;
     });

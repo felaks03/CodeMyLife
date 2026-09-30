@@ -655,8 +655,8 @@ function relockWhenComputerTaskExpires(progress: Awaited<ReturnType<typeof daily
 
 function pauseDailyFocusForOneMinute(): number {
   const now = Date.now();
-  if (!scheduler.getState().dailyFocusActive || dailyFocusComputerAllowed) return 0;
   if (dailyFocusPauseUntil > now) return dailyFocusPauseUntil;
+  if (!scheduler.getState().dailyFocusActive || dailyFocusComputerAllowed) return 0;
 
   dailyFocusPauseUntil = now + 60_000;
   setDailyFocusComputerAllowed(true);

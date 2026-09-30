@@ -8,6 +8,7 @@ import {
   isDailyFocusWindow,
   isDailyFocusBlocked,
   minutesUntilFocusCutoff,
+  pauseTasksOutsideFocusWindow,
   progressForDay,
   tasksForFocusWindow,
   tickDailyFocusProgress
@@ -137,6 +138,19 @@ test('la mañana muestra su suplementacion y la tarde muestra Gym y su suplement
   assert.deepEqual(morning.filter((task) => task.id.startsWith('supplementation-')).map((task) => task.id), ['supplementation-morning']);
   assert.deepEqual(evening.map((task) => task.id), ['gym', 'supplementation-afternoon']);
   assert.deepEqual(tasksForFocusWindow(new Date('2026-09-26T18:00:00')), []);
+});
+
+test('una tarea matinal activa se pausa al cambiar al bloqueo de tarde', () => {
+  const progress = [
+    { taskId: 'cold-shower', completed: false, startedAt: '2026-09-30T11:55:00.000Z', elapsedMs: 90_000 },
+    { taskId: 'gym', completed: false, startedAt: null, elapsedMs: 0 }
+  ];
+  const paused = pauseTasksOutsideFocusWindow(progress, new Date('2026-09-30T18:00:00'));
+
+  assert.equal(paused[0].startedAt, null);
+  assert.equal(paused[0].elapsedMs, 90_000);
+  assert.equal(paused[1].startedAt, null);
+  assert.equal(canStartDailyFocusTask('gym', paused), true);
 });
 
 test('el fin de semana conserva solo el bloqueo matinal', () => {

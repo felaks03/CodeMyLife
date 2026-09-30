@@ -163,6 +163,15 @@ export function tasksForFocusWindow(date: Date): DailyFocusTask[] {
   return [];
 }
 
+export function pauseTasksOutsideFocusWindow(progress: DailyFocusState, date: Date): DailyFocusState {
+  const activeTaskIds = new Set(tasksForFocusWindow(date).map((task) => task.id));
+  return progress.map((task) =>
+    task.startedAt && !activeTaskIds.has(task.taskId)
+      ? { ...task, startedAt: null }
+      : { ...task }
+  );
+}
+
 export type DailyFocusState = { taskId: string; completed: boolean; startedAt?: string | null; elapsedMs?: number; dayKey?: string }[];
 
 export function progressForDay(dayKey: string, items: DailyFocusState): DailyFocusState {

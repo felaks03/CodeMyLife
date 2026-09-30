@@ -1,6 +1,7 @@
 let tasks = [];
 let progress = [];
 const list = document.getElementById('focus-list');
+const focusNote = document.getElementById('focus-note');
 const updateStatus = document.getElementById('update-status');
 const updateButton = document.getElementById('check-updates');
 const pauseButton = document.getElementById('pause-daily-focus');
@@ -58,7 +59,13 @@ pauseButton.addEventListener('click', async () => {
   pauseButton.disabled = true;
   try {
     const nextPauseUntil = await window.codeMyLife.pauseDailyFocus();
-    if (nextPauseUntil > Date.now()) pauseUntil = nextPauseUntil;
+    if (nextPauseUntil > Date.now()) {
+      pauseUntil = nextPauseUntil;
+    } else {
+      pauseButton.disabled = false;
+      pauseStatus.textContent = 'La pausa no está disponible ahora.';
+      return;
+    }
   } catch {
     pauseUntil = 0;
     pauseStatus.textContent = 'No se pudo activar la pausa.';
@@ -125,7 +132,8 @@ function render() {
           progress = await window.codeMyLife.completeDailyFocusTask(task.id);
         }
         render();
-      } catch {
+      } catch (error) {
+        if (focusNote) focusNote.textContent = String(error?.message ?? error);
         render();
       }
     });

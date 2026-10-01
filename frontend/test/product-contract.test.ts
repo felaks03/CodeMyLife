@@ -70,6 +70,13 @@ test('el bloqueo diario se reconcilia por pantalla', () => {
   assert.match(main, /display-metrics-changed/);
 });
 
+test('completar una tarea reconcilia inmediatamente el bloqueo diario', () => {
+  const main = read('src/main/main.ts');
+  const scheduler = read('src/main/scheduler.ts');
+  assert.match(main, /daily-focus:complete[\s\S]*await scheduler\.reconcileNow\(\)/);
+  assert.match(scheduler, /async reconcileNow\(\): Promise<void> \{\s*await this\.tick\(\);/);
+});
+
 test('Chess y Backtesting permiten usar el ordenador y al completarse vuelve a bloquear', () => {
   const main = read('src/main/main.ts');
   assert.match(main, /if \(taskId === 'chess' \|\| taskId === 'backtesting'\) setDailyFocusComputerAllowed\(true\)/);

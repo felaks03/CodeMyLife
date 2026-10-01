@@ -73,6 +73,10 @@ export class BlockingScheduler {
     await this.tick();
   }
 
+  async reconcileNow(): Promise<void> {
+    await this.tick();
+  }
+
   async setTemporarilyAllowed(domains: string[], allowed: boolean, requiredScriptId = 'builtin-instagram'): Promise<void> {
     this.blocker.forceReconcile();
     const now = timeAuthority.now();

@@ -979,9 +979,11 @@ function registerIpcHandlers(): void {
       const wallet = await walletStore.completeTask(taskId);
       notifyWalletUpdated(wallet);
       if (taskId === 'chess' || taskId === 'backtesting') setDailyFocusComputerAllowed(false);
+      await scheduler.reconcileNow();
       return progress;
     } catch (error) {
       await dailyFocusStore.replace(previousProgress);
+      await scheduler.reconcileNow();
       throw error;
     }
   });

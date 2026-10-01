@@ -124,15 +124,16 @@ export const walletStore = {
         purchasedAt: now.toISOString()
       };
       const commitments = itemId === 'games-time' ? await guestStore.list() : [];
-      const games = commitments.find((commitment) =>
+      const games = commitments.filter((commitment) =>
         commitment.scriptId === item.targetScriptId &&
         commitment.status === 'active' &&
         new Date(commitment.startsAt) <= now &&
         new Date(commitment.endsAt) >= now
       );
-      const activeSeconds = games?.unlockUntil && new Date(games.unlockUntil) > now
-        ? Math.ceil((new Date(games.unlockUntil).getTime() - now.getTime()) / 1000)
-        : 0;
+      const activeSeconds = games.reduce((maximum, commitment) => {
+        if (!commitment.unlockUntil || new Date(commitment.unlockUntil) <= now) return maximum;
+        return Math.max(maximum, Math.ceil((new Date(commitment.unlockUntil).getTime() - now.getTime()) / 1000));
+      }, 0);
       const sessionWasActive = activeSeconds > 0 || unconsumed.some((entry) => Boolean(entry.startedAt));
       const pendingSeconds = unconsumed
         .filter((entry) => entry !== canonical && !entry.startedAt)
@@ -143,14 +144,14 @@ export const walletStore = {
       const totalSeconds = consolidatePurchaseSeconds(canonicalSeconds, pendingSeconds, item.durationMinutes);
       canonical.coins += item.costCoins;
       canonical.remainingSeconds = totalSeconds;
-      if (games && sessionWasActive) {
+      if (games.length > 0 && sessionWasActive) {
         const recheckNow = timeAuthority.now();
-        if (games.status !== 'active' || new Date(games.endsAt) < recheckNow) {
+        if (games.some((commitment) => commitment.status !== 'active' || new Date(commitment.endsAt) < recheckNow)) {
           throw new Error('El bloqueo expiro durante la compra. Intenta de nuevo.');
         }
         canonical.startedAt = now.toISOString();
         canonical.unlockUntil = new Date(now.getTime() + totalSeconds * 1000).toISOString();
-        games.unlockUntil = canonical.unlockUntil;
+        for (const commitment of games) commitment.unlockUntil = canonical.unlockUntil;
       } else {
         canonical.startedAt = undefined;
         canonical.unlockUntil = undefined;
@@ -159,7 +160,7 @@ export const walletStore = {
         if (entry !== canonical) entry.usedAt = now.toISOString();
       }
       if (!wallet.purchases.includes(canonical)) wallet.purchases.push(canonical);
-      if (games && sessionWasActive) await guestStore.replace(commitments);
+      if (games.length > 0 && sessionWasActive) await guestStore.replace(commitments);
       await writeWallet(wallet);
       return wallet;
     });
@@ -195,20 +196,20 @@ export const walletStore = {
       }
 
       const commitments = await guestStore.list();
-      const games = commitments.find((commitment) =>
+      const games = commitments.filter((commitment) =>
         commitment.scriptId === item.targetScriptId &&
         commitment.status === 'active' &&
         new Date(commitment.startsAt) <= now &&
         new Date(commitment.endsAt) >= now
       );
-      if (!games) throw new Error('Activa primero el bloqueo de videojuegos.');
+      if (games.length === 0) throw new Error('Activa primero el bloqueo de videojuegos.');
 
       const remainingSeconds = Math.max(0, Math.floor(purchase.remainingSeconds ?? item.durationMinutes * 60));
       if (remainingSeconds <= 0) throw new Error('Este objeto ya no tiene tiempo disponible.');
       const unlockUntil = new Date(now.getTime() + remainingSeconds * 1000).toISOString();
       const previousCommitments = commitments.map((commitment) => ({ ...commitment }));
       const previousWallet = { ...wallet, completions: [...wallet.completions], purchases: [...wallet.purchases] };
-      games.unlockUntil = unlockUntil;
+      for (const commitment of games) commitment.unlockUntil = unlockUntil;
       purchase.startedAt = now.toISOString();
       purchase.remainingSeconds = remainingSeconds;
       purchase.unlockUntil = unlockUntil;
@@ -250,8 +251,8 @@ export const walletStore = {
         now
       );
       const commitments = await guestStore.list();
-      const games = commitments.find((commitment) => commitment.scriptId === item.targetScriptId && commitment.status === 'active');
-      if (games && new Date(games.endsAt) < now) {
+      const games = commitments.filter((commitment) => commitment.scriptId === item.targetScriptId && commitment.status === 'active');
+      if (games.some((commitment) => new Date(commitment.endsAt) < now)) {
         throw new Error('El bloqueo expiro durante la pausa. Intenta de nuevo.');
       }
       const previousCommitments = commitments.map((commitment) => ({ ...commitment }));
@@ -260,7 +261,7 @@ export const walletStore = {
       purchase.remainingSeconds = remainingSeconds;
       purchase.unlockUntil = undefined;
       if (remainingSeconds <= 0) purchase.usedAt = now.toISOString();
-      if (games) games.unlockUntil = undefined;
+      for (const commitment of games) commitment.unlockUntil = undefined;
       try {
         await guestStore.replace(commitments);
         await writeWallet(wallet);

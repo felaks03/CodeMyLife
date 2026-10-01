@@ -391,5 +391,18 @@ test('completar foco diario conecta progreso y recompensa de wallet', () => {
 test('comprar videojuegos no activa un objeto pausado', () => {
   const wallet = read('src/main/wallet-store.ts');
   assert.match(wallet, /const sessionWasActive = activeSeconds > 0 \|\| unconsumed\.some/);
-  assert.match(wallet, /if \(games && sessionWasActive\)/);
+  assert.match(wallet, /const games = commitments\.filter\(/);
+  assert.match(wallet, /if \(games\.length > 0 && sessionWasActive\)/);
+});
+
+test('usar o pausar videojuegos actualiza todos los compromisos semanales activos', () => {
+  const wallet = read('src/main/wallet-store.ts');
+  assert.match(wallet, /const games = commitments\.filter\([\s\S]*scriptId === item\.targetScriptId/);
+  assert.match(wallet, /for \(const commitment of games\) commitment\.unlockUntil = unlockUntil/);
+  assert.match(wallet, /for \(const commitment of games\) commitment\.unlockUntil = undefined/);
+});
+
+test('Bloquear semana no duplica scripts ya programados en la semana actual', () => {
+  const renderer = read('src/renderer/renderer.js');
+  assert.match(renderer, /commitment\.status !== 'cancelled'[\s\S]*new Date\(commitment\.startsAt\) <= sunday[\s\S]*new Date\(commitment\.endsAt\) >= startsAt/);
 });

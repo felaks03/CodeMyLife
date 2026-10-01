@@ -915,10 +915,13 @@ el('lock-week').addEventListener('click', async () => {
   if (!window.confirm(i18n.t('lockWeekConfirm'))) return;
 
   const { startsAt, sunday } = weekBounds(await trustedNow());
-  const weekKey = startsAt.toISOString().slice(0, 10);
   const existingScripts = new Set(
     (lastOverview?.commitments ?? [])
-      .filter((commitment) => commitment.startsAt.slice(0, 10) === weekKey && commitment.status !== 'cancelled')
+      .filter((commitment) =>
+        commitment.status !== 'cancelled' &&
+        new Date(commitment.startsAt) <= sunday &&
+        new Date(commitment.endsAt) >= startsAt
+      )
       .map((commitment) => commitment.scriptId)
   );
   const scriptsToLock = availableScripts.filter((script) => !existingScripts.has(script._id));

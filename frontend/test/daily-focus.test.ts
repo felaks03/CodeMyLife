@@ -130,13 +130,14 @@ test('el bloqueo diario tiene ventana de mañana y de tarde', () => {
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T20:00:00')), false);
 });
 
-test('la mañana muestra su suplementacion y la tarde muestra Gym y su suplementacion', () => {
+test('la mañana muestra sus tareas y la tarde muestra Backtesting, Gym y su suplementacion', () => {
   const morning = tasksForFocusWindow(new Date('2026-09-25T09:00:00'));
   const evening = tasksForFocusWindow(new Date('2026-09-25T18:00:00'));
   assert.equal(morning.some((task) => task.id === 'gym'), false);
+  assert.equal(morning.some((task) => task.id === 'backtesting'), false);
   assert.equal(morning.some((task) => task.id === 'brush-my-teeth'), true);
   assert.deepEqual(morning.filter((task) => task.id.startsWith('supplementation-')).map((task) => task.id), ['supplementation-morning']);
-  assert.deepEqual(evening.map((task) => task.id), ['gym', 'supplementation-afternoon']);
+  assert.deepEqual(evening.map((task) => task.id), ['gym', 'supplementation-afternoon', 'backtesting']);
   assert.deepEqual(tasksForFocusWindow(new Date('2026-09-26T18:00:00')), []);
 });
 
@@ -173,7 +174,7 @@ test('cada ventana termina al completar sus tareas', () => {
   }));
   const eveningProgress = DAILY_FOCUS_TASKS.map((task) => ({
     taskId: task.id,
-    completed: task.id === 'gym' || task.id === 'supplementation-afternoon',
+    completed: task.id === 'gym' || task.id === 'supplementation-afternoon' || task.id === 'backtesting',
     elapsedMs: task.durationMinutes * 60 * 1000,
     startedAt: null
   }));

@@ -155,10 +155,10 @@ export function isAfternoonFocusWindow(date: Date): boolean {
 
 export function tasksForFocusWindow(date: Date): DailyFocusTask[] {
   if (isAfternoonFocusWindow(date)) return isGymEnabledForDate(date)
-    ? DAILY_FOCUS_TASKS.filter((task) => task.id === 'gym' || task.id === 'supplementation-afternoon')
+    ? DAILY_FOCUS_TASKS.filter((task) => task.id === 'gym' || task.id === 'supplementation-afternoon' || task.id === 'backtesting')
     : [];
   if (isMorningFocusWindow(date)) {
-    return visibleDailyFocusTasks(date).filter((task) => task.id !== 'gym' && task.id !== 'supplementation-afternoon');
+    return visibleDailyFocusTasks(date).filter((task) => task.id !== 'gym' && task.id !== 'supplementation-afternoon' && task.id !== 'backtesting');
   }
   return [];
 }

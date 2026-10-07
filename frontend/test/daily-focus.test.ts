@@ -130,14 +130,15 @@ test('el bloqueo diario tiene ventana de mañana y de tarde', () => {
   assert.equal(isDailyFocusWindow(new Date('2026-09-25T20:00:00')), false);
 });
 
-test('la mañana muestra sus tareas y la tarde muestra Backtesting, Gym y su suplementacion', () => {
+test('la mañana muestra sus tareas y la tarde muestra Backtesting y su suplementacion', () => {
   const morning = tasksForFocusWindow(new Date('2026-09-25T09:00:00'));
   const evening = tasksForFocusWindow(new Date('2026-09-25T18:00:00'));
   assert.equal(morning.some((task) => task.id === 'gym'), false);
   assert.equal(morning.some((task) => task.id === 'backtesting'), false);
   assert.equal(morning.some((task) => task.id === 'brush-my-teeth'), true);
   assert.deepEqual(morning.filter((task) => task.id.startsWith('supplementation-')).map((task) => task.id), ['supplementation-morning']);
-  assert.deepEqual(evening.map((task) => task.id), ['gym', 'supplementation-afternoon', 'backtesting']);
+  assert.equal(evening.some((task) => task.id === 'gym'), false);
+  assert.deepEqual(evening.map((task) => task.id), ['supplementation-afternoon', 'backtesting']);
   assert.deepEqual(tasksForFocusWindow(new Date('2026-09-26T18:00:00')), []);
 });
 
@@ -162,6 +163,7 @@ test('el fin de semana conserva solo el bloqueo matinal', () => {
   assert.equal(isDailyFocusBlocked(saturdayMorning, unfinished), true);
   assert.equal(tasksForFocusWindow(saturdayMorning).some((task) => task.id === 'gym'), false);
   assert.equal(isDailyFocusBlocked(saturdayEvening, unfinished), false);
+  assert.equal(tasksForFocusWindow(saturdayEvening).some((task) => task.id === 'gym'), false);
   assert.deepEqual(tasksForFocusWindow(saturdayEvening), []);
 });
 
